@@ -204,7 +204,7 @@ const LoginPage = ({
 
             {/* Footer */}
             <div className="mt-6 text-center text-sm text-gray-500">
-              <p>© 2025 Reguler System. All rights reserved.</p>
+              <p>� 2025 Reguler System. All rights reserved.</p>
             </div>
           </div>
         </div>
@@ -465,10 +465,14 @@ export default function ProduksiNPKApp() {
 
   // Login states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState<"admin" | "user">("admin");
+  const [userRole, setUserRole] = useState<"admin" | "user" | "supervisor">(
+    "admin"
+  );
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
+  const [showAccountInUseWarning, setShowAccountInUseWarning] = useState(false);
+  const [accountInUseMessage, setAccountInUseMessage] = useState("");
 
   // Notification states
   interface Notification {
@@ -692,32 +696,104 @@ export default function ProduksiNPKApp() {
     };
   }, [showNotifications]);
 
+  // Helper to check if user has edit/delete permission
+  const canEditDelete = () => {
+    return userRole === "admin" || userRole === "supervisor";
+  };
+
+  // Check if account is already in use
+  const checkAccountInUse = (username: string): boolean => {
+    const sessionKey = `session_${username}`;
+    const existingSession = localStorage.getItem(sessionKey);
+
+    if (existingSession) {
+      const sessionData = JSON.parse(existingSession);
+      const now = Date.now();
+      // Check if session is still active (within 24 hours)
+      if (now - sessionData.timestamp < 24 * 60 * 60 * 1000) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Set account session
+  const setAccountSession = (username: string) => {
+    const sessionKey = `session_${username}`;
+    const sessionData = {
+      timestamp: Date.now(),
+      sessionId: Math.random().toString(36).substr(2, 9),
+    };
+    localStorage.setItem(sessionKey, JSON.stringify(sessionData));
+  };
+
   // Handle Login
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate credentials
+    let validCredentials = false;
+    let role: "admin" | "user" | "supervisor" = "admin";
+    let username = "";
+
     if (loginUsername === "admin" && loginPassword === "adminreguler") {
-      setIsLoggedIn(true);
-      setUserRole("admin");
-      setLoginError("");
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("username", "admin");
-      localStorage.setItem("userRole", "admin");
+      validCredentials = true;
+      role = "admin";
+      username = "admin";
     } else if (loginUsername === "user" && loginPassword === "usernpk") {
-      setIsLoggedIn(true);
-      setUserRole("user");
-      setLoginError("");
-      localStorage.setItem("isLoggedIn", "true");
-      localStorage.setItem("username", "user");
-      localStorage.setItem("userRole", "user");
-    } else {
-      setLoginError("Username atau password salah!");
+      validCredentials = true;
+      role = "user";
+      username = "user";
+    } else if (loginUsername === "supervisor" && loginPassword === "3972103") {
+      validCredentials = true;
+      role = "supervisor";
+      username = "supervisor";
     }
+
+    if (!validCredentials) {
+      setLoginError("Username atau password salah!");
+      return;
+    }
+
+    // Check if account is already in use
+    if (checkAccountInUse(username)) {
+      setAccountInUseMessage(
+        `Akun "${username}" sedang digunakan di perangkat lain. Login akan mengeluarkan sesi yang sedang aktif.`
+      );
+      setShowAccountInUseWarning(true);
+
+      // Auto close warning after 3 seconds and proceed with login
+      setTimeout(() => {
+        setShowAccountInUseWarning(false);
+        proceedWithLogin(username, role);
+      }, 3000);
+    } else {
+      proceedWithLogin(username, role);
+    }
+  };
+
+  // Proceed with login after checks
+  const proceedWithLogin = (
+    username: string,
+    role: "admin" | "user" | "supervisor"
+  ) => {
+    setIsLoggedIn(true);
+    setUserRole(role);
+    setLoginError("");
+    setAccountSession(username);
+    localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("username", username);
+    localStorage.setItem("userRole", role);
   };
 
   // Handle Logout
   const handleLogout = () => {
     setShowLogoutOverlay(true);
     setTimeout(() => {
+      const username = localStorage.getItem("username");
+      if (username) {
+        localStorage.removeItem(`session_${username}`);
+      }
       setIsLoggedIn(false);
       setUserRole("admin");
       localStorage.removeItem("isLoggedIn");
@@ -868,7 +944,7 @@ export default function ProduksiNPKApp() {
 
     try {
       console.log(
-        "📅 normalizeDateForInput input:",
+        "?? normalizeDateForInput input:",
         date,
         "Type:",
         typeof date
@@ -876,7 +952,7 @@ export default function ProduksiNPKApp() {
 
       // Jika sudah string format YYYY-MM-DD, return as is
       if (typeof date === "string" && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        console.log("✅ Already YYYY-MM-DD format:", date);
+        console.log("? Already YYYY-MM-DD format:", date);
         return date;
       }
 
@@ -887,7 +963,7 @@ export default function ProduksiNPKApp() {
         const month = parts[1].padStart(2, "0");
         const year = parts[2];
         const result = `${year}-${month}-${day}`;
-        console.log("✅ Converted DD/MM/YYYY to:", result);
+        console.log("? Converted DD/MM/YYYY to:", result);
         return result;
       }
 
@@ -895,13 +971,13 @@ export default function ProduksiNPKApp() {
       // Backend seharusnya sudah mengirim string YYYY-MM-DD
       if (date instanceof Date && !isNaN(date.getTime())) {
         console.warn(
-          "⚠️ Received Date object instead of string! This may cause timezone issues."
+          "?? Received Date object instead of string! This may cause timezone issues."
         );
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");
         const day = String(date.getDate()).padStart(2, "0");
         const result = `${year}-${month}-${day}`;
-        console.log("✅ Converted Date object to:", result);
+        console.log("? Converted Date object to:", result);
         return result;
       }
 
@@ -914,16 +990,16 @@ export default function ProduksiNPKApp() {
           const month = String(dateObj.getMonth() + 1).padStart(2, "0");
           const day = String(dateObj.getDate()).padStart(2, "0");
           const result = `${year}-${month}-${day}`;
-          console.log("✅ Converted parseable string to:", result);
+          console.log("? Converted parseable string to:", result);
           return result;
         }
       }
 
-      console.error("❌ Failed to normalize date:", date);
+      console.error("? Failed to normalize date:", date);
       // Jangan paksa fallback ke hari ini; biarkan kosong supaya tidak misleading
       return "";
     } catch (error) {
-      console.error("❌ Error normalizing date:", error);
+      console.error("? Error normalizing date:", error);
       return "";
     }
   };
@@ -3397,15 +3473,15 @@ export default function ProduksiNPKApp() {
 </head>
 <body>
   <div class="cut-line">
-    <span class="cut-icon">✂️</span>
+    <span class="cut-icon">??</span>
   </div>
   ${generateGatePassBlock()}
   <div class="cut-line">
-    <span class="cut-icon">✂️</span>
+    <span class="cut-icon">??</span>
   </div>
   ${generateGatePassBlock()}
   <div class="cut-line">
-    <span class="cut-icon">✂️</span>
+    <span class="cut-icon">??</span>
   </div>
   <script>window.onload = function(){ window.print(); };</script>
 </body>
@@ -3670,7 +3746,7 @@ export default function ProduksiNPKApp() {
               </div>
               <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#2D6A4F]/20 shadow-sm">
                 <label className="text-sm font-semibold text-[#1B4332] whitespace-nowrap">
-                  📅 Periode:
+                  ?? Periode:
                 </label>
                 <input
                   type="month"
@@ -3845,9 +3921,9 @@ export default function ProduksiNPKApp() {
         return (
           <Card className="border-[#2D6A4F]/30 shadow-md">
             <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">Produksi NPK</CardTitle>
+              <CardTitle className="text-[#1B4332]">Produksi Granul</CardTitle>
               <CardDescription>
-                Data produksi NPK harian per shift
+                Data produksi NPK Granul harian per shift
               </CardDescription>
             </CardHeader>
             <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
@@ -4158,7 +4234,7 @@ export default function ProduksiNPKApp() {
               <div>
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-semibold text-[#1B4332] text-lg">
-                    Data Produksi NPK
+                    Data Produksi NPK Granul
                   </h4>
                   <div className="flex gap-2">
                     <Button
@@ -4285,7 +4361,7 @@ export default function ProduksiNPKApp() {
                             </td>
                             <td className="text-center py-3 px-4">
                               <div className="flex gap-2 justify-center">
-                                {userRole === "admin" && (
+                                {canEditDelete() && (
                                   <>
                                     <Button
                                       size="sm"
@@ -4637,7 +4713,7 @@ export default function ProduksiNPKApp() {
                             </td>
                             <td className="text-center py-3 px-4">
                               <div className="flex gap-2 justify-center">
-                                {userRole === "admin" && (
+                                {canEditDelete() && (
                                   <>
                                     <Button
                                       size="sm"
@@ -4947,7 +5023,7 @@ export default function ProduksiNPKApp() {
                             </td>
                             <td className="text-center py-3 px-4">
                               <div className="flex gap-2 justify-center">
-                                {userRole === "admin" && (
+                                {canEditDelete() && (
                                   <>
                                     <Button
                                       size="sm"
@@ -5351,7 +5427,7 @@ export default function ProduksiNPKApp() {
                             </td>
                             <td className="text-center py-2 px-3">
                               <div className="flex gap-2 justify-center">
-                                {userRole === "admin" && (
+                                {canEditDelete() && (
                                   <>
                                     <Button
                                       size="sm"
@@ -5728,7 +5804,7 @@ export default function ProduksiNPKApp() {
                             </td>
                             <td className="text-center py-2 px-3">
                               <div className="flex gap-2 justify-center">
-                                {userRole === "admin" && (
+                                {canEditDelete() && (
                                   <>
                                     <Button
                                       size="sm"
@@ -5997,7 +6073,7 @@ export default function ProduksiNPKApp() {
                             </td>
                             <td className="text-center py-2 px-3">
                               <div className="flex gap-2 justify-center">
-                                {userRole === "admin" && (
+                                {canEditDelete() && (
                                   <>
                                     <Button
                                       size="sm"
@@ -6277,7 +6353,7 @@ export default function ProduksiNPKApp() {
                             </td>
                             <td className="text-center py-2 px-3">
                               <div className="flex gap-2 justify-center">
-                                {userRole === "admin" && (
+                                {canEditDelete() && (
                                   <>
                                     <Button
                                       size="sm"
@@ -6516,7 +6592,7 @@ export default function ProduksiNPKApp() {
                             <td className="py-2 px-3">{item.keterangan}</td>
                             <td className="text-center py-2 px-3">
                               <div className="flex gap-2 justify-center">
-                                {userRole === "admin" && (
+                                {canEditDelete() && (
                                   <>
                                     <Button
                                       size="sm"
@@ -6780,7 +6856,7 @@ export default function ProduksiNPKApp() {
                             <td className="py-2 px-3">{item.keterangan}</td>
                             <td className="text-center py-2 px-3">
                               <div className="flex gap-2 justify-center">
-                                {userRole === "admin" && (
+                                {canEditDelete() && (
                                   <>
                                     <Button
                                       size="sm"
@@ -7075,7 +7151,7 @@ export default function ProduksiNPKApp() {
                                 >
                                   <Printer className="w-5 h-5" />
                                 </Button>
-                                {userRole === "admin" && (
+                                {canEditDelete() && (
                                   <>
                                     <Button
                                       size="sm"
@@ -7337,7 +7413,7 @@ export default function ProduksiNPKApp() {
                                 >
                                   <Eye className="w-5 h-5" />
                                 </Button>
-                                {userRole === "admin" && (
+                                {canEditDelete() && (
                                   <>
                                     <Button
                                       size="sm"
@@ -7520,7 +7596,7 @@ export default function ProduksiNPKApp() {
                             </td>
                             <td className="text-center py-2 px-3">
                               <div className="flex gap-2 justify-center">
-                                {userRole === "admin" && (
+                                {canEditDelete() && (
                                   <>
                                     <Button
                                       size="sm"
@@ -7582,7 +7658,7 @@ export default function ProduksiNPKApp() {
       icon: Factory,
       label: "Produksi",
       tabs: [
-        { id: "npk", label: "Produksi NPK" },
+        { id: "npk", label: "Produksi Granul" },
         { id: "blending", label: "Produksi Blending" },
         { id: "mini", label: "Produksi NPK Mini" },
       ],
@@ -7741,15 +7817,27 @@ export default function ProduksiNPKApp() {
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
                 <span className="text-lg font-bold">
-                  {userRole === "admin" ? "A" : "U"}
+                  {userRole === "admin"
+                    ? "A"
+                    : userRole === "supervisor"
+                    ? "S"
+                    : "U"}
                 </span>
               </div>
               <div>
                 <p className="font-semibold text-sm">
-                  {userRole === "admin" ? "Admin" : "User"}
+                  {userRole === "admin"
+                    ? "Admin"
+                    : userRole === "supervisor"
+                    ? "Supervisor"
+                    : "User"}
                 </p>
                 <p className="text-xs opacity-75">
-                  {userRole === "admin" ? "Administrator" : "User"}
+                  {userRole === "admin"
+                    ? "Administrator"
+                    : userRole === "supervisor"
+                    ? "Supervisor"
+                    : "User"}
                 </p>
               </div>
             </div>
@@ -7767,14 +7855,14 @@ export default function ProduksiNPKApp() {
               v1.15 - 2025 | NPKG-2 Production
             </p>
             <p className="text-xs opacity-75 mt-1">
-              Made with <span className="text-red-500">❤️</span>
+              Made with <span className="text-red-500">??</span>
             </p>
           </div>
         </div>
       </aside>
 
       {/* Notification Bell - Only for Admin - Fixed Position */}
-      {userRole === "admin" && (
+      {canEditDelete() && (
         <div className="fixed top-6 right-6 z-50 notification-dropdown">
           <Button
             onClick={() => setShowNotifications(!showNotifications)}
@@ -7995,7 +8083,7 @@ export default function ProduksiNPKApp() {
                   onClick={() => setViewAkunModal({ show: false, data: null })}
                   className="text-gray-500 hover:text-gray-700 text-2xl"
                 >
-                  ×
+                  �
                 </button>
               </div>
               {viewAkunModal.data && (
@@ -8316,7 +8404,11 @@ export default function ProduksiNPKApp() {
               <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center shadow-2xl animate-pulse">
                 <div className="w-20 h-20 bg-gradient-to-br from-[#2D6A4F] to-[#52B788] rounded-full flex items-center justify-center">
                   <span className="text-4xl font-bold text-white">
-                    {userRole === "admin" ? "A" : "U"}
+                    {userRole === "admin"
+                      ? "A"
+                      : userRole === "supervisor"
+                      ? "S"
+                      : "U"}
                   </span>
                 </div>
               </div>
@@ -8330,6 +8422,50 @@ export default function ProduksiNPKApp() {
             <p className="text-white/80 text-sm">
               Terima kasih telah menggunakan sistem
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Account In Use Warning Overlay */}
+      {showAccountInUseWarning && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[100]">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-[slideIn_0.3s_ease-out]">
+            <div className="bg-gradient-to-r from-yellow-500 to-orange-500 p-6">
+              <div className="flex items-center justify-center mb-4">
+                <div className="relative">
+                  <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
+                    <AlertCircle className="w-12 h-12 text-orange-500 animate-pulse" />
+                  </div>
+                  <div className="absolute inset-0 w-20 h-20 border-4 border-white/30 rounded-full animate-ping"></div>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-white text-center">
+                Akun Sedang Digunakan
+              </h3>
+            </div>
+
+            <div className="p-6">
+              <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-4 rounded">
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  {accountInUseMessage}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                <div className="flex-1 h-1 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full overflow-hidden">
+                  <div className="h-full bg-white/50 animate-[slideRight_3s_linear]"></div>
+                </div>
+                <span className="text-xs font-medium">
+                  Melanjutkan dalam 3 detik...
+                </span>
+              </div>
+
+              <div className="text-center">
+                <p className="text-xs text-gray-500">
+                  Sesi sebelumnya akan otomatis dikeluarkan
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       )}
