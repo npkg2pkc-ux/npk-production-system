@@ -455,13 +455,20 @@ async function createSessionAPI(
     console.log("[SESSION] Creating session:", { username, sessionId });
     const response = await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({
         action: "createSession",
         username,
         sessionId,
       }),
     });
+    
+    // Check if response is ok
+    if (!response.ok) {
+      console.error("[SESSION] Response not OK:", response.status);
+      return false;
+    }
+    
     const data = await response.json();
     console.log("[SESSION] Create result:", data);
     return data.success;
@@ -479,13 +486,19 @@ async function updateSessionAPI(
     console.log("[SESSION] Updating session:", { username, sessionId });
     const response = await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({
         action: "updateSession",
         username,
         sessionId,
       }),
     });
+    
+    if (!response.ok) {
+      console.error("[SESSION] Update response not OK:", response.status);
+      return false;
+    }
+    
     const data = await response.json();
     console.log("[SESSION] Update result:", data);
     return data.success;
@@ -500,12 +513,18 @@ async function deleteSessionAPI(username: string): Promise<boolean> {
     console.log("[SESSION] Deleting session:", username);
     const response = await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({
         action: "deleteSession",
         username,
       }),
     });
+    
+    if (!response.ok) {
+      console.error("[SESSION] Delete response not OK:", response.status);
+      return false;
+    }
+    
     const data = await response.json();
     console.log("[SESSION] Delete result:", data);
     return data.success;

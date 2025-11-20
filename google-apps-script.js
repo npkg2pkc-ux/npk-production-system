@@ -36,29 +36,23 @@ function doGet(e) {
     if (action === "checkSession") {
       const username = e.parameter.username;
       const result = checkActiveSession(username);
-      const output = ContentService.createTextOutput(JSON.stringify(result));
-      output.setMimeType(ContentService.MimeType.JSON);
-      return output;
+      return ContentService.createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     if (action === "read" && sheet) {
       const data = readData(sheet);
-      const output = ContentService.createTextOutput(JSON.stringify(data));
-      output.setMimeType(ContentService.MimeType.JSON);
-      return output;
+      return ContentService.createTextOutput(JSON.stringify(data))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
-    const output = ContentService.createTextOutput(
+    return ContentService.createTextOutput(
       JSON.stringify({ error: "Invalid request" })
-    );
-    output.setMimeType(ContentService.MimeType.JSON);
-    return output;
+    ).setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
-    const output = ContentService.createTextOutput(
+    return ContentService.createTextOutput(
       JSON.stringify({ error: error.toString() })
-    );
-    output.setMimeType(ContentService.MimeType.JSON);
-    return output;
+    ).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
@@ -95,15 +89,12 @@ function doPost(e) {
         result = { error: "Invalid action" };
     }
 
-    const output = ContentService.createTextOutput(JSON.stringify(result));
-    output.setMimeType(ContentService.MimeType.JSON);
-    return output;
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
   } catch (error) {
-    const output = ContentService.createTextOutput(
+    return ContentService.createTextOutput(
       JSON.stringify({ error: error.toString() })
-    );
-    output.setMimeType(ContentService.MimeType.JSON);
-    return output;
+    ).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
