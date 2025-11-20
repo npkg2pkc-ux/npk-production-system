@@ -827,12 +827,14 @@ export default function ProduksiNPKApp() {
         console.log("[CHECK] Comparing:", {
           existing: result.sessionData.sessionId,
           current: currentSessionId.current,
-          different: result.sessionData.sessionId !== currentSessionId.current
+          different: result.sessionData.sessionId !== currentSessionId.current,
         });
-        
+
         // Check if it's a different session (different browser/device)
         if (result.sessionData.sessionId !== currentSessionId.current) {
-          console.log("[CHECK] ⛔ BLOCKING LOGIN - Different session detected!");
+          console.log(
+            "[CHECK] ⛔ BLOCKING LOGIN - Different session detected!"
+          );
           return true; // Block login - account in use elsewhere
         } else {
           console.log("[CHECK] ✅ Same session - allowing login");
@@ -923,20 +925,28 @@ export default function ProduksiNPKApp() {
 
     // Check if account is already in use (cross-browser detection via Google Sheets)
     const accountInUse = await checkAccountInUse(username);
+    console.log("[LOGIN] Account in use check result:", accountInUse);
+
     if (accountInUse) {
-      setAccountInUseMessage(
-        `Akun "${username}" sedang aktif di perangkat/browser lain. Untuk keamanan, hanya satu sesi yang diperbolehkan per akun. Silakan logout dari perangkat lain atau tunggu 2 menit.`
-      );
+      console.log("[LOGIN] 🚨 Showing warning modal - account in use!");
+      const warningMsg = `Akun "${username}" sedang aktif di perangkat/browser lain. Untuk keamanan, hanya satu sesi yang diperbolehkan per akun. Silakan logout dari perangkat lain atau tunggu 2 menit.`;
+
+      setAccountInUseMessage(warningMsg);
       setShowAccountInUseWarning(true);
+
+      console.log("[LOGIN] Modal state set to true");
 
       // Auto close warning after 5 seconds WITHOUT logging in
       setTimeout(() => {
+        console.log("[LOGIN] Auto-closing warning modal");
         setShowAccountInUseWarning(false);
         setLoginUsername("");
         setLoginPassword("");
       }, 5000);
       return; // Block login attempt
     }
+
+    console.log("[LOGIN] ✅ Account free - proceeding with login");
 
     // Proceed with login if account is free
     await proceedWithLogin(username, role);
@@ -7881,15 +7891,61 @@ export default function ProduksiNPKApp() {
   // Show login screen if not logged in
   if (!isLoggedIn) {
     return (
-      <LoginPage
-        onLogin={handleLogin}
-        username={loginUsername}
-        setUsername={setLoginUsername}
-        password={loginPassword}
-        setPassword={setLoginPassword}
-        error={loginError}
-        setError={setLoginError}
-      />
+      <>
+        <LoginPage
+          onLogin={handleLogin}
+          username={loginUsername}
+          setUsername={setLoginUsername}
+          password={loginPassword}
+          setPassword={setLoginPassword}
+          error={loginError}
+          setError={setLoginError}
+        />
+
+        {/* Account In Use Warning Overlay - Must be here for login screen */}
+        {showAccountInUseWarning && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[100]">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-[slideIn_0.3s_ease-out]">
+              <div className="bg-gradient-to-r from-yellow-500 to-orange-500 p-6">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="relative">
+                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
+                      <AlertCircle className="w-12 h-12 text-orange-500 animate-pulse" />
+                    </div>
+                    <div className="absolute inset-0 w-20 h-20 border-4 border-white/30 rounded-full animate-ping"></div>
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-white text-center">
+                  Akun Sedang Digunakan
+                </h3>
+              </div>
+
+              <div className="p-6">
+                <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-4 rounded">
+                  <p className="text-gray-700 text-sm leading-relaxed">
+                    {accountInUseMessage}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+                  <div className="flex-1 h-1 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full overflow-hidden">
+                    <div className="h-full bg-white/50 animate-[slideRight_5s_linear]"></div>
+                  </div>
+                  <span className="text-xs font-medium">
+                    Menutup dalam 5 detik...
+                  </span>
+                </div>
+
+                <div className="text-center">
+                  <p className="text-xs text-red-600 font-medium">
+                    ⛔ Login Ditolak - Akun Sedang Aktif
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
 
