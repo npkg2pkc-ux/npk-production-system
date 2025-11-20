@@ -960,7 +960,7 @@ export default function ProduksiNPKApp() {
   ) => {
     // Show login overlay animation
     setShowLoginOverlay(true);
-    
+
     // Create session in Google Sheets
     await setAccountSession(username);
 
@@ -7953,7 +7953,7 @@ export default function ProduksiNPKApp() {
             </div>
           </div>
         )}
-        
+
         {/* Login Success Overlay Animation */}
         {showLoginOverlay && (
           <div className="fixed inset-0 bg-gradient-to-br from-[#1B4332] via-[#2D6A4F] to-[#52B788] flex items-center justify-center z-[100]">
@@ -8119,7 +8119,7 @@ export default function ProduksiNPKApp() {
 
           <div className="p-4">
             <p className="text-xs opacity-75">
-              v1.15 - 2025 | NPKG-2 Production
+              v1.18 - 2025 | NPKG-2 Production
             </p>
             <p className="text-xs opacity-75 mt-1">
               Made with <span className="text-red-500">??</span>
