@@ -604,6 +604,7 @@ export default function ProduksiNPKApp() {
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [showLogoutOverlay, setShowLogoutOverlay] = useState(false);
+  const [showLoginOverlay, setShowLoginOverlay] = useState(false);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState<{ [key: string]: number }>({
@@ -957,15 +958,22 @@ export default function ProduksiNPKApp() {
     username: string,
     role: "admin" | "user" | "supervisor"
   ) => {
+    // Show login overlay animation
+    setShowLoginOverlay(true);
+    
     // Create session in Google Sheets
     await setAccountSession(username);
 
-    setIsLoggedIn(true);
-    setUserRole(role);
-    setLoginError("");
-    localStorage.setItem("isLoggedIn", "true");
-    localStorage.setItem("username", username);
-    localStorage.setItem("userRole", role);
+    // Wait for animation
+    setTimeout(() => {
+      setIsLoggedIn(true);
+      setUserRole(role);
+      setLoginError("");
+      localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("username", username);
+      localStorage.setItem("userRole", role);
+      setShowLoginOverlay(false);
+    }, 1500);
   };
 
   // Handle Logout (Google Sheets session deletion)
@@ -7942,6 +7950,36 @@ export default function ProduksiNPKApp() {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Login Success Overlay Animation */}
+        {showLoginOverlay && (
+          <div className="fixed inset-0 bg-gradient-to-br from-[#1B4332] via-[#2D6A4F] to-[#52B788] flex items-center justify-center z-[100]">
+            <div className="text-center">
+              <div className="relative mb-8">
+                <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center shadow-2xl animate-pulse">
+                  <div className="w-20 h-20 bg-gradient-to-br from-[#2D6A4F] to-[#52B788] rounded-full flex items-center justify-center">
+                    <span className="text-4xl font-bold text-white">
+                      {loginUsername === "admin"
+                        ? "A"
+                        : loginUsername === "supervisor"
+                        ? "S"
+                        : "U"}
+                    </span>
+                  </div>
+                </div>
+                <div className="absolute inset-0 w-24 h-24 mx-auto">
+                  <div className="w-full h-full border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              </div>
+              <h3 className="text-2xl font-bold text-white mb-2 animate-pulse">
+                Logging In...
+              </h3>
+              <p className="text-white/80 text-sm">
+                Selamat datang di NPK Production System
+              </p>
             </div>
           </div>
         )}
