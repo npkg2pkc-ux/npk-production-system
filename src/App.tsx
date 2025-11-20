@@ -8122,7 +8122,7 @@ export default function ProduksiNPKApp() {
               v1.18 - 2025 | NPKG-2 Production
             </p>
             <p className="text-xs opacity-75 mt-1">
-              Made with <span className="text-red-500">❤️</span>
+              Made with <span className="text-red-500">🤍</span>
             </p>
           </div>
         </div>
