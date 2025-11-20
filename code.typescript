@@ -1,0 +1,2792 @@
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { Home, Factory, FileText, Database, Settings, Plus, Edit, Trash2, Search, Calendar, TrendingUp, Target, CheckCircle, AlertCircle } from 'lucide-react';
+
+const WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbwURvYXyBD0-SrqomO4eNbE16-KtdD1g6e8G0LLIZA0_nb_jkz9FHDp_SPA1r57vkVE/exec';
+
+interface ProduksiNPK {
+  tanggal: string;
+  shiftMalamOnspek: number;
+  shiftMalamOffspek: number;
+  shiftPagiOnspek: number;
+  shiftPagiOffspek: number;
+  shiftSoreOnspek: number;
+  shiftSoreOffspek: number;
+  totalOnspek?: number;
+  totalOffspek?: number;
+  total?: number;
+}
+
+interface ProduksiBlending {
+  tanggal: string;
+  kategori: string;
+  formula: string;
+  tonase: number;
+}
+
+interface ProduksiNPKMini {
+  tanggal: string;
+  formulasi: string;
+  tonase: number;
+}
+
+interface TimesheetForklift {
+  tanggal: string;
+  forklift: string;
+  deskripsiTemuan: string;
+  jamOff: string;
+  jamStart: string;
+  jamGrounded?: number;
+  jamOperasi?: number;
+  keterangan?: string;
+}
+
+interface TimesheetLoader {
+  tanggal: string;
+  shift: string;
+  deskripsiTemuan: string;
+  jamOff: string;
+  jamStart: string;
+  jamGrounded?: number;
+  jamOperasi?: number;
+  keterangan?: string;
+}
+
+interface Downtime {
+  tanggal: string;
+  item: string;
+  deskripsi: string;
+  jamOff: string;
+  jamStart: string;
+  downtime?: number;
+}
+
+interface WorkRequest {
+  tanggal: string;
+  nomorWR: string;
+  item: string;
+  area: string;
+  eksekutor: string;
+  include: string;
+  deskripsiPekerjaan: string;
+}
+
+interface BahanBaku {
+  tanggal: string;
+  jenisBahanBaku: string;
+  tonase: number;
+  keterangan: string;
+}
+
+interface Vibrasi {
+  tanggal: string;
+  equipment: string;
+  position: string;
+  point: string;
+  nilai: number;
+  keterangan: string;
+}
+
+interface GatePass {
+  noFile: string;
+  noPol: string;
+  pemilikBarang: string;
+  namaPembawa: string;
+  namaBarang: string;
+  alasanMengeluarkan: string;
+  tanggal: string;
+  approver: string;
+}
+
+interface Akun {
+  noBadge: string;
+  nama: string;
+  jabatan: string;
+  passwordESS: string;
+  passwordPismart: string;
+  passwordDOF: string;
+  tanggalUpdate: string;
+}
+
+interface RKAP {
+  bulan: string;
+  targetRKAP: number;
+}
+
+export default function ProduksiNPKApp() {
+  const [activeNav, setActiveNav] = useState('home');
+  const [activeTab, setActiveTab] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  // Data states
+  const [produksiNPKData, setProduksiNPKData] = useState<ProduksiNPK[]>([]);
+  const [produksiBlendingData, setProduksiBlendingData] = useState<ProduksiBlending[]>([]);
+  const [produksiNPKMiniData, setProduksiNPKMiniData] = useState<ProduksiNPKMini[]>([]);
+  const [timesheetForkliftData, setTimesheetForkliftData] = useState<TimesheetForklift[]>([]);
+  const [timesheetLoaderData, setTimesheetLoaderData] = useState<TimesheetLoader[]>([]);
+  const [downtimeData, setDowntimeData] = useState<Downtime[]>([]);
+  const [workRequestData, setWorkRequestData] = useState<WorkRequest[]>([]);
+  const [bahanBakuData, setBahanBakuData] = useState<BahanBaku[]>([]);
+  const [vibrasiData, setVibrasiData] = useState<Vibrasi[]>([]);
+  const [gatePassData, setGatePassData] = useState<GatePass[]>([]);
+  const [akunData, setAkunData] = useState<Akun[]>([]);
+  const [rkapData, setRkapData] = useState<RKAP[]>([]);
+
+  // Form states for Produksi NPK
+  const [formProduksiNPK, setFormProduksiNPK] = useState<ProduksiNPK>({
+    tanggal: new Date().toISOString().split('T')[0],
+    shiftMalamOnspek: 0,
+    shiftMalamOffspek: 0,
+    shiftPagiOnspek: 0,
+    shiftPagiOffspek: 0,
+    shiftSoreOnspek: 0,
+    shiftSoreOffspek: 0,
+  });
+
+  const [formProduksiBlending, setFormProduksiBlending] = useState<ProduksiBlending>({
+    tanggal: new Date().toISOString().split('T')[0],
+    kategori: 'Fresh',
+    formula: '',
+    tonase: 0,
+  });
+
+  const [formProduksiNPKMini, setFormProduksiNPKMini] = useState<ProduksiNPKMini>({
+    tanggal: new Date().toISOString().split('T')[0],
+    formulasi: '',
+    tonase: 0,
+  });
+
+  const [formTimesheetForklift, setFormTimesheetForklift] = useState<TimesheetForklift>({
+    tanggal: new Date().toISOString().split('T')[0],
+    forklift: 'F19',
+    deskripsiTemuan: '',
+    jamOff: '',
+    jamStart: '',
+  });
+
+  const [formTimesheetLoader, setFormTimesheetLoader] = useState<TimesheetLoader>({
+    tanggal: new Date().toISOString().split('T')[0],
+    shift: 'Malam',
+    deskripsiTemuan: '',
+    jamOff: '',
+    jamStart: '',
+  });
+
+  const [formDowntime, setFormDowntime] = useState<Downtime>({
+    tanggal: new Date().toISOString().split('T')[0],
+    item: '',
+    deskripsi: '',
+    jamOff: '',
+    jamStart: '',
+  });
+
+  const [formWorkRequest, setFormWorkRequest] = useState<WorkRequest>({
+    tanggal: new Date().toISOString().split('T')[0],
+    nomorWR: '',
+    item: '',
+    area: '',
+    eksekutor: '',
+    include: '',
+    deskripsiPekerjaan: '',
+  });
+
+  const [formBahanBaku, setFormBahanBaku] = useState<BahanBaku>({
+    tanggal: new Date().toISOString().split('T')[0],
+    jenisBahanBaku: 'Urea',
+    tonase: 0,
+    keterangan: '',
+  });
+
+  const [formVibrasi, setFormVibrasi] = useState<Vibrasi>({
+    tanggal: new Date().toISOString().split('T')[0],
+    equipment: '',
+    position: 'Horizontal',
+    point: 'A',
+    nilai: 0,
+    keterangan: '',
+  });
+
+  const [formGatePass, setFormGatePass] = useState<GatePass>({
+    noFile: '',
+    noPol: '',
+    pemilikBarang: '',
+    namaPembawa: '',
+    namaBarang: '',
+    alasanMengeluarkan: '',
+    tanggal: new Date().toISOString().split('T')[0],
+    approver: '',
+  });
+
+  const [formAkun, setFormAkun] = useState<Akun>({
+    noBadge: '',
+    nama: '',
+    jabatan: '',
+    passwordESS: '',
+    passwordPismart: '',
+    passwordDOF: '',
+    tanggalUpdate: new Date().toISOString().split('T')[0],
+  });
+
+  const [formRKAP, setFormRKAP] = useState<RKAP>({
+    bulan: 'Januari',
+    targetRKAP: 0,
+  });
+
+  // Calculate totals for Produksi NPK
+  useEffect(() => {
+    const totalOnspek = formProduksiNPK.shiftMalamOnspek + formProduksiNPK.shiftPagiOnspek + formProduksiNPK.shiftSoreOnspek;
+    const totalOffspek = formProduksiNPK.shiftMalamOffspek + formProduksiNPK.shiftPagiOffspek + formProduksiNPK.shiftSoreOffspek;
+    setFormProduksiNPK(prev => ({
+      ...prev,
+      totalOnspek,
+      totalOffspek,
+      total: totalOnspek + totalOffspek
+    }));
+  }, [formProduksiNPK.shiftMalamOnspek, formProduksiNPK.shiftMalamOffspek, formProduksiNPK.shiftPagiOnspek, formProduksiNPK.shiftPagiOffspek, formProduksiNPK.shiftSoreOnspek, formProduksiNPK.shiftSoreOffspek]);
+
+  // Calculate for Timesheet Forklift
+  useEffect(() => {
+    if (formTimesheetForklift.jamOff && formTimesheetForklift.jamStart) {
+      const off = parseFloat(formTimesheetForklift.jamOff);
+      const start = parseFloat(formTimesheetForklift.jamStart);
+      const grounded = start - off;
+      const operasi = 20 - grounded;
+      const keterangan = grounded < 3 ? 'OK' : 'Grounded';
+      setFormTimesheetForklift(prev => ({
+        ...prev,
+        jamGrounded: grounded,
+        jamOperasi: operasi,
+        keterangan
+      }));
+    }
+  }, [formTimesheetForklift.jamOff, formTimesheetForklift.jamStart]);
+
+  // Calculate for Timesheet Loader
+  useEffect(() => {
+    if (formTimesheetLoader.jamOff && formTimesheetLoader.jamStart) {
+      const off = parseFloat(formTimesheetLoader.jamOff);
+      const start = parseFloat(formTimesheetLoader.jamStart);
+      const grounded = start - off;
+      let operasi = 0;
+      if (formTimesheetLoader.shift === 'Malam') operasi = 8 - grounded;
+      else if (formTimesheetLoader.shift === 'Pagi') operasi = 7 - grounded;
+      else if (formTimesheetLoader.shift === 'Sore') operasi = 7 - grounded;
+      const keterangan = grounded < 3 ? 'OK' : 'Grounded';
+      setFormTimesheetLoader(prev => ({
+        ...prev,
+        jamGrounded: grounded,
+        jamOperasi: operasi,
+        keterangan
+      }));
+    }
+  }, [formTimesheetLoader.jamOff, formTimesheetLoader.jamStart, formTimesheetLoader.shift]);
+
+  // Calculate downtime
+  useEffect(() => {
+    if (formDowntime.jamOff && formDowntime.jamStart) {
+      const off = parseFloat(formDowntime.jamOff);
+      const start = parseFloat(formDowntime.jamStart);
+      setFormDowntime(prev => ({
+        ...prev,
+        downtime: start - off
+      }));
+    }
+  }, [formDowntime.jamOff, formDowntime.jamStart]);
+
+  // Generate Gate Pass number
+  const generateGatePassNumber = () => {
+    const now = new Date();
+    const month = now.toLocaleString('id-ID', { month: 'long' });
+    const monthRoman = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'][now.getMonth()];
+    const year = now.getFullYear();
+    const count = gatePassData.length + 1;
+    const noFile = `${String(count).padStart(3, '0')}/GATE/NPKG2/${monthRoman}/${year}`;
+    setFormGatePass(prev => ({ ...prev, noFile }));
+  };
+
+  useEffect(() => {
+    if (activeTab === 'gatepass' && !formGatePass.noFile) {
+      generateGatePassNumber();
+    }
+  }, [activeTab, gatePassData.length]);
+
+  // Fetch data from Google Sheets
+  const fetchData = async (sheetName: string) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${WEBHOOK_URL}?action=read&sheet=${sheetName}`);
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Save data to Google Sheets
+  const saveData = async (sheetName: string, data: any) => {
+    try {
+      setLoading(true);
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'create',
+          sheet: sheetName,
+          data: data
+        })
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Error saving data:', error);
+      alert('Gagal menyimpan data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load all data on mount
+  useEffect(() => {
+    const loadAllData = async () => {
+      const [npk, blending, mini, forklift, loader, downtime, wr, bahan, vibrasi, gate, akun, rkap] = await Promise.all([
+        fetchData('produksi_npk'),
+        fetchData('produksi_blending'),
+        fetchData('produksi_npk_mini'),
+        fetchData('timesheet_forklift'),
+        fetchData('timesheet_loader'),
+        fetchData('downtime'),
+        fetchData('work_request'),
+        fetchData('bahan_baku'),
+        fetchData('vibrasi'),
+        fetchData('gate_pass'),
+        fetchData('akun'),
+        fetchData('rkap')
+      ]);
+      
+      setProduksiNPKData(npk || []);
+      setProduksiBlendingData(blending || []);
+      setProduksiNPKMiniData(mini || []);
+      setTimesheetForkliftData(forklift || []);
+      setTimesheetLoaderData(loader || []);
+      setDowntimeData(downtime || []);
+      setWorkRequestData(wr || []);
+      setBahanBakuData(bahan || []);
+      setVibrasiData(vibrasi || []);
+      setGatePassData(gate || []);
+      setAkunData(akun || []);
+      setRkapData(rkap || []);
+    };
+    
+    loadAllData();
+  }, []);
+
+  // Handle form submissions
+  const handleSubmitProduksiNPK = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updatedData = [...produksiNPKData];
+      updatedData[editingIndex] = formProduksiNPK;
+      setProduksiNPKData(updatedData);
+      await saveData('produksi_npk', formProduksiNPK);
+      alert('Data berhasil diupdate!');
+    } else {
+      await saveData('produksi_npk', formProduksiNPK);
+      setProduksiNPKData([...produksiNPKData, formProduksiNPK]);
+      alert('Data berhasil disimpan!');
+    }
+    setFormProduksiNPK({
+      tanggal: new Date().toISOString().split('T')[0],
+      shiftMalamOnspek: 0,
+      shiftMalamOffspek: 0,
+      shiftPagiOnspek: 0,
+      shiftPagiOffspek: 0,
+      shiftSoreOnspek: 0,
+      shiftSoreOffspek: 0,
+    });
+    setShowForm(false);
+    setEditingIndex(null);
+  };
+
+  const handleSubmitProduksiBlending = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updatedData = [...produksiBlendingData];
+      updatedData[editingIndex] = formProduksiBlending;
+      setProduksiBlendingData(updatedData);
+      await saveData('produksi_blending', formProduksiBlending);
+      alert('Data berhasil diupdate!');
+    } else {
+      await saveData('produksi_blending', formProduksiBlending);
+      setProduksiBlendingData([...produksiBlendingData, formProduksiBlending]);
+      alert('Data berhasil disimpan!');
+    }
+    setFormProduksiBlending({
+      tanggal: new Date().toISOString().split('T')[0],
+      kategori: 'Fresh',
+      formula: '',
+      tonase: 0,
+    });
+    setShowForm(false);
+    setEditingIndex(null);
+  };
+
+  const handleSubmitProduksiNPKMini = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updatedData = [...produksiNPKMiniData];
+      updatedData[editingIndex] = formProduksiNPKMini;
+      setProduksiNPKMiniData(updatedData);
+      await saveData('produksi_npk_mini', formProduksiNPKMini);
+      alert('Data berhasil diupdate!');
+    } else {
+      await saveData('produksi_npk_mini', formProduksiNPKMini);
+      setProduksiNPKMiniData([...produksiNPKMiniData, formProduksiNPKMini]);
+      alert('Data berhasil disimpan!');
+    }
+    setFormProduksiNPKMini({
+      tanggal: new Date().toISOString().split('T')[0],
+      formulasi: '',
+      tonase: 0,
+    });
+    setShowForm(false);
+    setEditingIndex(null);
+  };
+
+  const handleSubmitTimesheetForklift = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updatedData = [...timesheetForkliftData];
+      updatedData[editingIndex] = formTimesheetForklift;
+      setTimesheetForkliftData(updatedData);
+      await saveData('timesheet_forklift', formTimesheetForklift);
+      alert('Data berhasil diupdate!');
+    } else {
+      await saveData('timesheet_forklift', formTimesheetForklift);
+      setTimesheetForkliftData([...timesheetForkliftData, formTimesheetForklift]);
+      alert('Data berhasil disimpan!');
+    }
+    setFormTimesheetForklift({
+      tanggal: new Date().toISOString().split('T')[0],
+      forklift: 'F19',
+      deskripsiTemuan: '',
+      jamOff: '',
+      jamStart: '',
+    });
+    setShowForm(false);
+    setEditingIndex(null);
+  };
+
+  const handleSubmitTimesheetLoader = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updatedData = [...timesheetLoaderData];
+      updatedData[editingIndex] = formTimesheetLoader;
+      setTimesheetLoaderData(updatedData);
+      await saveData('timesheet_loader', formTimesheetLoader);
+      alert('Data berhasil diupdate!');
+    } else {
+      await saveData('timesheet_loader', formTimesheetLoader);
+      setTimesheetLoaderData([...timesheetLoaderData, formTimesheetLoader]);
+      alert('Data berhasil disimpan!');
+    }
+    setFormTimesheetLoader({
+      tanggal: new Date().toISOString().split('T')[0],
+      shift: 'Malam',
+      deskripsiTemuan: '',
+      jamOff: '',
+      jamStart: '',
+    });
+    setShowForm(false);
+    setEditingIndex(null);
+  };
+
+  const handleSubmitDowntime = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updatedData = [...downtimeData];
+      updatedData[editingIndex] = formDowntime;
+      setDowntimeData(updatedData);
+      await saveData('downtime', formDowntime);
+      alert('Data berhasil diupdate!');
+    } else {
+      await saveData('downtime', formDowntime);
+      setDowntimeData([...downtimeData, formDowntime]);
+      alert('Data berhasil disimpan!');
+    }
+    setFormDowntime({
+      tanggal: new Date().toISOString().split('T')[0],
+      item: '',
+      deskripsi: '',
+      jamOff: '',
+      jamStart: '',
+    });
+    setShowForm(false);
+    setEditingIndex(null);
+  };
+
+  const handleSubmitWorkRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updatedData = [...workRequestData];
+      updatedData[editingIndex] = formWorkRequest;
+      setWorkRequestData(updatedData);
+      await saveData('work_request', formWorkRequest);
+      alert('Data berhasil diupdate!');
+    } else {
+      await saveData('work_request', formWorkRequest);
+      setWorkRequestData([...workRequestData, formWorkRequest]);
+      alert('Data berhasil disimpan!');
+    }
+    setFormWorkRequest({
+      tanggal: new Date().toISOString().split('T')[0],
+      nomorWR: '',
+      item: '',
+      area: '',
+      eksekutor: '',
+      include: '',
+      deskripsiPekerjaan: '',
+    });
+    setShowForm(false);
+    setEditingIndex(null);
+  };
+
+  const handleSubmitBahanBaku = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updatedData = [...bahanBakuData];
+      updatedData[editingIndex] = formBahanBaku;
+      setBahanBakuData(updatedData);
+      await saveData('bahan_baku', formBahanBaku);
+      alert('Data berhasil diupdate!');
+    } else {
+      await saveData('bahan_baku', formBahanBaku);
+      setBahanBakuData([...bahanBakuData, formBahanBaku]);
+      alert('Data berhasil disimpan!');
+    }
+    setFormBahanBaku({
+      tanggal: new Date().toISOString().split('T')[0],
+      jenisBahanBaku: 'Urea',
+      tonase: 0,
+      keterangan: '',
+    });
+    setShowForm(false);
+    setEditingIndex(null);
+  };
+
+  const handleSubmitVibrasi = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updatedData = [...vibrasiData];
+      updatedData[editingIndex] = formVibrasi;
+      setVibrasiData(updatedData);
+      await saveData('vibrasi', formVibrasi);
+      alert('Data berhasil diupdate!');
+    } else {
+      await saveData('vibrasi', formVibrasi);
+      setVibrasiData([...vibrasiData, formVibrasi]);
+      alert('Data berhasil disimpan!');
+    }
+    setFormVibrasi({
+      tanggal: new Date().toISOString().split('T')[0],
+      equipment: '',
+      position: 'Horizontal',
+      point: 'A',
+      nilai: 0,
+      keterangan: '',
+    });
+    setShowForm(false);
+    setEditingIndex(null);
+  };
+
+  const handleSubmitGatePass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updatedData = [...gatePassData];
+      updatedData[editingIndex] = formGatePass;
+      setGatePassData(updatedData);
+      await saveData('gate_pass', formGatePass);
+      alert('Data berhasil diupdate!');
+    } else {
+      await saveData('gate_pass', formGatePass);
+      setGatePassData([...gatePassData, formGatePass]);
+      alert('Data berhasil disimpan!');
+    }
+    generateGatePassNumber();
+    setFormGatePass({
+      noFile: '',
+      noPol: '',
+      pemilikBarang: '',
+      namaPembawa: '',
+      namaBarang: '',
+      alasanMengeluarkan: '',
+      tanggal: new Date().toISOString().split('T')[0],
+      approver: '',
+    });
+    setShowForm(false);
+    setEditingIndex(null);
+  };
+
+  const handleSubmitAkun = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updatedData = [...akunData];
+      updatedData[editingIndex] = formAkun;
+      setAkunData(updatedData);
+      await saveData('akun', formAkun);
+      alert('Data berhasil diupdate!');
+    } else {
+      await saveData('akun', formAkun);
+      setAkunData([...akunData, formAkun]);
+      alert('Data berhasil disimpan!');
+    }
+    setFormAkun({
+      noBadge: '',
+      nama: '',
+      jabatan: '',
+      passwordESS: '',
+      passwordPismart: '',
+      passwordDOF: '',
+      tanggalUpdate: new Date().toISOString().split('T')[0],
+    });
+    setShowForm(false);
+    setEditingIndex(null);
+  };
+
+  const handleSubmitRKAP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingIndex !== null) {
+      const updatedData = [...rkapData];
+      updatedData[editingIndex] = formRKAP;
+      setRkapData(updatedData);
+      await saveData('rkap', formRKAP);
+      alert('Data berhasil diupdate!');
+    } else {
+      await saveData('rkap', formRKAP);
+      setRkapData([...rkapData, formRKAP]);
+      alert('Data berhasil disimpan!');
+    }
+    setFormRKAP({
+      bulan: 'Januari',
+      targetRKAP: 0,
+    });
+    setShowForm(false);
+    setEditingIndex(null);
+  };
+
+  // Delete handlers
+  const handleDelete = (index: number, dataType: string) => {
+    if (window.confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+      switch (dataType) {
+        case 'produksi_npk':
+          const newNPKData = produksiNPKData.filter((_, i) => i !== index);
+          setProduksiNPKData(newNPKData);
+          break;
+        case 'produksi_blending':
+          const newBlendingData = produksiBlendingData.filter((_, i) => i !== index);
+          setProduksiBlendingData(newBlendingData);
+          break;
+        case 'produksi_npk_mini':
+          const newMiniData = produksiNPKMiniData.filter((_, i) => i !== index);
+          setProduksiNPKMiniData(newMiniData);
+          break;
+        case 'timesheet_forklift':
+          const newForkliftData = timesheetForkliftData.filter((_, i) => i !== index);
+          setTimesheetForkliftData(newForkliftData);
+          break;
+        case 'timesheet_loader':
+          const newLoaderData = timesheetLoaderData.filter((_, i) => i !== index);
+          setTimesheetLoaderData(newLoaderData);
+          break;
+        case 'downtime':
+          const newDowntimeData = downtimeData.filter((_, i) => i !== index);
+          setDowntimeData(newDowntimeData);
+          break;
+        case 'work_request':
+          const newWRData = workRequestData.filter((_, i) => i !== index);
+          setWorkRequestData(newWRData);
+          break;
+        case 'bahan_baku':
+          const newBahanData = bahanBakuData.filter((_, i) => i !== index);
+          setBahanBakuData(newBahanData);
+          break;
+        case 'vibrasi':
+          const newVibrasiData = vibrasiData.filter((_, i) => i !== index);
+          setVibrasiData(newVibrasiData);
+          break;
+        case 'gate_pass':
+          const newGateData = gatePassData.filter((_, i) => i !== index);
+          setGatePassData(newGateData);
+          break;
+        case 'akun':
+          const newAkunData = akunData.filter((_, i) => i !== index);
+          setAkunData(newAkunData);
+          break;
+        case 'rkap':
+          const newRKAPData = rkapData.filter((_, i) => i !== index);
+          setRkapData(newRKAPData);
+          break;
+      }
+      alert('Data berhasil dihapus!');
+    }
+  };
+
+  // Edit handlers
+  const handleEdit = (index: number, dataType: string) => {
+    setEditingIndex(index);
+    setShowForm(true);
+    
+    switch (dataType) {
+      case 'produksi_npk':
+        setFormProduksiNPK(produksiNPKData[index]);
+        break;
+      case 'produksi_blending':
+        setFormProduksiBlending(produksiBlendingData[index]);
+        break;
+      case 'produksi_npk_mini':
+        setFormProduksiNPKMini(produksiNPKMiniData[index]);
+        break;
+      case 'timesheet_forklift':
+        setFormTimesheetForklift(timesheetForkliftData[index]);
+        break;
+      case 'timesheet_loader':
+        setFormTimesheetLoader(timesheetLoaderData[index]);
+        break;
+      case 'downtime':
+        setFormDowntime(downtimeData[index]);
+        break;
+      case 'work_request':
+        setFormWorkRequest(workRequestData[index]);
+        break;
+      case 'bahan_baku':
+        setFormBahanBaku(bahanBakuData[index]);
+        break;
+      case 'vibrasi':
+        setFormVibrasi(vibrasiData[index]);
+        break;
+      case 'gate_pass':
+        setFormGatePass(gatePassData[index]);
+        break;
+      case 'akun':
+        setFormAkun(akunData[index]);
+        break;
+      case 'rkap':
+        setFormRKAP(rkapData[index]);
+        break;
+    }
+  };
+
+  // Calculate dashboard metrics
+  const calculateDashboardMetrics = () => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    // Total production this month
+    const monthlyProduction = produksiNPKData.filter(item => {
+      const itemDate = new Date(item.tanggal);
+      return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
+    }).reduce((sum, item) => sum + (item.total || 0), 0);
+
+    // Total production this year
+    const yearlyProduction = produksiNPKData.filter(item => {
+      const itemDate = new Date(item.tanggal);
+      return itemDate.getFullYear() === currentYear;
+    }).reduce((sum, item) => sum + (item.total || 0), 0);
+
+    // Get RKAP for current month
+    const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const currentMonthName = monthNames[currentMonth];
+    const monthlyRKAP = rkapData.find(r => r.bulan === currentMonthName)?.targetRKAP || 0;
+
+    // Total RKAP for year
+    const yearlyRKAP = rkapData.reduce((sum, item) => sum + item.targetRKAP, 0);
+
+    // Calculate percentages
+    const monthlyPercentage = monthlyRKAP > 0 ? (monthlyProduction / monthlyRKAP) * 100 : 0;
+    const yearlyPercentage = yearlyRKAP > 0 ? (yearlyProduction / yearlyRKAP) * 100 : 0;
+
+    // Monthly breakdown
+    const monthlyBreakdown = monthNames.map((month, index) => {
+      const monthData = produksiNPKData.filter(item => {
+        const itemDate = new Date(item.tanggal);
+        return itemDate.getMonth() === index && itemDate.getFullYear() === currentYear;
+      });
+      const production = monthData.reduce((sum, item) => sum + (item.total || 0), 0);
+      const rkap = rkapData.find(r => r.bulan === month)?.targetRKAP || 0;
+      const percentage = rkap > 0 ? (production / rkap) * 100 : 0;
+      
+      return {
+        bulan: month.substring(0, 3),
+        produksi: production,
+        rkap: rkap,
+        percentage: percentage
+      };
+    });
+
+    return {
+      monthlyProduction,
+      yearlyProduction,
+      monthlyRKAP,
+      yearlyRKAP,
+      monthlyPercentage,
+      yearlyPercentage,
+      monthlyBreakdown
+    };
+  };
+
+  const metrics = calculateDashboardMetrics();
+
+  // Render Dashboard
+  const renderDashboard = () => {
+    const COLORS = ['#9CAF88', '#6B7F5F', '#A8C99C', '#7D9370'];
+    
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="bg-gradient-to-br from-[#9CAF88] to-[#7D9370] text-white shadow-lg border-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                Produksi Bulan Ini
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{metrics.monthlyProduction.toFixed(2)} Ton</div>
+              <p className="text-xs mt-2 opacity-90">Target: {metrics.monthlyRKAP} Ton</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-[#6B7F5F] to-[#556650] text-white shadow-lg border-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Target className="w-4 h-4" />
+                Pencapaian Bulanan
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{metrics.monthlyPercentage.toFixed(1)}%</div>
+              <div className="w-full bg-white/20 rounded-full h-2 mt-3">
+                <div 
+                  className="bg-white h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(metrics.monthlyPercentage, 100)}%` }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-[#A8C99C] to-[#8FB380] text-white shadow-lg border-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Factory className="w-4 h-4" />
+                Produksi Tahun Ini
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{metrics.yearlyProduction.toFixed(2)} Ton</div>
+              <p className="text-xs mt-2 opacity-90">Target: {metrics.yearlyRKAP} Ton</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-[#7D9370] to-[#6A7E62] text-white shadow-lg border-none">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                {metrics.yearlyPercentage >= 100 ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                Pencapaian Tahunan
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{metrics.yearlyPercentage.toFixed(1)}%</div>
+              <div className="w-full bg-white/20 rounded-full h-2 mt-3">
+                <div 
+                  className="bg-white h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.min(metrics.yearlyPercentage, 100)}%` }}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Grafik Produksi vs RKAP Tahunan</CardTitle>
+              <CardDescription>Perbandingan produksi dengan target RKAP per bulan</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={metrics.monthlyBreakdown}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis dataKey="bulan" stroke="#666" />
+                  <YAxis stroke="#666" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #9CAF88' }}
+                    formatter={(value: number) => `${value.toFixed(2)} Ton`}
+                  />
+                  <Legend />
+                  <Bar dataKey="produksi" name="Produksi Aktual" fill="#9CAF88" radius={[8, 8, 0, 0]} />
+                  <Bar dataKey="rkap" name="Target RKAP" fill="#6B7F5F" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Persentase Pencapaian Bulanan</CardTitle>
+              <CardDescription>Tracking pencapaian terhadap RKAP setiap bulan</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={metrics.monthlyBreakdown}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis dataKey="bulan" stroke="#666" />
+                  <YAxis stroke="#666" unit="%" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #9CAF88' }}
+                    formatter={(value: number) => `${value.toFixed(1)}%`}
+                  />
+                  <Legend />
+                  <Line 
+                    type="monotone" 
+                    dataKey="percentage" 
+                    name="Pencapaian (%)" 
+                    stroke="#9CAF88" 
+                    strokeWidth={3}
+                    dot={{ fill: '#6B7F5F', r: 5 }}
+                    activeDot={{ r: 8 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="border-[#9CAF88]/30 shadow-md">
+          <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+            <CardTitle className="text-[#6B7F5F]">Detail Pencapaian Bulanan</CardTitle>
+            <CardDescription>Rincian produksi dan pencapaian setiap bulan</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#9CAF88]/30">
+                    <th className="text-left py-3 px-4 font-semibold text-[#6B7F5F]">Bulan</th>
+                    <th className="text-right py-3 px-4 font-semibold text-[#6B7F5F]">Produksi (Ton)</th>
+                    <th className="text-right py-3 px-4 font-semibold text-[#6B7F5F]">Target RKAP (Ton)</th>
+                    <th className="text-right py-3 px-4 font-semibold text-[#6B7F5F]">Pencapaian (%)</th>
+                    <th className="text-center py-3 px-4 font-semibold text-[#6B7F5F]">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {metrics.monthlyBreakdown.map((month, idx) => (
+                    <tr key={idx} className="border-b border-gray-100 hover:bg-[#9CAF88]/5">
+                      <td className="py-3 px-4 font-medium">{month.bulan}</td>
+                      <td className="text-right py-3 px-4">{month.produksi.toFixed(2)}</td>
+                      <td className="text-right py-3 px-4">{month.rkap.toFixed(2)}</td>
+                      <td className="text-right py-3 px-4 font-semibold">{month.percentage.toFixed(1)}%</td>
+                      <td className="text-center py-3 px-4">
+                        {month.percentage >= 100 ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[#9CAF88]/20 text-[#6B7F5F]">
+                            <CheckCircle className="w-3 h-3" /> Target Tercapai
+                          </span>
+                        ) : month.percentage >= 80 ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            <TrendingUp className="w-3 h-3" /> Mendekati Target
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <AlertCircle className="w-3 h-3" /> Perlu Peningkatan
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="border-[#9CAF88]/30 shadow-md hover:shadow-lg transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-sm text-[#6B7F5F]">Total Produksi Blending</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[#6B7F5F]">
+                {produksiBlendingData.reduce((sum, item) => sum + item.tonase, 0).toFixed(2)} Ton
+              </div>
+              <p className="text-xs text-gray-500 mt-1">{produksiBlendingData.length} transaksi</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-[#9CAF88]/30 shadow-md hover:shadow-lg transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-sm text-[#6B7F5F]">Total Produksi NPK Mini</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[#6B7F5F]">
+                {produksiNPKMiniData.reduce((sum, item) => sum + item.tonase, 0).toFixed(2)} Ton
+              </div>
+              <p className="text-xs text-gray-500 mt-1">{produksiNPKMiniData.length} transaksi</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-[#9CAF88]/30 shadow-md hover:shadow-lg transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-sm text-[#6B7F5F]">Total Downtime</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-[#6B7F5F]">
+                {downtimeData.reduce((sum, item) => sum + (item.downtime || 0), 0).toFixed(1)} Jam
+              </div>
+              <p className="text-xs text-gray-500 mt-1">{downtimeData.length} kejadian</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  };
+
+  // Render content based on active navigation
+  const renderContent = () => {
+    if (activeNav === 'home') {
+      return renderDashboard();
+    }
+
+    if (activeNav === 'produksi') {
+      if (activeTab === 'npk') {
+        return (
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Produksi NPK</CardTitle>
+              <CardDescription>Data produksi NPK harian per shift</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <div className="mb-4">
+                <Button 
+                  onClick={() => {
+                    setShowForm(!showForm);
+                    setEditingIndex(null);
+                    setFormProduksiNPK({
+                      tanggal: new Date().toISOString().split('T')[0],
+                      shiftMalamOnspek: 0,
+                      shiftMalamOffspek: 0,
+                      shiftPagiOnspek: 0,
+                      shiftPagiOffspek: 0,
+                      shiftSoreOnspek: 0,
+                      shiftSoreOffspek: 0,
+                    });
+                  }}
+                  className="bg-[#9CAF88] hover:bg-[#7D9370]"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {showForm ? 'Tutup Form' : 'Tambah Data'}
+                </Button>
+              </div>
+
+              {showForm && (
+                <form onSubmit={handleSubmitProduksiNPK} className="space-y-4 mb-8 p-6 border-2 border-[#9CAF88]/40 rounded-lg bg-white shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tanggal">Tanggal</Label>
+                    <Input
+                      id="tanggal"
+                      type="date"
+                      value={formProduksiNPK.tanggal}
+                      onChange={(e) => setFormProduksiNPK({ ...formProduksiNPK, tanggal: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3 text-[#6B7F5F]">Shift Malam</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="malamOnspek">Onspek (Ton)</Label>
+                      <Input
+                        id="malamOnspek"
+                        type="number"
+                        step="0.01"
+                        value={formProduksiNPK.shiftMalamOnspek}
+                        onChange={(e) => setFormProduksiNPK({ ...formProduksiNPK, shiftMalamOnspek: parseFloat(e.target.value) || 0 })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="malamOffspek">Offspek (Ton)</Label>
+                      <Input
+                        id="malamOffspek"
+                        type="number"
+                        step="0.01"
+                        value={formProduksiNPK.shiftMalamOffspek}
+                        onChange={(e) => setFormProduksiNPK({ ...formProduksiNPK, shiftMalamOffspek: parseFloat(e.target.value) || 0 })}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3 text-[#6B7F5F]">Shift Pagi</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="pagiOnspek">Onspek (Ton)</Label>
+                      <Input
+                        id="pagiOnspek"
+                        type="number"
+                        step="0.01"
+                        value={formProduksiNPK.shiftPagiOnspek}
+                        onChange={(e) => setFormProduksiNPK({ ...formProduksiNPK, shiftPagiOnspek: parseFloat(e.target.value) || 0 })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="pagiOffspek">Offspek (Ton)</Label>
+                      <Input
+                        id="pagiOffspek"
+                        type="number"
+                        step="0.01"
+                        value={formProduksiNPK.shiftPagiOffspek}
+                        onChange={(e) => setFormProduksiNPK({ ...formProduksiNPK, shiftPagiOffspek: parseFloat(e.target.value) || 0 })}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3 text-[#6B7F5F]">Shift Sore</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="soreOnspek">Onspek (Ton)</Label>
+                      <Input
+                        id="soreOnspek"
+                        type="number"
+                        step="0.01"
+                        value={formProduksiNPK.shiftSoreOnspek}
+                        onChange={(e) => setFormProduksiNPK({ ...formProduksiNPK, shiftSoreOnspek: parseFloat(e.target.value) || 0 })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="soreOffspek">Offspek (Ton)</Label>
+                      <Input
+                        id="soreOffspek"
+                        type="number"
+                        step="0.01"
+                        value={formProduksiNPK.shiftSoreOffspek}
+                        onChange={(e) => setFormProduksiNPK({ ...formProduksiNPK, shiftSoreOffspek: parseFloat(e.target.value) || 0 })}
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 bg-[#9CAF88]/10 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-3 text-[#6B7F5F]">Total (Otomatis)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label>Total Onspek</Label>
+                      <Input
+                        type="number"
+                        value={formProduksiNPK.totalOnspek?.toFixed(2) || '0.00'}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <Label>Total Offspek</Label>
+                      <Input
+                        type="number"
+                        value={formProduksiNPK.totalOffspek?.toFixed(2) || '0.00'}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <Label>Total Produksi</Label>
+                      <Input
+                        type="number"
+                        value={formProduksiNPK.total?.toFixed(2) || '0.00'}
+                        readOnly
+                        className="bg-gray-100 font-bold"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                    <Button type="submit" className="bg-[#9CAF88] hover:bg-[#7D9370]" disabled={loading}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      {loading ? 'Menyimpan...' : (editingIndex !== null ? 'Update Data' : 'Simpan Data')}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => {
+                        setShowForm(false);
+                        setEditingIndex(null);
+                      }}
+                    >
+                      Batal
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+              <div>
+                <h4 className="font-semibold mb-4 text-[#6B7F5F] text-lg">Data Produksi NPK</h4>
+                <div className="overflow-x-auto border border-[#9CAF88]/30 rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gradient-to-r from-[#9CAF88] to-[#A8C99C] text-white">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-semibold">Tanggal</th>
+                        <th className="text-right py-3 px-4 font-semibold">Total Onspek</th>
+                        <th className="text-right py-3 px-4 font-semibold">Total Offspek</th>
+                        <th className="text-right py-3 px-4 font-semibold">Total</th>
+                        <th className="text-center py-3 px-4 font-semibold">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {produksiNPKData.map((item, idx) => (
+                        <tr key={idx} className="border-b border-[#9CAF88]/20 hover:bg-[#9CAF88]/5 transition-colors">
+                          <td className="py-3 px-4 text-gray-700">{item.tanggal}</td>
+                          <td className="text-right py-3 px-4 text-gray-700">{item.totalOnspek?.toFixed(2)}</td>
+                          <td className="text-right py-3 px-4 text-gray-700">{item.totalOffspek?.toFixed(2)}</td>
+                          <td className="text-right py-3 px-4 font-semibold text-[#6B7F5F]">{item.total?.toFixed(2)}</td>
+                          <td className="text-center py-3 px-4">
+                            <div className="flex gap-2 justify-center">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEdit(idx, 'produksi_npk')}
+                                className="h-8 w-8 p-0 border-[#9CAF88] text-[#6B7F5F] hover:bg-[#9CAF88] hover:text-white"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDelete(idx, 'produksi_npk')}
+                                className="h-8 w-8 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      if (activeTab === 'blending') {
+        return (
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Produksi Blending</CardTitle>
+              <CardDescription>Data produksi blending</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <div className="mb-4">
+                <Button 
+                  onClick={() => {
+                    setShowForm(!showForm);
+                    setEditingIndex(null);
+                    setFormProduksiBlending({
+                      tanggal: new Date().toISOString().split('T')[0],
+                      kategori: 'Fresh',
+                      formula: '',
+                      tonase: 0,
+                    });
+                  }}
+                  className="bg-[#9CAF88] hover:bg-[#7D9370]"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {showForm ? 'Tutup Form' : 'Tambah Data'}
+                </Button>
+              </div>
+
+              {showForm && (
+                <form onSubmit={handleSubmitProduksiBlending} className="space-y-4 mb-8 p-6 border-2 border-[#9CAF88]/40 rounded-lg bg-white shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tanggalBlending">Tanggal</Label>
+                    <Input
+                      id="tanggalBlending"
+                      type="date"
+                      value={formProduksiBlending.tanggal}
+                      onChange={(e) => setFormProduksiBlending({ ...formProduksiBlending, tanggal: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="kategori">Kategori</Label>
+                    <Select value={formProduksiBlending.kategori} onValueChange={(value) => setFormProduksiBlending({ ...formProduksiBlending, kategori: value })}>
+                      <SelectTrigger id="kategori">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Fresh">Fresh</SelectItem>
+                        <SelectItem value="Oversack">Oversack</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="formula">Formula</Label>
+                    <Input
+                      id="formula"
+                      value={formProduksiBlending.formula}
+                      onChange={(e) => setFormProduksiBlending({ ...formProduksiBlending, formula: e.target.value })}
+                      placeholder="Contoh: NPK 15-15-15"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="tonaseBlending">Tonase</Label>
+                    <Input
+                      id="tonaseBlending"
+                      type="number"
+                      step="0.01"
+                      value={formProduksiBlending.tonase}
+                      onChange={(e) => setFormProduksiBlending({ ...formProduksiBlending, tonase: parseFloat(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                    <Button type="submit" className="bg-[#9CAF88] hover:bg-[#7D9370]" disabled={loading}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      {loading ? 'Menyimpan...' : (editingIndex !== null ? 'Update Data' : 'Simpan Data')}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => {
+                        setShowForm(false);
+                        setEditingIndex(null);
+                      }}
+                    >
+                      Batal
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+              <div>
+                <h4 className="font-semibold mb-4 text-[#6B7F5F] text-lg">Data Produksi Blending</h4>
+                <div className="overflow-x-auto border border-[#9CAF88]/30 rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gradient-to-r from-[#9CAF88] to-[#A8C99C] text-white">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-semibold">Tanggal</th>
+                        <th className="text-left py-3 px-4 font-semibold">Kategori</th>
+                        <th className="text-left py-3 px-4 font-semibold">Formula</th>
+                        <th className="text-right py-3 px-4 font-semibold">Tonase</th>
+                        <th className="text-center py-3 px-4 font-semibold">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {produksiBlendingData.map((item, idx) => (
+                        <tr key={idx} className="border-b border-[#9CAF88]/20 hover:bg-[#9CAF88]/5 transition-colors">
+                          <td className="py-3 px-4 text-gray-700">{item.tanggal}</td>
+                          <td className="py-3 px-4 text-gray-700">{item.kategori}</td>
+                          <td className="py-3 px-4 text-gray-700">{item.formula}</td>
+                          <td className="text-right py-3 px-4 text-gray-700">{item.tonase.toFixed(2)}</td>
+                          <td className="text-center py-3 px-4">
+                            <div className="flex gap-2 justify-center">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEdit(idx, 'produksi_blending')}
+                                className="h-8 w-8 p-0 border-[#9CAF88] text-[#6B7F5F] hover:bg-[#9CAF88] hover:text-white"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDelete(idx, 'produksi_blending')}
+                                className="h-8 w-8 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      if (activeTab === 'mini') {
+        return (
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Produksi NPK Mini</CardTitle>
+              <CardDescription>Data produksi NPK mini</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <div className="mb-4">
+                <Button 
+                  onClick={() => {
+                    setShowForm(!showForm);
+                    setEditingIndex(null);
+                    setFormProduksiNPKMini({
+                      tanggal: new Date().toISOString().split('T')[0],
+                      formulasi: '',
+                      tonase: 0,
+                    });
+                  }}
+                  className="bg-[#9CAF88] hover:bg-[#7D9370]"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  {showForm ? 'Tutup Form' : 'Tambah Data'}
+                </Button>
+              </div>
+
+              {showForm && (
+                <form onSubmit={handleSubmitProduksiNPKMini} className="space-y-4 mb-8 p-6 border-2 border-[#9CAF88]/40 rounded-lg bg-white shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tanggalMini">Tanggal</Label>
+                    <Input
+                      id="tanggalMini"
+                      type="date"
+                      value={formProduksiNPKMini.tanggal}
+                      onChange={(e) => setFormProduksiNPKMini({ ...formProduksiNPKMini, tanggal: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="formulasi">Formulasi</Label>
+                    <Input
+                      id="formulasi"
+                      value={formProduksiNPKMini.formulasi}
+                      onChange={(e) => setFormProduksiNPKMini({ ...formProduksiNPKMini, formulasi: e.target.value })}
+                      placeholder="Contoh: NPK Mini 16-16-16"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="tonaseMini">Tonase</Label>
+                    <Input
+                      id="tonaseMini"
+                      type="number"
+                      step="0.01"
+                      value={formProduksiNPKMini.tonase}
+                      onChange={(e) => setFormProduksiNPKMini({ ...formProduksiNPKMini, tonase: parseFloat(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                    <Button type="submit" className="bg-[#9CAF88] hover:bg-[#7D9370]" disabled={loading}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      {loading ? 'Menyimpan...' : (editingIndex !== null ? 'Update Data' : 'Simpan Data')}
+                    </Button>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => {
+                        setShowForm(false);
+                        setEditingIndex(null);
+                      }}
+                    >
+                      Batal
+                    </Button>
+                  </div>
+                </form>
+              )}
+
+              <div>
+                <h4 className="font-semibold mb-4 text-[#6B7F5F] text-lg">Data Produksi NPK Mini</h4>
+                <div className="overflow-x-auto border border-[#9CAF88]/30 rounded-lg">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gradient-to-r from-[#9CAF88] to-[#A8C99C] text-white">
+                      <tr>
+                        <th className="text-left py-3 px-4 font-semibold">Tanggal</th>
+                        <th className="text-left py-3 px-4 font-semibold">Formulasi</th>
+                        <th className="text-right py-3 px-4 font-semibold">Tonase</th>
+                        <th className="text-center py-3 px-4 font-semibold">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {produksiNPKMiniData.map((item, idx) => (
+                        <tr key={idx} className="border-b border-[#9CAF88]/20 hover:bg-[#9CAF88]/5 transition-colors">
+                          <td className="py-3 px-4 text-gray-700">{item.tanggal}</td>
+                          <td className="py-3 px-4 text-gray-700">{item.formulasi}</td>
+                          <td className="text-right py-3 px-4 text-gray-700">{item.tonase.toFixed(2)}</td>
+                          <td className="text-center py-3 px-4">
+                            <div className="flex gap-2 justify-center">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEdit(idx, 'produksi_npk_mini')}
+                                className="h-8 w-8 p-0 border-[#9CAF88] text-[#6B7F5F] hover:bg-[#9CAF88] hover:text-white"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDelete(idx, 'produksi_npk_mini')}
+                                className="h-8 w-8 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+    }
+
+    if (activeNav === 'laporan') {
+      if (activeTab === 'forklift') {
+        return (
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Timesheet Forklift</CardTitle>
+              <CardDescription>Input timesheet dan tracking downtime forklift</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <form onSubmit={handleSubmitTimesheetForklift} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tanggalForklift">Tanggal</Label>
+                    <Input
+                      id="tanggalForklift"
+                      type="date"
+                      value={formTimesheetForklift.tanggal}
+                      onChange={(e) => setFormTimesheetForklift({ ...formTimesheetForklift, tanggal: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="forklift">Forklift</Label>
+                    <Select value={formTimesheetForklift.forklift} onValueChange={(value) => setFormTimesheetForklift({ ...formTimesheetForklift, forklift: value })}>
+                      <SelectTrigger id="forklift">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="F19">F19</SelectItem>
+                        <SelectItem value="F20">F20</SelectItem>
+                        <SelectItem value="F21">F21</SelectItem>
+                        <SelectItem value="F22">F22</SelectItem>
+                        <SelectItem value="F23">F23</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="deskripsiTemuanForklift">Deskripsi Temuan</Label>
+                    <Input
+                      id="deskripsiTemuanForklift"
+                      value={formTimesheetForklift.deskripsiTemuan}
+                      onChange={(e) => setFormTimesheetForklift({ ...formTimesheetForklift, deskripsiTemuan: e.target.value })}
+                      placeholder="Deskripsi masalah atau temuan"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="jamOffForklift">Jam Off</Label>
+                    <Input
+                      id="jamOffForklift"
+                      type="number"
+                      step="0.1"
+                      value={formTimesheetForklift.jamOff}
+                      onChange={(e) => setFormTimesheetForklift({ ...formTimesheetForklift, jamOff: e.target.value })}
+                      placeholder="Contoh: 8.5"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="jamStartForklift">Jam Start</Label>
+                    <Input
+                      id="jamStartForklift"
+                      type="number"
+                      step="0.1"
+                      value={formTimesheetForklift.jamStart}
+                      onChange={(e) => setFormTimesheetForklift({ ...formTimesheetForklift, jamStart: e.target.value })}
+                      placeholder="Contoh: 10.5"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 bg-[#9CAF88]/10 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-3 text-[#6B7F5F]">Kalkulasi Otomatis</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label>Jam Grounded</Label>
+                      <Input
+                        type="number"
+                        value={formTimesheetForklift.jamGrounded?.toFixed(1) || '0.0'}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <Label>Jam Operasi</Label>
+                      <Input
+                        type="number"
+                        value={formTimesheetForklift.jamOperasi?.toFixed(1) || '0.0'}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <Label>Keterangan</Label>
+                      <Input
+                        type="text"
+                        value={formTimesheetForklift.keterangan || '-'}
+                        readOnly
+                        className={`font-semibold ${formTimesheetForklift.keterangan === 'Grounded' ? 'bg-red-100' : 'bg-green-100'}`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Button type="submit" className="bg-[#9CAF88] hover:bg-[#7D9370]" disabled={loading}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {loading ? 'Menyimpan...' : 'Simpan Data'}
+                </Button>
+              </form>
+
+              <div className="mt-8">
+                <h4 className="font-semibold mb-4 text-[#6B7F5F]">Data Timesheet Forklift</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#9CAF88]/20">
+                      <tr>
+                        <th className="text-left py-2 px-3">Tanggal</th>
+                        <th className="text-left py-2 px-3">Forklift</th>
+                        <th className="text-left py-2 px-3">Deskripsi</th>
+                        <th className="text-right py-2 px-3">Jam Grounded</th>
+                        <th className="text-right py-2 px-3">Jam Operasi</th>
+                        <th className="text-center py-2 px-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {timesheetForkliftData.map((item, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="py-2 px-3">{item.tanggal}</td>
+                          <td className="py-2 px-3">{item.forklift}</td>
+                          <td className="py-2 px-3">{item.deskripsiTemuan}</td>
+                          <td className="text-right py-2 px-3">{item.jamGrounded?.toFixed(1)}</td>
+                          <td className="text-right py-2 px-3">{item.jamOperasi?.toFixed(1)}</td>
+                          <td className="text-center py-2 px-3">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${item.keterangan === 'Grounded' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                              {item.keterangan}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      if (activeTab === 'loader') {
+        return (
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Timesheet Loader</CardTitle>
+              <CardDescription>Input timesheet dan tracking downtime loader per shift</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <form onSubmit={handleSubmitTimesheetLoader} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tanggalLoader">Tanggal</Label>
+                    <Input
+                      id="tanggalLoader"
+                      type="date"
+                      value={formTimesheetLoader.tanggal}
+                      onChange={(e) => setFormTimesheetLoader({ ...formTimesheetLoader, tanggal: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="shiftLoader">Shift</Label>
+                    <Select value={formTimesheetLoader.shift} onValueChange={(value) => setFormTimesheetLoader({ ...formTimesheetLoader, shift: value })}>
+                      <SelectTrigger id="shiftLoader">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Malam">Malam</SelectItem>
+                        <SelectItem value="Pagi">Pagi</SelectItem>
+                        <SelectItem value="Sore">Sore</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="deskripsiTemuanLoader">Deskripsi Temuan</Label>
+                    <Input
+                      id="deskripsiTemuanLoader"
+                      value={formTimesheetLoader.deskripsiTemuan}
+                      onChange={(e) => setFormTimesheetLoader({ ...formTimesheetLoader, deskripsiTemuan: e.target.value })}
+                      placeholder="Deskripsi masalah atau temuan"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="jamOffLoader">Jam Off</Label>
+                    <Input
+                      id="jamOffLoader"
+                      type="number"
+                      step="0.1"
+                      value={formTimesheetLoader.jamOff}
+                      onChange={(e) => setFormTimesheetLoader({ ...formTimesheetLoader, jamOff: e.target.value })}
+                      placeholder="Contoh: 8.5"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="jamStartLoader">Jam Start</Label>
+                    <Input
+                      id="jamStartLoader"
+                      type="number"
+                      step="0.1"
+                      value={formTimesheetLoader.jamStart}
+                      onChange={(e) => setFormTimesheetLoader({ ...formTimesheetLoader, jamStart: e.target.value })}
+                      placeholder="Contoh: 10.5"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 bg-[#9CAF88]/10 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-3 text-[#6B7F5F]">Kalkulasi Otomatis</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label>Jam Grounded</Label>
+                      <Input
+                        type="number"
+                        value={formTimesheetLoader.jamGrounded?.toFixed(1) || '0.0'}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <Label>Jam Operasi</Label>
+                      <Input
+                        type="number"
+                        value={formTimesheetLoader.jamOperasi?.toFixed(1) || '0.0'}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <Label>Keterangan</Label>
+                      <Input
+                        type="text"
+                        value={formTimesheetLoader.keterangan || '-'}
+                        readOnly
+                        className={`font-semibold ${formTimesheetLoader.keterangan === 'Grounded' ? 'bg-red-100' : 'bg-green-100'}`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Button type="submit" className="bg-[#9CAF88] hover:bg-[#7D9370]" disabled={loading}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {loading ? 'Menyimpan...' : 'Simpan Data'}
+                </Button>
+              </form>
+
+              <div className="mt-8">
+                <h4 className="font-semibold mb-4 text-[#6B7F5F]">Data Timesheet Loader</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#9CAF88]/20">
+                      <tr>
+                        <th className="text-left py-2 px-3">Tanggal</th>
+                        <th className="text-left py-2 px-3">Shift</th>
+                        <th className="text-left py-2 px-3">Deskripsi</th>
+                        <th className="text-right py-2 px-3">Jam Grounded</th>
+                        <th className="text-right py-2 px-3">Jam Operasi</th>
+                        <th className="text-center py-2 px-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {timesheetLoaderData.map((item, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="py-2 px-3">{item.tanggal}</td>
+                          <td className="py-2 px-3">{item.shift}</td>
+                          <td className="py-2 px-3">{item.deskripsiTemuan}</td>
+                          <td className="text-right py-2 px-3">{item.jamGrounded?.toFixed(1)}</td>
+                          <td className="text-right py-2 px-3">{item.jamOperasi?.toFixed(1)}</td>
+                          <td className="text-center py-2 px-3">
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${item.keterangan === 'Grounded' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                              {item.keterangan}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      if (activeTab === 'downtime') {
+        return (
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Downtime</CardTitle>
+              <CardDescription>Input data downtime peralatan</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <form onSubmit={handleSubmitDowntime} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tanggalDowntime">Tanggal</Label>
+                    <Input
+                      id="tanggalDowntime"
+                      type="date"
+                      value={formDowntime.tanggal}
+                      onChange={(e) => setFormDowntime({ ...formDowntime, tanggal: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="itemDowntime">Item</Label>
+                    <Input
+                      id="itemDowntime"
+                      value={formDowntime.item}
+                      onChange={(e) => setFormDowntime({ ...formDowntime, item: e.target.value })}
+                      placeholder="Nama peralatan"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="deskripsiDowntime">Deskripsi/Kendala</Label>
+                    <Input
+                      id="deskripsiDowntime"
+                      value={formDowntime.deskripsi}
+                      onChange={(e) => setFormDowntime({ ...formDowntime, deskripsi: e.target.value })}
+                      placeholder="Deskripsi masalah atau kendala"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="jamOffDowntime">Jam Off</Label>
+                    <Input
+                      id="jamOffDowntime"
+                      type="number"
+                      step="0.1"
+                      value={formDowntime.jamOff}
+                      onChange={(e) => setFormDowntime({ ...formDowntime, jamOff: e.target.value })}
+                      placeholder="Contoh: 8.5"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="jamStartDowntime">Jam Start</Label>
+                    <Input
+                      id="jamStartDowntime"
+                      type="number"
+                      step="0.1"
+                      value={formDowntime.jamStart}
+                      onChange={(e) => setFormDowntime({ ...formDowntime, jamStart: e.target.value })}
+                      placeholder="Contoh: 10.5"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t pt-4 bg-[#9CAF88]/10 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-3 text-[#6B7F5F]">Kalkulasi Otomatis</h4>
+                  <div>
+                    <Label>Downtime (Jam)</Label>
+                    <Input
+                      type="number"
+                      value={formDowntime.downtime?.toFixed(1) || '0.0'}
+                      readOnly
+                      className="bg-gray-100 font-bold"
+                    />
+                  </div>
+                </div>
+
+                <Button type="submit" className="bg-[#9CAF88] hover:bg-[#7D9370]" disabled={loading}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {loading ? 'Menyimpan...' : 'Simpan Data'}
+                </Button>
+              </form>
+
+              <div className="mt-8">
+                <h4 className="font-semibold mb-4 text-[#6B7F5F]">Data Downtime</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#9CAF88]/20">
+                      <tr>
+                        <th className="text-left py-2 px-3">Tanggal</th>
+                        <th className="text-left py-2 px-3">Item</th>
+                        <th className="text-left py-2 px-3">Deskripsi</th>
+                        <th className="text-right py-2 px-3">Jam Off</th>
+                        <th className="text-right py-2 px-3">Jam Start</th>
+                        <th className="text-right py-2 px-3">Downtime</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {downtimeData.map((item, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="py-2 px-3">{item.tanggal}</td>
+                          <td className="py-2 px-3">{item.item}</td>
+                          <td className="py-2 px-3">{item.deskripsi}</td>
+                          <td className="text-right py-2 px-3">{item.jamOff}</td>
+                          <td className="text-right py-2 px-3">{item.jamStart}</td>
+                          <td className="text-right py-2 px-3 font-semibold">{item.downtime?.toFixed(1)} jam</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+    }
+
+    if (activeNav === 'data') {
+      if (activeTab === 'workrequest') {
+        return (
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Work Request</CardTitle>
+              <CardDescription>Input data work request pekerjaan</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <form onSubmit={handleSubmitWorkRequest} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tanggalWR">Tanggal</Label>
+                    <Input
+                      id="tanggalWR"
+                      type="date"
+                      value={formWorkRequest.tanggal}
+                      onChange={(e) => setFormWorkRequest({ ...formWorkRequest, tanggal: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="nomorWR">Nomor Work Request</Label>
+                    <Input
+                      id="nomorWR"
+                      value={formWorkRequest.nomorWR}
+                      onChange={(e) => setFormWorkRequest({ ...formWorkRequest, nomorWR: e.target.value })}
+                      placeholder="Contoh: WR-2025-001"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="itemWR">Item</Label>
+                    <Input
+                      id="itemWR"
+                      value={formWorkRequest.item}
+                      onChange={(e) => setFormWorkRequest({ ...formWorkRequest, item: e.target.value })}
+                      placeholder="Nama item/peralatan"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="areaWR">Area</Label>
+                    <Input
+                      id="areaWR"
+                      value={formWorkRequest.area}
+                      onChange={(e) => setFormWorkRequest({ ...formWorkRequest, area: e.target.value })}
+                      placeholder="Lokasi area kerja"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="eksekutorWR">Eksekutor</Label>
+                    <Input
+                      id="eksekutorWR"
+                      value={formWorkRequest.eksekutor}
+                      onChange={(e) => setFormWorkRequest({ ...formWorkRequest, eksekutor: e.target.value })}
+                      placeholder="Nama eksekutor"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="includeWR">Include</Label>
+                    <Input
+                      id="includeWR"
+                      value={formWorkRequest.include}
+                      onChange={(e) => setFormWorkRequest({ ...formWorkRequest, include: e.target.value })}
+                      placeholder="Yang termasuk dalam pekerjaan"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="deskripsiPekerjaan">Deskripsi Pekerjaan</Label>
+                    <Input
+                      id="deskripsiPekerjaan"
+                      value={formWorkRequest.deskripsiPekerjaan}
+                      onChange={(e) => setFormWorkRequest({ ...formWorkRequest, deskripsiPekerjaan: e.target.value })}
+                      placeholder="Detail pekerjaan yang akan dilakukan"
+                      required
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="bg-[#9CAF88] hover:bg-[#7D9370]" disabled={loading}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {loading ? 'Menyimpan...' : 'Simpan Data'}
+                </Button>
+              </form>
+
+              <div className="mt-8">
+                <h4 className="font-semibold mb-4 text-[#6B7F5F]">Data Work Request</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#9CAF88]/20">
+                      <tr>
+                        <th className="text-left py-2 px-3">Tanggal</th>
+                        <th className="text-left py-2 px-3">No. WR</th>
+                        <th className="text-left py-2 px-3">Item</th>
+                        <th className="text-left py-2 px-3">Area</th>
+                        <th className="text-left py-2 px-3">Eksekutor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {workRequestData.map((item, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="py-2 px-3">{item.tanggal}</td>
+                          <td className="py-2 px-3">{item.nomorWR}</td>
+                          <td className="py-2 px-3">{item.item}</td>
+                          <td className="py-2 px-3">{item.area}</td>
+                          <td className="py-2 px-3">{item.eksekutor}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      if (activeTab === 'bahanbaku') {
+        return (
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Bahan Baku</CardTitle>
+              <CardDescription>Input data bahan baku</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <form onSubmit={handleSubmitBahanBaku} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tanggalBahan">Tanggal</Label>
+                    <Input
+                      id="tanggalBahan"
+                      type="date"
+                      value={formBahanBaku.tanggal}
+                      onChange={(e) => setFormBahanBaku({ ...formBahanBaku, tanggal: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="jenisBahanBaku">Jenis Bahan Baku</Label>
+                    <Select value={formBahanBaku.jenisBahanBaku} onValueChange={(value) => setFormBahanBaku({ ...formBahanBaku, jenisBahanBaku: value })}>
+                      <SelectTrigger id="jenisBahanBaku">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Urea">Urea</SelectItem>
+                        <SelectItem value="DAP">DAP</SelectItem>
+                        <SelectItem value="KCL">KCL</SelectItem>
+                        <SelectItem value="ZA">ZA</SelectItem>
+                        <SelectItem value="Clay">Clay</SelectItem>
+                        <SelectItem value="Silica">Silica</SelectItem>
+                        <SelectItem value="Pewarna">Pewarna</SelectItem>
+                        <SelectItem value="Dolomite">Dolomite</SelectItem>
+                        <SelectItem value="Coating Oil">Coating Oil</SelectItem>
+                        <SelectItem value="Amnit">Amnit</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="tonaseBahan">Tonase/Berat</Label>
+                    <Input
+                      id="tonaseBahan"
+                      type="number"
+                      step="0.01"
+                      value={formBahanBaku.tonase}
+                      onChange={(e) => setFormBahanBaku({ ...formBahanBaku, tonase: parseFloat(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="keteranganBahan">Keterangan</Label>
+                    <Input
+                      id="keteranganBahan"
+                      value={formBahanBaku.keterangan}
+                      onChange={(e) => setFormBahanBaku({ ...formBahanBaku, keterangan: e.target.value })}
+                      placeholder="Keterangan tambahan"
+                      required
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="bg-[#9CAF88] hover:bg-[#7D9370]" disabled={loading}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {loading ? 'Menyimpan...' : 'Simpan Data'}
+                </Button>
+              </form>
+
+              <div className="mt-8">
+                <h4 className="font-semibold mb-4 text-[#6B7F5F]">Data Bahan Baku</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#9CAF88]/20">
+                      <tr>
+                        <th className="text-left py-2 px-3">Tanggal</th>
+                        <th className="text-left py-2 px-3">Jenis Bahan</th>
+                        <th className="text-right py-2 px-3">Tonase</th>
+                        <th className="text-left py-2 px-3">Keterangan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {bahanBakuData.map((item, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="py-2 px-3">{item.tanggal}</td>
+                          <td className="py-2 px-3">{item.jenisBahanBaku}</td>
+                          <td className="text-right py-2 px-3">{item.tonase.toFixed(2)}</td>
+                          <td className="py-2 px-3">{item.keterangan}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      if (activeTab === 'vibrasi') {
+        return (
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Vibrasi</CardTitle>
+              <CardDescription>Input data pengukuran vibrasi equipment</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <form onSubmit={handleSubmitVibrasi} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="tanggalVibrasi">Tanggal</Label>
+                    <Input
+                      id="tanggalVibrasi"
+                      type="date"
+                      value={formVibrasi.tanggal}
+                      onChange={(e) => setFormVibrasi({ ...formVibrasi, tanggal: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="equipmentVibrasi">Equipment</Label>
+                    <Input
+                      id="equipmentVibrasi"
+                      value={formVibrasi.equipment}
+                      onChange={(e) => setFormVibrasi({ ...formVibrasi, equipment: e.target.value })}
+                      placeholder="Nama equipment"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="positionVibrasi">Position</Label>
+                    <Select value={formVibrasi.position} onValueChange={(value) => setFormVibrasi({ ...formVibrasi, position: value })}>
+                      <SelectTrigger id="positionVibrasi">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Horizontal">Horizontal</SelectItem>
+                        <SelectItem value="Vertical">Vertical</SelectItem>
+                        <SelectItem value="Axial">Axial</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="pointVibrasi">Point</Label>
+                    <Select value={formVibrasi.point} onValueChange={(value) => setFormVibrasi({ ...formVibrasi, point: value })}>
+                      <SelectTrigger id="pointVibrasi">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="A">A</SelectItem>
+                        <SelectItem value="B">B</SelectItem>
+                        <SelectItem value="C">C</SelectItem>
+                        <SelectItem value="D">D</SelectItem>
+                        <SelectItem value="E">E</SelectItem>
+                        <SelectItem value="F">F</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="nilaiVibrasi">Nilai</Label>
+                    <Input
+                      id="nilaiVibrasi"
+                      type="number"
+                      step="0.01"
+                      value={formVibrasi.nilai}
+                      onChange={(e) => setFormVibrasi({ ...formVibrasi, nilai: parseFloat(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="keteranganVibrasi">Keterangan</Label>
+                    <Input
+                      id="keteranganVibrasi"
+                      value={formVibrasi.keterangan}
+                      onChange={(e) => setFormVibrasi({ ...formVibrasi, keterangan: e.target.value })}
+                      placeholder="Keterangan kondisi"
+                      required
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="bg-[#9CAF88] hover:bg-[#7D9370]" disabled={loading}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {loading ? 'Menyimpan...' : 'Simpan Data'}
+                </Button>
+              </form>
+
+              <div className="mt-8">
+                <h4 className="font-semibold mb-4 text-[#6B7F5F]">Data Vibrasi</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#9CAF88]/20">
+                      <tr>
+                        <th className="text-left py-2 px-3">Tanggal</th>
+                        <th className="text-left py-2 px-3">Equipment</th>
+                        <th className="text-left py-2 px-3">Position</th>
+                        <th className="text-left py-2 px-3">Point</th>
+                        <th className="text-right py-2 px-3">Nilai</th>
+                        <th className="text-left py-2 px-3">Keterangan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vibrasiData.map((item, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="py-2 px-3">{item.tanggal}</td>
+                          <td className="py-2 px-3">{item.equipment}</td>
+                          <td className="py-2 px-3">{item.position}</td>
+                          <td className="py-2 px-3">{item.point}</td>
+                          <td className="text-right py-2 px-3">{item.nilai.toFixed(2)}</td>
+                          <td className="py-2 px-3">{item.keterangan}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      if (activeTab === 'gatepass') {
+        return (
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Gate Pass</CardTitle>
+              <CardDescription>Input data gate pass untuk pengeluaran barang</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <form onSubmit={handleSubmitGatePass} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="noFile">No. File (Otomatis)</Label>
+                    <Input
+                      id="noFile"
+                      value={formGatePass.noFile}
+                      readOnly
+                      className="bg-gray-100 font-semibold"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="tanggalGate">Tanggal</Label>
+                    <Input
+                      id="tanggalGate"
+                      type="date"
+                      value={formGatePass.tanggal}
+                      onChange={(e) => setFormGatePass({ ...formGatePass, tanggal: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="noPol">No. Pol</Label>
+                    <Input
+                      id="noPol"
+                      value={formGatePass.noPol}
+                      onChange={(e) => setFormGatePass({ ...formGatePass, noPol: e.target.value })}
+                      placeholder="Nomor polisi kendaraan"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="pemilikBarang">Pemilik Barang</Label>
+                    <Input
+                      id="pemilikBarang"
+                      value={formGatePass.pemilikBarang}
+                      onChange={(e) => setFormGatePass({ ...formGatePass, pemilikBarang: e.target.value })}
+                      placeholder="Nama pemilik barang"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="namaPembawa">Nama Pembawa</Label>
+                    <Input
+                      id="namaPembawa"
+                      value={formGatePass.namaPembawa}
+                      onChange={(e) => setFormGatePass({ ...formGatePass, namaPembawa: e.target.value })}
+                      placeholder="Nama pembawa barang"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="namaBarang">Nama Barang</Label>
+                    <Input
+                      id="namaBarang"
+                      value={formGatePass.namaBarang}
+                      onChange={(e) => setFormGatePass({ ...formGatePass, namaBarang: e.target.value })}
+                      placeholder="Nama barang yang keluar"
+                      required
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label htmlFor="alasanMengeluarkan">Alasan Mengeluarkan Barang</Label>
+                    <Input
+                      id="alasanMengeluarkan"
+                      value={formGatePass.alasanMengeluarkan}
+                      onChange={(e) => setFormGatePass({ ...formGatePass, alasanMengeluarkan: e.target.value })}
+                      placeholder="Alasan pengeluaran barang"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="approver">Approver</Label>
+                    <Input
+                      id="approver"
+                      value={formGatePass.approver}
+                      onChange={(e) => setFormGatePass({ ...formGatePass, approver: e.target.value })}
+                      placeholder="Nama yang menyetujui"
+                      required
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="bg-[#9CAF88] hover:bg-[#7D9370]" disabled={loading}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {loading ? 'Menyimpan...' : 'Simpan Data'}
+                </Button>
+              </form>
+
+              <div className="mt-8">
+                <h4 className="font-semibold mb-4 text-[#6B7F5F]">Data Gate Pass</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#9CAF88]/20">
+                      <tr>
+                        <th className="text-left py-2 px-3">No. File</th>
+                        <th className="text-left py-2 px-3">Tanggal</th>
+                        <th className="text-left py-2 px-3">No. Pol</th>
+                        <th className="text-left py-2 px-3">Nama Barang</th>
+                        <th className="text-left py-2 px-3">Pembawa</th>
+                        <th className="text-left py-2 px-3">Approver</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {gatePassData.map((item, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="py-2 px-3 font-mono text-xs">{item.noFile}</td>
+                          <td className="py-2 px-3">{item.tanggal}</td>
+                          <td className="py-2 px-3">{item.noPol}</td>
+                          <td className="py-2 px-3">{item.namaBarang}</td>
+                          <td className="py-2 px-3">{item.namaPembawa}</td>
+                          <td className="py-2 px-3">{item.approver}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+    }
+
+    if (activeNav === 'setting') {
+      if (activeTab === 'akun') {
+        return (
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">Akun</CardTitle>
+              <CardDescription>Manajemen akun dan password</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <form onSubmit={handleSubmitAkun} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="noBadge">No. Badge</Label>
+                    <Input
+                      id="noBadge"
+                      value={formAkun.noBadge}
+                      onChange={(e) => setFormAkun({ ...formAkun, noBadge: e.target.value })}
+                      placeholder="Nomor badge karyawan"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="namaAkun">Nama</Label>
+                    <Input
+                      id="namaAkun"
+                      value={formAkun.nama}
+                      onChange={(e) => setFormAkun({ ...formAkun, nama: e.target.value })}
+                      placeholder="Nama lengkap"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="jabatan">Jabatan</Label>
+                    <Input
+                      id="jabatan"
+                      value={formAkun.jabatan}
+                      onChange={(e) => setFormAkun({ ...formAkun, jabatan: e.target.value })}
+                      placeholder="Jabatan"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="passwordESS">Password ESS</Label>
+                    <Input
+                      id="passwordESS"
+                      type="password"
+                      value={formAkun.passwordESS}
+                      onChange={(e) => setFormAkun({ ...formAkun, passwordESS: e.target.value })}
+                      placeholder="Password ESS"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="passwordPismart">Password Pismart</Label>
+                    <Input
+                      id="passwordPismart"
+                      type="password"
+                      value={formAkun.passwordPismart}
+                      onChange={(e) => setFormAkun({ ...formAkun, passwordPismart: e.target.value })}
+                      placeholder="Password Pismart"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="passwordDOF">Password DOF</Label>
+                    <Input
+                      id="passwordDOF"
+                      type="password"
+                      value={formAkun.passwordDOF}
+                      onChange={(e) => setFormAkun({ ...formAkun, passwordDOF: e.target.value })}
+                      placeholder="Password DOF"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="tanggalUpdate">Tanggal Terakhir Update</Label>
+                    <Input
+                      id="tanggalUpdate"
+                      type="date"
+                      value={formAkun.tanggalUpdate}
+                      onChange={(e) => setFormAkun({ ...formAkun, tanggalUpdate: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="bg-[#9CAF88] hover:bg-[#7D9370]" disabled={loading}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {loading ? 'Menyimpan...' : 'Simpan Data'}
+                </Button>
+              </form>
+
+              <div className="mt-8">
+                <h4 className="font-semibold mb-4 text-[#6B7F5F]">Data Akun</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#9CAF88]/20">
+                      <tr>
+                        <th className="text-left py-2 px-3">No. Badge</th>
+                        <th className="text-left py-2 px-3">Nama</th>
+                        <th className="text-left py-2 px-3">Jabatan</th>
+                        <th className="text-left py-2 px-3">Tanggal Update</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {akunData.map((item, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="py-2 px-3">{item.noBadge}</td>
+                          <td className="py-2 px-3">{item.nama}</td>
+                          <td className="py-2 px-3">{item.jabatan}</td>
+                          <td className="py-2 px-3">{item.tanggalUpdate}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      if (activeTab === 'rkap') {
+        return (
+          <Card className="border-[#9CAF88]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#9CAF88]/10 to-[#A8C99C]/10 border-b border-[#9CAF88]/20">
+              <CardTitle className="text-[#6B7F5F]">RKAP (Rencana Kerja dan Anggaran Perusahaan)</CardTitle>
+              <CardDescription>Setting target produksi bulanan</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <form onSubmit={handleSubmitRKAP} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="bulanRKAP">Bulan</Label>
+                    <Select value={formRKAP.bulan} onValueChange={(value) => setFormRKAP({ ...formRKAP, bulan: value })}>
+                      <SelectTrigger id="bulanRKAP">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Januari">Januari</SelectItem>
+                        <SelectItem value="Februari">Februari</SelectItem>
+                        <SelectItem value="Maret">Maret</SelectItem>
+                        <SelectItem value="April">April</SelectItem>
+                        <SelectItem value="Mei">Mei</SelectItem>
+                        <SelectItem value="Juni">Juni</SelectItem>
+                        <SelectItem value="Juli">Juli</SelectItem>
+                        <SelectItem value="Agustus">Agustus</SelectItem>
+                        <SelectItem value="September">September</SelectItem>
+                        <SelectItem value="Oktober">Oktober</SelectItem>
+                        <SelectItem value="November">November</SelectItem>
+                        <SelectItem value="Desember">Desember</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="targetRKAP">Target RKAP (Ton)</Label>
+                    <Input
+                      id="targetRKAP"
+                      type="number"
+                      step="0.01"
+                      value={formRKAP.targetRKAP}
+                      onChange={(e) => setFormRKAP({ ...formRKAP, targetRKAP: parseFloat(e.target.value) || 0 })}
+                      required
+                    />
+                  </div>
+                </div>
+                <Button type="submit" className="bg-[#9CAF88] hover:bg-[#7D9370]" disabled={loading}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  {loading ? 'Menyimpan...' : 'Simpan Data'}
+                </Button>
+              </form>
+
+              <div className="mt-8">
+                <h4 className="font-semibold mb-4 text-[#6B7F5F]">Data RKAP</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#9CAF88]/20">
+                      <tr>
+                        <th className="text-left py-2 px-3">Bulan</th>
+                        <th className="text-right py-2 px-3">Target RKAP (Ton)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rkapData.map((item, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="py-2 px-3 font-semibold">{item.bulan}</td>
+                          <td className="text-right py-2 px-3">{item.targetRKAP.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+    }
+
+    return (
+      <Card>
+        <CardContent className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <p className="text-gray-500">Pilih menu untuk memulai</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const navItems = [
+    { id: 'home', icon: Home, label: 'Home', tabs: [] },
+    { 
+      id: 'produksi', 
+      icon: Factory, 
+      label: 'Produksi', 
+      tabs: [
+        { id: 'npk', label: 'Produksi NPK' },
+        { id: 'blending', label: 'Produksi Blending' },
+        { id: 'mini', label: 'Produksi NPK Mini' }
+      ]
+    },
+    { 
+      id: 'laporan', 
+      icon: FileText, 
+      label: 'Laporan', 
+      tabs: [
+        { id: 'forklift', label: 'Timesheet Forklift' },
+        { id: 'loader', label: 'Timesheet Loader' },
+        { id: 'downtime', label: 'Downtime' }
+      ]
+    },
+    { 
+      id: 'data', 
+      icon: Database, 
+      label: 'Data', 
+      tabs: [
+        { id: 'workrequest', label: 'Work Request' },
+        { id: 'bahanbaku', label: 'Bahan Baku' },
+        { id: 'vibrasi', label: 'Vibrasi' },
+        { id: 'gatepass', label: 'Gate Pass' }
+      ]
+    },
+    { 
+      id: 'setting', 
+      icon: Settings, 
+      label: 'Setting', 
+      tabs: [
+        { id: 'akun', label: 'Akun' },
+        { id: 'rkap', label: 'RKAP' }
+      ]
+    }
+  ];
+
+  const handleNavClick = (navId: string) => {
+    setActiveNav(navId);
+    const nav = navItems.find(item => item.id === navId);
+    if (nav && nav.tabs && nav.tabs.length > 0) {
+      setActiveTab(nav.tabs[0].id);
+    } else {
+      setActiveTab('');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-[#E8EDE5] to-[#D4DDD0] flex">
+      <aside className="w-64 bg-gradient-to-b from-[#9CAF88] to-[#7D9370] text-white flex flex-col">
+        <div className="p-6 border-b border-white/20">
+          <h1 className="text-2xl font-bold">NPK Production</h1>
+          <p className="text-sm opacity-90 mt-1">Management System</p>
+        </div>
+        
+        <nav className="flex-1 py-4">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.id}>
+                <button
+                  onClick={() => handleNavClick(item.id)}
+                  className={`w-full flex items-center gap-3 px-6 py-3 transition-all ${
+                    activeNav === item.id 
+                      ? 'bg-white/20 border-l-4 border-white' 
+                      : 'hover:bg-white/10'
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="font-medium">{item.label}</span>
+                </button>
+                
+                {activeNav === item.id && item.tabs && item.tabs.length > 0 && (
+                  <div className="bg-black/10 py-2">
+                    {item.tabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`w-full text-left px-12 py-2 text-sm transition-all ${
+                          activeTab === tab.id 
+                            ? 'bg-white/20 font-semibold' 
+                            : 'hover:bg-white/10 opacity-80'
+                        }`}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className="p-6 border-t border-white/20">
+          <p className="text-xs opacity-75">v1.0.0 - 2025</p>
+          <p className="text-xs opacity-75 mt-1">NPK NPKG2 Production</p>
+        </div>
+      </aside>
+
+      <main className="flex-1 p-8 overflow-y-auto">
+        <div className="max-w-7xl mx-auto">
+          <div className="mb-6">
+            <h2 className="text-3xl font-bold text-[#6B7F5F]">
+              {navItems.find(item => item.id === activeNav)?.label}
+            </h2>
+            {activeTab && (
+              <p className="text-gray-600 mt-1">
+                {navItems.find(item => item.id === activeNav)?.tabs?.find(tab => tab.id === activeTab)?.label}
+              </p>
+            )}
+          </div>
+          
+          {renderContent()}
+        </div>
+      </main>
+    </div>
+  );
+}
