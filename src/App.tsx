@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -425,6 +425,96 @@ interface RKAP {
   targetRKAP: number;
 }
 
+// Google Sheets API URL - Replace with your deployed script URL
+const API_URL =
+  "https://script.google.com/macros/s/AKfycbzzqA7LG0LwCBjCw-2WUOXDNZMf7HFuwHyivuEtgaevdF9GxOFUaCeA8gfaElxj00p2/exec";
+
+// Session API helpers
+async function checkSessionAPI(
+  username: string
+): Promise<{ hasSession: boolean; sessionData?: any }> {
+  try {
+    console.log("[SESSION] Checking session for:", username);
+    const response = await fetch(
+      `${API_URL}?action=checkSession&username=${encodeURIComponent(username)}`
+    );
+    const data = await response.json();
+    console.log("[SESSION] Check result:", data);
+    return data;
+  } catch (error) {
+    console.error("[SESSION] Error checking session:", error);
+    return { hasSession: false };
+  }
+}
+
+async function createSessionAPI(
+  username: string,
+  sessionId: string
+): Promise<boolean> {
+  try {
+    console.log("[SESSION] Creating session:", { username, sessionId });
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "createSession",
+        username,
+        sessionId,
+      }),
+    });
+    const data = await response.json();
+    console.log("[SESSION] Create result:", data);
+    return data.success;
+  } catch (error) {
+    console.error("[SESSION] Error creating session:", error);
+    return false;
+  }
+}
+
+async function updateSessionAPI(
+  username: string,
+  sessionId: string
+): Promise<boolean> {
+  try {
+    console.log("[SESSION] Updating session:", { username, sessionId });
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "updateSession",
+        username,
+        sessionId,
+      }),
+    });
+    const data = await response.json();
+    console.log("[SESSION] Update result:", data);
+    return data.success;
+  } catch (error) {
+    console.error("[SESSION] Error updating session:", error);
+    return false;
+  }
+}
+
+async function deleteSessionAPI(username: string): Promise<boolean> {
+  try {
+    console.log("[SESSION] Deleting session:", username);
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "deleteSession",
+        username,
+      }),
+    });
+    const data = await response.json();
+    console.log("[SESSION] Delete result:", data);
+    return data.success;
+  } catch (error) {
+    console.error("[SESSION] Error deleting session:", error);
+    return false;
+  }
+}
+
 export default function ProduksiNPKApp() {
   const [activeNav, setActiveNav] = useState("home");
   const [activeTab, setActiveTab] = useState("");
@@ -701,34 +791,77 @@ export default function ProduksiNPKApp() {
     return userRole === "admin" || userRole === "supervisor";
   };
 
-  // Check if account is already in use
-  const checkAccountInUse = (username: string): boolean => {
-    const sessionKey = `session_${username}`;
-    const existingSession = localStorage.getItem(sessionKey);
+  // Generate unique session ID for current browser
+  const currentSessionId = useRef(
+    Math.random().toString(36).substr(2, 9) + Date.now()
+  );
 
-    if (existingSession) {
-      const sessionData = JSON.parse(existingSession);
-      const now = Date.now();
-      // Check if session is still active (within 24 hours)
-      if (now - sessionData.timestamp < 24 * 60 * 60 * 1000) {
-        return true;
+  // Check if account is already in use (Google Sheets-based)
+  const checkAccountInUse = async (username: string): Promise<boolean> => {
+    try {
+      const result = await checkSessionAPI(username);
+
+      if (result.hasSession) {
+        // Check if it's a different session (different browser/device)
+        if (result.sessionData.sessionId !== currentSessionId.current) {
+          return true; // Block login - account in use elsewhere
+        }
       }
+
+      return false; // Account free to use
+    } catch (error) {
+      console.error("Error checking account use:", error);
+      return false; // Allow login on error
     }
-    return false;
   };
 
-  // Set account session
-  const setAccountSession = (username: string) => {
-    const sessionKey = `session_${username}`;
-    const sessionData = {
-      timestamp: Date.now(),
-      sessionId: Math.random().toString(36).substr(2, 9),
+  // Set account session (Google Sheets-based)
+  const setAccountSession = async (username: string): Promise<boolean> => {
+    try {
+      const success = await createSessionAPI(
+        username,
+        currentSessionId.current
+      );
+      return success;
+    } catch (error) {
+      console.error("Error setting session:", error);
+      return false;
+    }
+  };
+
+  // Update session keep-alive (Google Sheets-based)
+  const updateAccountSession = async (username: string): Promise<boolean> => {
+    try {
+      const success = await updateSessionAPI(
+        username,
+        currentSessionId.current
+      );
+      return success;
+    } catch (error) {
+      console.error("Error updating session:", error);
+      return false;
+    }
+  };
+
+  // Keep session alive by updating timestamp (Google Sheets-based)
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const username = localStorage.getItem("username");
+    if (!username) return;
+
+    // Update session timestamp every 30 seconds to keep session active
+    const keepAliveInterval = setInterval(() => {
+      updateAccountSession(username);
+    }, 30000);
+
+    return () => {
+      clearInterval(keepAliveInterval);
     };
-    localStorage.setItem(sessionKey, JSON.stringify(sessionData));
-  };
+  }, [isLoggedIn]);
 
-  // Handle Login
-  const handleLogin = (e: React.FormEvent) => {
+  // Handle Login (Google Sheets session check)
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     // Validate credentials
@@ -755,44 +888,51 @@ export default function ProduksiNPKApp() {
       return;
     }
 
-    // Check if account is already in use
-    if (checkAccountInUse(username)) {
+    // Check if account is already in use (cross-browser detection via Google Sheets)
+    const accountInUse = await checkAccountInUse(username);
+    if (accountInUse) {
       setAccountInUseMessage(
-        `Akun "${username}" sedang digunakan di perangkat lain. Login akan mengeluarkan sesi yang sedang aktif.`
+        `Akun "${username}" sedang aktif di perangkat/browser lain. Untuk keamanan, hanya satu sesi yang diperbolehkan per akun. Silakan logout dari perangkat lain atau tunggu 2 menit.`
       );
       setShowAccountInUseWarning(true);
 
-      // Auto close warning after 3 seconds and proceed with login
+      // Auto close warning after 5 seconds WITHOUT logging in
       setTimeout(() => {
         setShowAccountInUseWarning(false);
-        proceedWithLogin(username, role);
-      }, 3000);
-    } else {
-      proceedWithLogin(username, role);
+        setLoginUsername("");
+        setLoginPassword("");
+      }, 5000);
+      return; // Block login attempt
     }
+
+    // Proceed with login if account is free
+    await proceedWithLogin(username, role);
   };
 
-  // Proceed with login after checks
-  const proceedWithLogin = (
+  // Proceed with login after checks (Google Sheets session creation)
+  const proceedWithLogin = async (
     username: string,
     role: "admin" | "user" | "supervisor"
   ) => {
+    // Create session in Google Sheets
+    await setAccountSession(username);
+
     setIsLoggedIn(true);
     setUserRole(role);
     setLoginError("");
-    setAccountSession(username);
     localStorage.setItem("isLoggedIn", "true");
     localStorage.setItem("username", username);
     localStorage.setItem("userRole", role);
   };
 
-  // Handle Logout
+  // Handle Logout (Google Sheets session deletion)
   const handleLogout = () => {
     setShowLogoutOverlay(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       const username = localStorage.getItem("username");
       if (username) {
-        localStorage.removeItem(`session_${username}`);
+        // Delete session from Google Sheets
+        await deleteSessionAPI(username);
       }
       setIsLoggedIn(false);
       setUserRole("admin");
@@ -8453,16 +8593,16 @@ export default function ProduksiNPKApp() {
 
               <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
                 <div className="flex-1 h-1 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full overflow-hidden">
-                  <div className="h-full bg-white/50 animate-[slideRight_3s_linear]"></div>
+                  <div className="h-full bg-white/50 animate-[slideRight_5s_linear]"></div>
                 </div>
                 <span className="text-xs font-medium">
-                  Melanjutkan dalam 3 detik...
+                  Menutup dalam 5 detik...
                 </span>
               </div>
 
               <div className="text-center">
-                <p className="text-xs text-gray-500">
-                  Sesi sebelumnya akan otomatis dikeluarkan
+                <p className="text-xs text-red-600 font-medium">
+                  ⛔ Login Ditolak - Akun Sedang Aktif
                 </p>
               </div>
             </div>

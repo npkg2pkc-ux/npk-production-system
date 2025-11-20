@@ -16,6 +16,7 @@
  *    - gate_pass
  *    - akun
  *    - rkap
+ *    - sessions (untuk multi-login detection)
  *
  * 3. Buka Extensions > Apps Script
  * 4. Copy paste script ini
@@ -30,6 +31,15 @@ function doGet(e) {
   try {
     const sheet = e.parameter.sheet;
     const action = e.parameter.action || "read";
+
+    // Session management endpoints
+    if (action === "checkSession") {
+      const username = e.parameter.username;
+      const result = checkActiveSession(username);
+      const output = ContentService.createTextOutput(JSON.stringify(result));
+      output.setMimeType(ContentService.MimeType.JSON);
+      return output;
+    }
 
     if (action === "read" && sheet) {
       const data = readData(sheet);
@@ -71,6 +81,15 @@ function doPost(e) {
         break;
       case "delete":
         result = deleteData(sheet, rowData);
+        break;
+      case "createSession":
+        result = createSession(data.username, data.sessionId);
+        break;
+      case "updateSession":
+        result = updateSession(data.username, data.sessionId);
+        break;
+      case "deleteSession":
+        result = deleteSession(data.username);
         break;
       default:
         result = { error: "Invalid action" };
@@ -757,4 +776,154 @@ function testScript() {
 
   const result = createData("produksi_npk", testData);
   Logger.log(result);
+}
+
+// ==================== SESSION MANAGEMENT FUNCTIONS ====================
+
+/**
+ * Check if user has active session
+ * Returns { hasSession: boolean, sessionData: object }
+ */
+function checkActiveSession(username) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("sessions");
+
+  // Create sessions sheet if doesn't exist
+  if (!sheet) {
+    sheet = ss.insertSheet("sessions");
+    sheet.appendRow(["Username", "Session ID", "Timestamp", "Browser", "IP"]);
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const now = new Date().getTime();
+  const TWO_MINUTES = 2 * 60 * 1000;
+
+  // Find active session (within last 2 minutes)
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === username) {
+      const sessionTime = new Date(data[i][2]).getTime();
+
+      // Check if session is still active (< 2 minutes old)
+      if (now - sessionTime < TWO_MINUTES) {
+        return {
+          hasSession: true,
+          sessionData: {
+            username: data[i][0],
+            sessionId: data[i][1],
+            timestamp: data[i][2],
+            browser: data[i][3],
+            ip: data[i][4],
+          },
+        };
+      } else {
+        // Session expired, delete it
+        sheet.deleteRow(i + 1);
+        return { hasSession: false };
+      }
+    }
+  }
+
+  return { hasSession: false };
+}
+
+/**
+ * Create new session for user
+ */
+function createSession(username, sessionId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("sessions");
+
+  if (!sheet) {
+    sheet = ss.insertSheet("sessions");
+    sheet.appendRow(["Username", "Session ID", "Timestamp", "Browser", "IP"]);
+  }
+
+  // Delete any existing session for this user
+  deleteSession(username);
+
+  // Create new session
+  const timestamp = new Date();
+  const browser = "Unknown"; // Will be sent from client
+  const ip = Session.getActiveUser().getEmail() || "Unknown";
+
+  sheet.appendRow([username, sessionId, timestamp, browser, ip]);
+
+  return {
+    success: true,
+    message: "Session created",
+    sessionId: sessionId,
+  };
+}
+
+/**
+ * Update existing session timestamp (keep-alive)
+ */
+function updateSession(username, sessionId) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("sessions");
+
+  if (!sheet) {
+    return { success: false, message: "Sessions sheet not found" };
+  }
+
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0] === username && data[i][1] === sessionId) {
+      // Update timestamp
+      sheet.getRange(i + 1, 3).setValue(new Date());
+      return { success: true, message: "Session updated" };
+    }
+  }
+
+  return { success: false, message: "Session not found" };
+}
+
+/**
+ * Delete session for user (on logout)
+ */
+function deleteSession(username) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("sessions");
+
+  if (!sheet) {
+    return { success: false, message: "Sessions sheet not found" };
+  }
+
+  const data = sheet.getDataRange().getValues();
+
+  // Delete from bottom to top to avoid index shifting
+  for (let i = data.length - 1; i >= 1; i--) {
+    if (data[i][0] === username) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+
+  return { success: true, message: "Session deleted" };
+}
+
+/**
+ * Clean up expired sessions (run periodically)
+ * Can be set as time-based trigger: every 5 minutes
+ */
+function cleanupExpiredSessions() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("sessions");
+
+  if (!sheet) return;
+
+  const data = sheet.getDataRange().getValues();
+  const now = new Date().getTime();
+  const TWO_MINUTES = 2 * 60 * 1000;
+
+  // Delete from bottom to top
+  for (let i = data.length - 1; i >= 1; i--) {
+    const sessionTime = new Date(data[i][2]).getTime();
+
+    if (now - sessionTime >= TWO_MINUTES) {
+      sheet.deleteRow(i + 1);
+    }
+  }
+
+  Logger.log("Expired sessions cleaned up");
 }
