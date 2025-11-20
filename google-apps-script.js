@@ -36,14 +36,16 @@ function doGet(e) {
     if (action === "checkSession") {
       const username = e.parameter.username;
       const result = checkActiveSession(username);
-      return ContentService.createTextOutput(JSON.stringify(result))
-        .setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(
+        JSON.stringify(result)
+      ).setMimeType(ContentService.MimeType.JSON);
     }
 
     if (action === "read" && sheet) {
       const data = readData(sheet);
-      return ContentService.createTextOutput(JSON.stringify(data))
-        .setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(
+        ContentService.MimeType.JSON
+      );
     }
 
     return ContentService.createTextOutput(
@@ -89,8 +91,9 @@ function doPost(e) {
         result = { error: "Invalid action" };
     }
 
-    return ContentService.createTextOutput(JSON.stringify(result))
-      .setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(
+      ContentService.MimeType.JSON
+    );
   } catch (error) {
     return ContentService.createTextOutput(
       JSON.stringify({ error: error.toString() })

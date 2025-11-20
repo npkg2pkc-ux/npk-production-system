@@ -462,13 +462,13 @@ async function createSessionAPI(
         sessionId,
       }),
     });
-    
+
     // Check if response is ok
     if (!response.ok) {
       console.error("[SESSION] Response not OK:", response.status);
       return false;
     }
-    
+
     const data = await response.json();
     console.log("[SESSION] Create result:", data);
     return data.success;
@@ -493,12 +493,12 @@ async function updateSessionAPI(
         sessionId,
       }),
     });
-    
+
     if (!response.ok) {
       console.error("[SESSION] Update response not OK:", response.status);
       return false;
     }
-    
+
     const data = await response.json();
     console.log("[SESSION] Update result:", data);
     return data.success;
@@ -519,12 +519,12 @@ async function deleteSessionAPI(username: string): Promise<boolean> {
         username,
       }),
     });
-    
+
     if (!response.ok) {
       console.error("[SESSION] Delete response not OK:", response.status);
       return false;
     }
-    
+
     const data = await response.json();
     console.log("[SESSION] Delete result:", data);
     return data.success;
@@ -818,18 +818,32 @@ export default function ProduksiNPKApp() {
   // Check if account is already in use (Google Sheets-based)
   const checkAccountInUse = async (username: string): Promise<boolean> => {
     try {
+      console.log("[CHECK] Current session ID:", currentSessionId.current);
       const result = await checkSessionAPI(username);
+      console.log("[CHECK] API result:", result);
 
       if (result.hasSession) {
+        console.log("[CHECK] Found active session:", result.sessionData);
+        console.log("[CHECK] Comparing:", {
+          existing: result.sessionData.sessionId,
+          current: currentSessionId.current,
+          different: result.sessionData.sessionId !== currentSessionId.current
+        });
+        
         // Check if it's a different session (different browser/device)
         if (result.sessionData.sessionId !== currentSessionId.current) {
+          console.log("[CHECK] ⛔ BLOCKING LOGIN - Different session detected!");
           return true; // Block login - account in use elsewhere
+        } else {
+          console.log("[CHECK] ✅ Same session - allowing login");
         }
+      } else {
+        console.log("[CHECK] ✅ No active session found - allowing login");
       }
 
       return false; // Account free to use
     } catch (error) {
-      console.error("Error checking account use:", error);
+      console.error("[CHECK] Error checking account use:", error);
       return false; // Allow login on error
     }
   };
