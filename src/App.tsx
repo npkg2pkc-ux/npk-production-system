@@ -3989,7 +3989,7 @@ export default function ProduksiNPKApp() {
               </div>
               <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#2D6A4F]/20 shadow-sm">
                 <label className="text-sm font-semibold text-[#1B4332] whitespace-nowrap">
-                  ?? Periode:
+                  📅 Periode:
                 </label>
                 <input
                   type="month"
