@@ -8097,9 +8097,8 @@ export default function ProduksiNPKApp() {
         <div className="relative">
           <Button
             onClick={() => setShowUserMenu(!showUserMenu)}
-            variant="outline"
             size="sm"
-            className="relative border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white w-10 h-10 rounded-full p-0 font-bold text-base"
+            className="relative bg-gradient-to-br from-[#2D6A4F] to-[#52B788] hover:from-[#1B4332] hover:to-[#2D6A4F] text-white w-10 h-10 rounded-full p-0 font-bold text-base shadow-md"
           >
             {userRole === "admin" ? "A" : userRole === "supervisor" ? "S" : "U"}
           </Button>
