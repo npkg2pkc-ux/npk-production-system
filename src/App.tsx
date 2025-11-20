@@ -427,7 +427,7 @@ interface RKAP {
 
 // Google Sheets API URL - Replace with your deployed script URL
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbzzqA7LG0LwCBjCw-2WUOXDNZMf7HFuwHyivuEtgaevdF9GxOFUaCeA8gfaElxj00p2/exec";
+  "https://script.google.com/macros/s/AKfycbwURvYXyBD0-SrqomO4eNbE16-KtdD1g6e8G0LLIZA0_nb_jkz9FHDp_SPA1r57vkVE/exec";
 
 // Session API helpers
 async function checkSessionAPI(
