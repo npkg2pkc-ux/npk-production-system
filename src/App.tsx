@@ -605,6 +605,7 @@ export default function ProduksiNPKApp() {
   const [successMessage, setSuccessMessage] = useState("");
   const [showLogoutOverlay, setShowLogoutOverlay] = useState(false);
   const [showLoginOverlay, setShowLoginOverlay] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState<{ [key: string]: number }>({
@@ -8079,44 +8080,6 @@ export default function ProduksiNPKApp() {
         })()}
 
         <div className="mt-auto border-t border-white/20">
-          {/* User Info */}
-          <div className="p-4 bg-white/5">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                <span className="text-lg font-bold">
-                  {userRole === "admin"
-                    ? "A"
-                    : userRole === "supervisor"
-                    ? "S"
-                    : "U"}
-                </span>
-              </div>
-              <div>
-                <p className="font-semibold text-sm">
-                  {userRole === "admin"
-                    ? "Admin"
-                    : userRole === "supervisor"
-                    ? "Supervisor"
-                    : "User"}
-                </p>
-                <p className="text-xs opacity-75">
-                  {userRole === "admin"
-                    ? "Administrator"
-                    : userRole === "supervisor"
-                    ? "Supervisor"
-                    : "User"}
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={handleLogout}
-              className="w-full mt-2 bg-red-500/80 hover:bg-red-600 text-white border-none"
-              size="sm"
-            >
-              Logout
-            </Button>
-          </div>
-
           <div className="p-4">
             <p className="text-xs opacity-75">
               v1.18 - 2025 | NPKG-2 Production
@@ -8128,154 +8091,231 @@ export default function ProduksiNPKApp() {
         </div>
       </aside>
 
-      {/* Notification Bell - Only for Admin - Fixed Position */}
-      {canEditDelete() && (
-        <div className="fixed top-6 right-6 z-50 notification-dropdown">
+      {/* Header Right - User Menu & Notification - Fixed Position */}
+      <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
+        {/* User Menu Button */}
+        <div className="relative">
           <Button
-            onClick={() => setShowNotifications(!showNotifications)}
+            onClick={() => setShowUserMenu(!showUserMenu)}
             variant="outline"
             size="sm"
-            className="relative border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+            className="relative border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white w-10 h-10 rounded-full p-0 font-bold text-base"
           >
-            <Bell className="w-5 h-5" />
-            {notifications.filter((n) => !n.read).length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                {notifications.filter((n) => !n.read).length}
-              </span>
-            )}
+            {userRole === "admin" ? "A" : userRole === "supervisor" ? "S" : "U"}
           </Button>
 
-          {/* Notification Dropdown */}
-          {showNotifications && (
-            <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center">
-                <h3 className="font-semibold text-[#1B4332]">Notifikasi</h3>
-                <div className="flex gap-2">
-                  {notifications.filter((n) => !n.read).length > 0 && (
+          {/* User Dropdown Menu */}
+          {showUserMenu && (
+            <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
+              <div className="p-4 bg-gradient-to-br from-[#2D6A4F] to-[#52B788] text-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                    <span className="text-xl font-bold">
+                      {userRole === "admin"
+                        ? "A"
+                        : userRole === "supervisor"
+                        ? "S"
+                        : "U"}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="font-semibold">
+                      {userRole === "admin"
+                        ? "Admin"
+                        : userRole === "supervisor"
+                        ? "Supervisor"
+                        : "User"}
+                    </p>
+                    <p className="text-xs opacity-90">
+                      {userRole === "admin"
+                        ? "Administrator"
+                        : userRole === "supervisor"
+                        ? "Supervisor"
+                        : "User"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-2">
+                <Button
+                  onClick={() => {
+                    setShowUserMenu(false);
+                    handleLogout();
+                  }}
+                  className="w-full bg-red-500 hover:bg-red-600 text-white justify-start gap-2"
+                  size="sm"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                  </svg>
+                  Logout
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Notification Bell - Only for Admin */}
+        {canEditDelete() && (
+          <div className="relative notification-dropdown">
+            <Button
+              onClick={() => setShowNotifications(!showNotifications)}
+              variant="outline"
+              size="sm"
+              className="relative border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+            >
+              <Bell className="w-5 h-5" />
+              {notifications.filter((n) => !n.read).length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                  {notifications.filter((n) => !n.read).length}
+                </span>
+              )}
+            </Button>
+
+            {/* Notification Dropdown */}
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center">
+                  <h3 className="font-semibold text-[#1B4332]">Notifikasi</h3>
+                  <div className="flex gap-2">
+                    {notifications.filter((n) => !n.read).length > 0 && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setNotifications(
+                            notifications.map((n) => ({ ...n, read: true }))
+                          );
+                          localStorage.setItem(
+                            "notifications",
+                            JSON.stringify(
+                              notifications.map((n) => ({
+                                ...n,
+                                read: true,
+                              }))
+                            )
+                          );
+                        }}
+                        className="text-xs text-[#2D6A4F] hover:text-[#1B4332]"
+                      >
+                        Tandai Semua Dibaca
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowNotifications(false)}
+                      className="h-6 w-6 p-0"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {notifications.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    <Bell className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                    <p>Tidak ada notifikasi</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-100">
+                    {notifications
+                      .slice()
+                      .reverse()
+                      .map((notif) => (
+                        <div
+                          key={notif.id}
+                          className={`p-4 hover:bg-gray-50 transition-colors ${
+                            !notif.read ? "bg-blue-50" : ""
+                          }`}
+                          onClick={() => {
+                            const updatedNotifs = notifications.map((n) =>
+                              n.id === notif.id ? { ...n, read: true } : n
+                            );
+                            setNotifications(updatedNotifs);
+                            localStorage.setItem(
+                              "notifications",
+                              JSON.stringify(updatedNotifs)
+                            );
+                          }}
+                        >
+                          <div className="flex items-start gap-2">
+                            {!notif.read && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-gray-800 break-words">
+                                {notif.message}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(notif.timestamp).toLocaleString(
+                                  "id-ID",
+                                  {
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )}
+                              </p>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const updatedNotifs = notifications.filter(
+                                  (n) => n.id !== notif.id
+                                );
+                                setNotifications(updatedNotifs);
+                                localStorage.setItem(
+                                  "notifications",
+                                  JSON.stringify(updatedNotifs)
+                                );
+                              }}
+                              className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                            >
+                              <X className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+
+                {notifications.length > 0 && (
+                  <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-2">
                     <Button
                       size="sm"
                       variant="ghost"
                       onClick={() => {
-                        setNotifications(
-                          notifications.map((n) => ({ ...n, read: true }))
-                        );
-                        localStorage.setItem(
-                          "notifications",
-                          JSON.stringify(
-                            notifications.map((n) => ({
-                              ...n,
-                              read: true,
-                            }))
-                          )
-                        );
+                        setNotifications([]);
+                        localStorage.removeItem("notifications");
                       }}
-                      className="text-xs text-[#2D6A4F] hover:text-[#1B4332]"
+                      className="w-full text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
-                      Tandai Semua Dibaca
+                      Hapus Semua Notifikasi
                     </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setShowNotifications(false)}
-                    className="h-6 w-6 p-0"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
+                  </div>
+                )}
               </div>
-
-              {notifications.length === 0 ? (
-                <div className="p-8 text-center text-gray-500">
-                  <Bell className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                  <p>Tidak ada notifikasi</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-gray-100">
-                  {notifications
-                    .slice()
-                    .reverse()
-                    .map((notif) => (
-                      <div
-                        key={notif.id}
-                        className={`p-4 hover:bg-gray-50 transition-colors ${
-                          !notif.read ? "bg-blue-50" : ""
-                        }`}
-                        onClick={() => {
-                          const updatedNotifs = notifications.map((n) =>
-                            n.id === notif.id ? { ...n, read: true } : n
-                          );
-                          setNotifications(updatedNotifs);
-                          localStorage.setItem(
-                            "notifications",
-                            JSON.stringify(updatedNotifs)
-                          );
-                        }}
-                      >
-                        <div className="flex items-start gap-2">
-                          {!notif.read && (
-                            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-800 break-words">
-                              {notif.message}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                              {new Date(notif.timestamp).toLocaleString(
-                                "id-ID",
-                                {
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                }
-                              )}
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const updatedNotifs = notifications.filter(
-                                (n) => n.id !== notif.id
-                              );
-                              setNotifications(updatedNotifs);
-                              localStorage.setItem(
-                                "notifications",
-                                JSON.stringify(updatedNotifs)
-                              );
-                            }}
-                            className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-
-              {notifications.length > 0 && (
-                <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setNotifications([]);
-                      localStorage.removeItem("notifications");
-                    }}
-                    className="w-full text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    Hapus Semua Notifikasi
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
 
       <main className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
         <div className="max-w-7xl mx-auto">
