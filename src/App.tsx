@@ -4138,7 +4138,7 @@ export default function ProduksiNPKApp() {
                 <BarChart
                   data={calculateWRPerEksekutor(wrChartPeriod, wrChartMonth)}
                   layout="vertical"
-                  margin={{ top: 10, right: 40, left: 150, bottom: 10 }}
+                  margin={{ top: 10, right: 40, left: 100, bottom: 10 }}
                 >
                   <defs>
                     <linearGradient id="wrGradient" x1="0" y1="0" x2="1" y2="0">
