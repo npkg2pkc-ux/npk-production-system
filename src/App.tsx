@@ -572,6 +572,14 @@ export default function ProduksiNPKApp() {
     new Date().toISOString().slice(0, 7)
   );
 
+  // Work Request chart filter
+  const [wrChartMonth, setWrChartMonth] = useState(
+    new Date().toISOString().slice(0, 7)
+  );
+  const [wrChartPeriod, setWrChartPeriod] = useState<"monthly" | "yearly">(
+    "monthly"
+  );
+
   // Login states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<"admin" | "user" | "supervisor">(
@@ -3072,6 +3080,49 @@ export default function ProduksiNPKApp() {
     return chartData;
   };
 
+  // Calculate Work Request per Eksekutor for selected period
+  const calculateWRPerEksekutor = (
+    period: "monthly" | "yearly",
+    selectedMonth?: string
+  ) => {
+    const currentYear = new Date().getFullYear();
+
+    let filteredData = workRequestData;
+
+    if (period === "monthly" && selectedMonth) {
+      const [year, month] = selectedMonth.split("-").map(Number);
+      filteredData = workRequestData.filter((item) => {
+        const [itemYear, itemMonth] = String(item.tanggal)
+          .split("-")
+          .map(Number);
+        return itemYear === year && itemMonth === month;
+      });
+    } else if (period === "yearly") {
+      filteredData = workRequestData.filter((item) => {
+        const itemDate = new Date(item.tanggal);
+        return itemDate.getFullYear() === currentYear;
+      });
+    }
+
+    // Group by eksekutor and count
+    const eksekutorMap = new Map<string, number>();
+
+    filteredData.forEach((item) => {
+      const eksekutor = item.eksekutor || "Unknown";
+      eksekutorMap.set(eksekutor, (eksekutorMap.get(eksekutor) || 0) + 1);
+    });
+
+    // Convert to array and sort by count descending
+    const chartData = Array.from(eksekutorMap.entries())
+      .map(([eksekutor, count]) => ({
+        eksekutor,
+        count,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    return chartData;
+  };
+
   // Calculate dashboard metrics
   const calculateDashboardMetrics = () => {
     const currentMonth = new Date().getMonth();
@@ -4034,6 +4085,134 @@ export default function ProduksiNPKApp() {
               <div className="flex flex-col items-center justify-center h-[450px] text-gray-400">
                 <AlertCircle className="w-16 h-16 mb-4 opacity-50" />
                 <p className="text-lg font-medium">Tidak ada data downtime</p>
+                <p className="text-sm">untuk periode yang dipilih</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-[#2D6A4F]/30 shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-[#1B4332] flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-[#2D6A4F]" />
+                  Work Request Per Eksekutor
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Total Work Request berdasarkan eksekutor
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#2D6A4F]/20 shadow-sm">
+                  <label className="text-sm font-semibold text-[#1B4332] whitespace-nowrap">
+                    📅 Periode:
+                  </label>
+                  <select
+                    value={wrChartPeriod}
+                    onChange={(e) =>
+                      setWrChartPeriod(e.target.value as "monthly" | "yearly")
+                    }
+                    className="border-none bg-transparent text-sm font-medium text-[#2D6A4F] focus:outline-none focus:ring-0 cursor-pointer"
+                  >
+                    <option value="monthly">Bulanan</option>
+                    <option value="yearly">Tahunan</option>
+                  </select>
+                </div>
+                {wrChartPeriod === "monthly" && (
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#2D6A4F]/20 shadow-sm">
+                    <input
+                      type="month"
+                      value={wrChartMonth}
+                      onChange={(e) => setWrChartMonth(e.target.value)}
+                      className="border-none bg-transparent text-sm font-medium text-[#2D6A4F] focus:outline-none focus:ring-0 cursor-pointer"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {calculateWRPerEksekutor(wrChartPeriod, wrChartMonth).length > 0 ? (
+              <ResponsiveContainer width="100%" height={450}>
+                <BarChart
+                  data={calculateWRPerEksekutor(wrChartPeriod, wrChartMonth)}
+                  layout="vertical"
+                  margin={{ top: 10, right: 40, left: 150, bottom: 10 }}
+                >
+                  <defs>
+                    <linearGradient id="wrGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#2D6A4F" stopOpacity={0.9} />
+                      <stop offset="100%" stopColor="#52B788" stopOpacity={1} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#e5e7eb"
+                    horizontal={true}
+                    vertical={false}
+                  />
+                  <XAxis
+                    type="number"
+                    stroke="#6b7280"
+                    tick={{ fill: "#6b7280", fontSize: 12 }}
+                    label={{
+                      value: "Total Work Request",
+                      position: "insideBottom",
+                      offset: -5,
+                      style: { fill: "#1B4332", fontWeight: 600, fontSize: 13 },
+                    }}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="eksekutor"
+                    stroke="#6b7280"
+                    width={140}
+                    tick={{ fill: "#1B4332", fontSize: 12, fontWeight: 500 }}
+                  />
+                  <Tooltip
+                    cursor={{ fill: "rgba(45, 106, 79, 0.05)" }}
+                    contentStyle={{
+                      backgroundColor: "#fff",
+                      border: "2px solid #2D6A4F",
+                      borderRadius: "12px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                      padding: "12px",
+                    }}
+                    labelStyle={{
+                      color: "#1B4332",
+                      fontWeight: 600,
+                      marginBottom: 4,
+                    }}
+                    formatter={(value: number) => [
+                      <span style={{ color: "#2D6A4F", fontWeight: 600 }}>
+                        {value} WR
+                      </span>,
+                      "Total",
+                    ]}
+                  />
+                  <Bar
+                    dataKey="count"
+                    fill="url(#wrGradient)"
+                    radius={[0, 12, 12, 0]}
+                    animationDuration={1000}
+                    animationBegin={0}
+                    label={{
+                      position: "right",
+                      formatter: (value: number) => `${value} WR`,
+                      fill: "#1B4332",
+                      fontSize: 11,
+                      fontWeight: 600,
+                    }}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[450px] text-gray-400">
+                <FileText className="w-16 h-16 mb-4 opacity-50" />
+                <p className="text-lg font-medium">
+                  Tidak ada data Work Request
+                </p>
                 <p className="text-sm">untuk periode yang dipilih</p>
               </div>
             )}
