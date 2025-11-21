@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -867,9 +867,7 @@ export default function ProduksiNPKApp() {
 
         // Check if it's a different session (different browser/device)
         if (result.sessionData.sessionId !== currentSessionId.current) {
-          console.log(
-            "[CHECK] ? BLOCKING LOGIN - Different session detected!"
-          );
+          console.log("[CHECK] ? BLOCKING LOGIN - Different session detected!");
           return true; // Block login - account in use elsewhere
         } else {
           console.log("[CHECK] ? Same session - allowing login");
@@ -963,7 +961,7 @@ export default function ProduksiNPKApp() {
     console.log("[LOGIN] Account in use check result:", accountInUse);
 
     if (accountInUse) {
-      console.log("[LOGIN] ?? Showing warning modal - account in use!");
+      console.log("[LOGIN] ⚠️ Showing warning modal - account in use!");
       const warningMsg = `Akun "${username}" sedang aktif di perangkat/browser lain. Untuk keamanan, hanya satu sesi yang diperbolehkan per akun. Silakan logout dari perangkat lain atau tunggu 2 menit.`;
 
       setAccountInUseMessage(warningMsg);
@@ -1169,7 +1167,7 @@ export default function ProduksiNPKApp() {
 
     try {
       console.log(
-        "?? normalizeDateForInput input:",
+        "📅 normalizeDateForInput input:",
         date,
         "Type:",
         typeof date
@@ -1196,7 +1194,7 @@ export default function ProduksiNPKApp() {
       // Backend seharusnya sudah mengirim string YYYY-MM-DD
       if (date instanceof Date && !isNaN(date.getTime())) {
         console.warn(
-          "?? Received Date object instead of string! This may cause timezone issues."
+          "⚠️ Received Date object instead of string! This may cause timezone issues."
         );
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -1508,10 +1506,7 @@ export default function ProduksiNPKApp() {
 
         // Jika items sudah array, gunakan langsung
         if (Array.isArray(parsedItems)) {
-          console.log(
-            "? Items already array with length:",
-            parsedItems.length
-          );
+          console.log("? Items already array with length:", parsedItems.length);
           return {
             ...item,
             items: parsedItems,
@@ -1532,7 +1527,7 @@ export default function ProduksiNPKApp() {
           }
         } else {
           // Fallback jika bukan string dan bukan array
-          console.warn("?? Items bukan string dan bukan array, using default");
+          console.warn("⚠️ Items bukan string dan bukan array, using default");
           parsedItems = [{ item: "", deskripsi: "" }];
         }
 
@@ -2201,8 +2196,8 @@ export default function ProduksiNPKApp() {
     e.preventDefault();
     setShowLoadingOverlay(true);
     try {
-      console.log("?? Saving Perta - formPerta.items:", formPerta.items);
-      console.log("?? Items array length:", formPerta.items.length);
+      console.log("💾 Saving Perta - formPerta.items:", formPerta.items);
+      console.log("💾 Items array length:", formPerta.items.length);
 
       // Prepare data with stringified items for Google Sheets
       const preparedData = {
@@ -2210,7 +2205,7 @@ export default function ProduksiNPKApp() {
         items: JSON.stringify(formPerta.items), // Stringify items array
       };
 
-      console.log("?? Stringified items:", preparedData.items);
+      console.log("💾 Stringified items:", preparedData.items);
 
       if (editingIndex !== null) {
         const current: any = formPerta as any;
@@ -3909,15 +3904,15 @@ export default function ProduksiNPKApp() {
 </head>
 <body>
   <div class="cut-line">
-    <span class="cut-icon">??</span>
+    <span class="cut-icon">✂️</span>
   </div>
   ${generateGatePassBlock()}
   <div class="cut-line">
-    <span class="cut-icon">??</span>
+    <span class="cut-icon">✂️</span>
   </div>
   ${generateGatePassBlock()}
   <div class="cut-line">
-    <span class="cut-icon">??</span>
+    <span class="cut-icon">✂️</span>
   </div>
   <script>window.onload = function(){ window.print(); };</script>
 </body>
@@ -4182,7 +4177,7 @@ export default function ProduksiNPKApp() {
               </div>
               <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#494E6B]/20 shadow-sm">
                 <label className="text-sm font-semibold text-[#192231] whitespace-nowrap">
-                  ?? Periode:
+                  📊 Periode:
                 </label>
                 <input
                   type="month"
@@ -4299,7 +4294,7 @@ export default function ProduksiNPKApp() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#494E6B]/20 shadow-sm">
                   <label className="text-sm font-semibold text-[#192231] whitespace-nowrap">
-                    ?? Periode:
+                    📊 Periode:
                   </label>
                   <select
                     value={wrChartPeriod}
@@ -7936,7 +7931,7 @@ export default function ProduksiNPKApp() {
                     <div>
                       <h4 className="font-semibold text-[#192231] mb-3 flex items-center gap-2">
                         <span className="w-8 h-8 bg-[#494E6B] text-white rounded flex items-center justify-center">
-                          ??
+                          📋
                         </span>
                         Item yang Diganti / Upgrade
                       </h4>
@@ -8806,7 +8801,7 @@ export default function ProduksiNPKApp() {
               V 1.20 - 2025 | NPKG-2 Production
             </p>
             <p className="text-xs opacity-75 mt-1">
-              Made with <span className="text-red-500">??</span>
+              Made with <span className="text-red-500">❤️</span>
             </p>
           </div>
         </div>
