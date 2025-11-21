@@ -9055,24 +9055,26 @@ export default function ProduksiNPKApp() {
 
       {/* Modal Password */}
       {passwordModal.show && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <form onSubmit={handlePasswordSubmit} className="p-6">
-              <h3 className="text-xl font-bold text-[#192231] mb-4">
-                Masukkan Password
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 border-4 border-[#494E6B]">
+            <div className="bg-gradient-to-r from-[#494E6B] to-[#98878F] p-4 rounded-t-lg">
+              <h3 className="text-xl font-bold text-white text-center">
+                🔒 Masukkan Password
               </h3>
+            </div>
+            <form onSubmit={handlePasswordSubmit} className="p-6">
               <input
                 type="password"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="Password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#494E6B] focus:border-transparent"
+                className="w-full px-4 py-3 border-2 border-[#494E6B]/30 rounded-md focus:ring-2 focus:ring-[#494E6B] focus:border-[#494E6B] transition-all"
                 autoFocus
               />
-              <div className="flex gap-3 mt-4">
+              <div className="flex gap-3 mt-6">
                 <Button
                   type="submit"
-                  className="flex-1 bg-[#494E6B] hover:bg-[#192231]"
+                  className="flex-1 bg-gradient-to-r from-[#494E6B] to-[#98878F] hover:from-[#192231] hover:to-[#494E6B] text-white font-semibold shadow-lg"
                 >
                   OK
                 </Button>
@@ -9082,7 +9084,7 @@ export default function ProduksiNPKApp() {
                     setPasswordModal({ show: false, pendingAkun: null });
                     setPasswordInput("");
                   }}
-                  className="flex-1 bg-gray-400 hover:bg-gray-500"
+                  className="flex-1 bg-gray-400 hover:bg-gray-500 text-white font-semibold"
                 >
                   Batal
                 </Button>
@@ -9094,20 +9096,20 @@ export default function ProduksiNPKApp() {
 
       {/* Modal View Akun */}
       {viewAkunModal.show && viewAkunModal.data && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-[#192231]">
-                  Detail Akun
-                </h3>
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto border-4 border-[#494E6B]">
+            <div className="bg-gradient-to-r from-[#494E6B] to-[#98878F] p-6 rounded-t-lg">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white">👤 Detail Akun</h3>
                 <button
                   onClick={() => setViewAkunModal({ show: false, data: null })}
-                  className="text-gray-500 hover:text-gray-700 text-2xl"
+                  className="text-white hover:text-gray-200 text-2xl font-bold transition-colors p-2 rounded-full hover:bg-white/20"
                 >
-                  ?
+                  ×
                 </button>
               </div>
+            </div>
+            <div className="p-6">
               {viewAkunModal.data && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-4">
@@ -9397,9 +9399,13 @@ export default function ProduksiNPKApp() {
       {/* Loading Overlay */}
       {showLoadingOverlay && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[100]">
-          <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4">
-            <Loader2 className="w-16 h-16 text-[#494E6B] animate-spin" />
-            <p className="text-lg font-semibold text-gray-700">
+          <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4 shadow-2xl border-4 border-[#494E6B]">
+            <div className="relative">
+              <div className="w-20 h-20 bg-gradient-to-br from-[#494E6B] to-[#98878F] rounded-full flex items-center justify-center">
+                <Loader2 className="w-12 h-12 text-white animate-spin" />
+              </div>
+            </div>
+            <p className="text-lg font-semibold text-[#192231]">
               Memproses data...
             </p>
           </div>
@@ -9409,9 +9415,11 @@ export default function ProduksiNPKApp() {
       {/* Success Overlay */}
       {showSuccessOverlay && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[100]">
-          <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4 animate-bounce">
-            <CheckCircle className="w-16 h-16 text-green-500" />
-            <p className="text-lg font-semibold text-gray-700">
+          <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4 animate-bounce shadow-2xl border-4 border-[#494E6B]">
+            <div className="w-20 h-20 bg-gradient-to-br from-[#494E6B] to-[#98878F] rounded-full flex items-center justify-center">
+              <CheckCircle className="w-12 h-12 text-white" />
+            </div>
+            <p className="text-lg font-semibold text-[#192231]">
               {successMessage}
             </p>
           </div>
@@ -9452,11 +9460,11 @@ export default function ProduksiNPKApp() {
       {showAccountInUseWarning && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[100]">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden animate-[slideIn_0.3s_ease-out]">
-            <div className="bg-gradient-to-r from-yellow-500 to-orange-500 p-6">
+            <div className="bg-gradient-to-r from-[#985E6D] to-[#985E6D] p-6">
               <div className="flex items-center justify-center mb-4">
                 <div className="relative">
                   <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-lg">
-                    <AlertCircle className="w-12 h-12 text-orange-500 animate-pulse" />
+                    <AlertCircle className="w-12 h-12 text-[#985E6D] animate-pulse" />
                   </div>
                   <div className="absolute inset-0 w-20 h-20 border-4 border-white/30 rounded-full animate-ping"></div>
                 </div>
@@ -9467,14 +9475,14 @@ export default function ProduksiNPKApp() {
             </div>
 
             <div className="p-6">
-              <div className="bg-orange-50 border-l-4 border-orange-500 p-4 mb-4 rounded">
-                <p className="text-gray-700 text-sm leading-relaxed">
+              <div className="bg-[#985E6D]/10 border-l-4 border-[#985E6D] p-4 mb-4 rounded">
+                <p className="text-[#192231] text-sm leading-relaxed">
                   {accountInUseMessage}
                 </p>
               </div>
 
               <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
-                <div className="flex-1 h-1 bg-gradient-to-r from-orange-500 to-yellow-500 rounded-full overflow-hidden">
+                <div className="flex-1 h-1 bg-gradient-to-r from-[#985E6D] to-[#98878F] rounded-full overflow-hidden">
                   <div className="h-full bg-white/50 animate-[slideRight_5s_linear]"></div>
                 </div>
                 <span className="text-xs font-medium">
@@ -9483,8 +9491,8 @@ export default function ProduksiNPKApp() {
               </div>
 
               <div className="text-center">
-                <p className="text-xs text-red-600 font-medium">
-                  ? Login Ditolak - Akun Sedang Aktif
+                <p className="text-xs text-[#985E6D] font-medium">
+                  ⛔ Login Ditolak - Akun Sedang Aktif
                 </p>
               </div>
             </div>
