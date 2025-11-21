@@ -425,6 +425,18 @@ interface RKAP {
   targetRKAP: number;
 }
 
+interface PertaItem {
+  item: string;
+  deskripsi: string;
+}
+
+interface Perta {
+  id?: string;
+  tanggalMulai: string;
+  tanggalSelesai: string;
+  items: PertaItem[];
+}
+
 // Google Sheets API URL - Replace with your deployed script URL
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwURvYXyBD0-SrqomO4eNbE16-KtdD1g6e8G0LLIZA0_nb_jkz9FHDp_SPA1r57vkVE/exec";
@@ -629,6 +641,7 @@ export default function ProduksiNPKApp() {
     gate_pass: 1,
     akun: 1,
     rkap: 1,
+    perta: 1,
   });
   const itemsPerPage = 15;
 
@@ -653,6 +666,7 @@ export default function ProduksiNPKApp() {
   const [gatePassData, setGatePassData] = useState<GatePass[]>([]);
   const [akunData, setAkunData] = useState<Akun[]>([]);
   const [rkapData, setRkapData] = useState<RKAP[]>([]);
+  const [pertaData, setPertaData] = useState<Perta[]>([]);
 
   // Form states for Produksi NPK
   const [formProduksiNPK, setFormProduksiNPK] = useState<ProduksiNPK>({
@@ -757,6 +771,17 @@ export default function ProduksiNPKApp() {
     bulan: "Januari",
     targetRKAP: 0,
   });
+
+  const [formPerta, setFormPerta] = useState<Perta>({
+    tanggalMulai: new Date().toISOString().split("T")[0],
+    tanggalSelesai: new Date().toISOString().split("T")[0],
+    items: [{ item: "", deskripsi: "" }],
+  });
+
+  const [viewPertaModal, setViewPertaModal] = useState<{
+    show: boolean;
+    data: Perta | null;
+  }>({ show: false, data: null });
 
   const [viewAkunModal, setViewAkunModal] = useState<{
     show: boolean;
@@ -1365,6 +1390,7 @@ export default function ProduksiNPKApp() {
         gate,
         akun,
         rkap,
+        perta,
       ] = await Promise.all([
         fetchData("produksi_npk"),
         fetchData("produksi_blending"),
@@ -1378,6 +1404,7 @@ export default function ProduksiNPKApp() {
         fetchData("gate_pass"),
         fetchData("akun"),
         fetchData("rkap"),
+        fetchData("perta"),
       ]);
 
       setProduksiNPKData(npk || []);
@@ -1466,6 +1493,56 @@ export default function ProduksiNPKApp() {
       setGatePassData(gate || []);
       setAkunData(akun || []);
       setRkapData(rkap || []);
+
+      // Normalisasi data Perta - parse items jika dalam format string
+      const normalizedPerta = (perta || []).map((item: any) => {
+        let parsedItems = item.items;
+
+        console.log("🔍 Raw perta item from backend:", item);
+        console.log(
+          "🔍 Raw items field type:",
+          typeof parsedItems,
+          "value:",
+          parsedItems
+        );
+
+        // Jika items sudah array, gunakan langsung
+        if (Array.isArray(parsedItems)) {
+          console.log(
+            "✅ Items already array with length:",
+            parsedItems.length
+          );
+          return {
+            ...item,
+            items: parsedItems,
+          };
+        }
+
+        // Jika items adalah string, parse sebagai JSON
+        if (typeof parsedItems === "string") {
+          try {
+            parsedItems = JSON.parse(parsedItems);
+            console.log(
+              "✅ Parsed items from string, length:",
+              parsedItems.length
+            );
+          } catch (e) {
+            console.error("❌ Error parsing perta items:", e);
+            parsedItems = [{ item: "", deskripsi: "" }];
+          }
+        } else {
+          // Fallback jika bukan string dan bukan array
+          console.warn("⚠️ Items bukan string dan bukan array, using default");
+          parsedItems = [{ item: "", deskripsi: "" }];
+        }
+
+        return {
+          ...item,
+          items: parsedItems,
+        };
+      });
+
+      setPertaData(normalizedPerta);
     };
 
     loadAllData();
@@ -2120,6 +2197,97 @@ export default function ProduksiNPKApp() {
     }
   };
 
+  const handleSubmitPerta = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowLoadingOverlay(true);
+    try {
+      console.log("💾 Saving Perta - formPerta.items:", formPerta.items);
+      console.log("💾 Items array length:", formPerta.items.length);
+
+      // Prepare data with stringified items for Google Sheets
+      const preparedData = {
+        ...formPerta,
+        items: JSON.stringify(formPerta.items), // Stringify items array
+      };
+
+      console.log("💾 Stringified items:", preparedData.items);
+
+      if (editingIndex !== null) {
+        const current: any = formPerta as any;
+        const oldById = pertaData.find(
+          (r) => r.id && current.id && r.id === current.id
+        );
+        let oldItem = oldById;
+        if (!oldItem) {
+          oldItem = pertaData[editingIndex];
+        }
+        const payload: any = { ...preparedData, id: oldItem?.id || current.id };
+        if (!payload.id && current.__original) {
+          payload.__original = current.__original;
+        }
+        await updateData("perta", payload);
+        const refreshed = await fetchData("perta");
+
+        // Normalisasi data setelah fetch
+        const normalizedRefreshed = (refreshed || []).map((item: any) => {
+          let parsedItems = item.items;
+          if (typeof parsedItems === "string") {
+            try {
+              parsedItems = JSON.parse(parsedItems);
+            } catch (e) {
+              parsedItems = [{ item: "", deskripsi: "" }];
+            }
+          }
+          if (!Array.isArray(parsedItems)) {
+            parsedItems = [{ item: "", deskripsi: "" }];
+          }
+          return { ...item, items: parsedItems };
+        });
+
+        setPertaData(normalizedRefreshed);
+        showSuccess("Data Perta berhasil diupdate!");
+      } else {
+        await saveData("perta", preparedData);
+        addNotification(
+          "perta",
+          `Perta ${new Date(formPerta.tanggalMulai).toLocaleDateString(
+            "id-ID"
+          )} - ${formPerta.items.length} item`
+        );
+        const refreshed = await fetchData("perta");
+
+        // Normalisasi data setelah fetch
+        const normalizedRefreshed = (refreshed || []).map((item: any) => {
+          let parsedItems = item.items;
+          if (typeof parsedItems === "string") {
+            try {
+              parsedItems = JSON.parse(parsedItems);
+            } catch (e) {
+              parsedItems = [{ item: "", deskripsi: "" }];
+            }
+          }
+          if (!Array.isArray(parsedItems)) {
+            parsedItems = [{ item: "", deskripsi: "" }];
+          }
+          return { ...item, items: parsedItems };
+        });
+
+        setPertaData(normalizedRefreshed);
+        showSuccess("Data Perta berhasil disimpan!");
+      }
+      setFormPerta({
+        tanggalMulai: new Date().toISOString().split("T")[0],
+        tanggalSelesai: new Date().toISOString().split("T")[0],
+        items: [{ item: "", deskripsi: "" }],
+      });
+      setShowForm(false);
+      setEditingIndex(null);
+    } catch (error) {
+      setShowLoadingOverlay(false);
+      alert("Terjadi kesalahan saat menyimpan data Perta");
+    }
+  };
+
   // Delete handlers
   const handleDelete = async (index: number, dataType: string, item?: any) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus data ini?")) {
@@ -2249,6 +2417,14 @@ export default function ProduksiNPKApp() {
               setRkapData(refreshed || []);
             }
             break;
+          case "perta":
+            dataToDelete = item || pertaData[index];
+            await deleteDataFromSheet("perta", dataToDelete);
+            {
+              const refreshed = await fetchData("perta");
+              setPertaData(refreshed || []);
+            }
+            break;
         }
         showSuccess("Data berhasil dihapus!");
       } catch (error) {
@@ -2369,6 +2545,15 @@ export default function ProduksiNPKApp() {
           __original: { ...rkapEditData },
         } as any);
         break;
+      case "perta":
+        const pertaEditData: any = pertaData[index];
+        setFormPerta({
+          ...pertaEditData,
+          tanggalMulai: normalizeDateForInput(pertaEditData.tanggalMulai),
+          tanggalSelesai: normalizeDateForInput(pertaEditData.tanggalSelesai),
+          __original: { ...pertaEditData },
+        } as any);
+        break;
     }
   };
 
@@ -2389,6 +2574,14 @@ export default function ProduksiNPKApp() {
     return [...data].sort((a, b) => {
       const dateA = new Date(a.tanggalUpdate).getTime();
       const dateB = new Date(b.tanggalUpdate).getTime();
+      return dateB - dateA; // Sort descending (newest first)
+    });
+  };
+
+  const sortPertaByDateDesc = (data: Perta[]): Perta[] => {
+    return [...data].sort((a, b) => {
+      const dateA = new Date(a.tanggalMulai).getTime();
+      const dateB = new Date(b.tanggalMulai).getTime();
       return dateB - dateA; // Sort descending (newest first)
     });
   };
@@ -7564,6 +7757,354 @@ export default function ProduksiNPKApp() {
           </Card>
         );
       }
+
+      if (activeTab === "perta") {
+        return (
+          <Card className="border-[#2D6A4F]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
+              <CardTitle className="text-[#1B4332]">Perta</CardTitle>
+              <CardDescription>Permintaan barang dan alat</CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
+              <Modal
+                isOpen={showForm}
+                onClose={() => {
+                  setShowForm(false);
+                  setEditingIndex(null);
+                }}
+                title={
+                  editingIndex !== null
+                    ? "Edit Data Perta"
+                    : "Tambah Data Perta"
+                }
+                size="xl"
+              >
+                <form onSubmit={handleSubmitPerta} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="tanggalMulai">Tanggal Mulai Perta</Label>
+                      <Input
+                        id="tanggalMulai"
+                        type="date"
+                        value={formPerta.tanggalMulai}
+                        onChange={(e) =>
+                          setFormPerta({
+                            ...formPerta,
+                            tanggalMulai: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="tanggalSelesai">
+                        Tanggal Selesai Perta
+                      </Label>
+                      <Input
+                        id="tanggalSelesai"
+                        type="date"
+                        value={formPerta.tanggalSelesai}
+                        onChange={(e) =>
+                          setFormPerta({
+                            ...formPerta,
+                            tanggalSelesai: e.target.value,
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="font-semibold text-[#1B4332]">
+                        Item yang Diganti / Upgrade
+                      </h4>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setFormPerta({
+                            ...formPerta,
+                            items: [
+                              ...formPerta.items,
+                              { item: "", deskripsi: "" },
+                            ],
+                          });
+                        }}
+                        className="bg-[#2D6A4F] hover:bg-[#52B788] h-8 w-8 p-0"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    {formPerta.items.map((itemData, index) => (
+                      <div key={index} className="flex gap-2 mb-3 items-end">
+                        <div className="text-center font-semibold text-[#1B4332] pt-8 w-8 flex-shrink-0">
+                          {index + 1}
+                        </div>
+                        <div className="flex-1">
+                          <Label htmlFor={`item-${index}`}>
+                            Item / Peralatan
+                          </Label>
+                          <Input
+                            id={`item-${index}`}
+                            value={itemData.item}
+                            onChange={(e) => {
+                              const newItems = [...formPerta.items];
+                              newItems[index].item = e.target.value;
+                              setFormPerta({ ...formPerta, items: newItems });
+                            }}
+                            placeholder="Contoh: C2-L-001"
+                            required
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Label htmlFor={`deskripsi-${index}`}>
+                            Deskripsi
+                          </Label>
+                          <Input
+                            id={`deskripsi-${index}`}
+                            value={itemData.deskripsi}
+                            onChange={(e) => {
+                              const newItems = [...formPerta.items];
+                              newItems[index].deskripsi = e.target.value;
+                              setFormPerta({ ...formPerta, items: newItems });
+                            }}
+                            placeholder="Masukkan Deskripsi"
+                            required
+                          />
+                        </div>
+                        <div className="w-10 flex-shrink-0">
+                          {formPerta.items.length > 1 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const newItems = formPerta.items.filter(
+                                  (_, i) => i !== index
+                                );
+                                setFormPerta({ ...formPerta, items: newItems });
+                              }}
+                              className="h-10 w-10 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowForm(false);
+                        setEditingIndex(null);
+                      }}
+                    >
+                      Batal
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      disabled={loading}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      {loading
+                        ? "Menyimpan..."
+                        : editingIndex !== null
+                        ? "Update Data"
+                        : "Simpan Data"}
+                    </Button>
+                  </div>
+                </form>
+              </Modal>
+
+              {/* View Perta Modal */}
+              <Modal
+                isOpen={viewPertaModal.show}
+                onClose={() => setViewPertaModal({ show: false, data: null })}
+                title="PERTA NPK (Perbaikan Tahunan)"
+                size="lg"
+              >
+                {viewPertaModal.data && (
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-semibold text-[#1B4332] mb-3 flex items-center gap-2">
+                        <span className="w-8 h-8 bg-[#2D6A4F] text-white rounded flex items-center justify-center">
+                          📋
+                        </span>
+                        Item yang Diganti / Upgrade
+                      </h4>
+                      <div className="space-y-2">
+                        {viewPertaModal.data.items.map((itemData, index) => (
+                          <div
+                            key={index}
+                            className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
+                          >
+                            <div className="w-8 h-8 bg-[#2D6A4F] text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                              {index + 1}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium text-[#1B4332]">
+                                {itemData.item}
+                              </p>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {itemData.deskripsi}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Modal>
+
+              <div className="mt-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-semibold text-[#1B4332]">Data Perta</h4>
+                  <Button
+                    onClick={() => {
+                      setShowForm(true);
+                      setEditingIndex(null);
+                      setFormPerta({
+                        tanggalMulai: new Date().toISOString().split("T")[0],
+                        tanggalSelesai: new Date().toISOString().split("T")[0],
+                        items: [{ item: "", deskripsi: "" }],
+                      });
+                    }}
+                    className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Tambah Data
+                  </Button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#2D6A4F]/20">
+                      <tr>
+                        <th className="text-left py-2 px-3">Tanggal Mulai</th>
+                        <th className="text-left py-2 px-3">Tanggal Selesai</th>
+                        <th className="text-center py-2 px-3">Durasi Perta</th>
+                        <th className="text-center py-2 px-3">
+                          Jumlah Item Yang Di Ganti / Upgrade
+                        </th>
+                        <th className="text-center py-2 px-3">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginateData(
+                        sortPertaByDateDesc(pertaData),
+                        currentPage.perta,
+                        itemsPerPage
+                      ).map((item, idx) => {
+                        const actualIdx =
+                          sortPertaByDateDesc(pertaData).indexOf(item);
+
+                        // Hitung durasi perta dalam hari
+                        const startDate = new Date(item.tanggalMulai);
+                        const endDate = new Date(item.tanggalSelesai);
+                        const diffTime = Math.abs(
+                          endDate.getTime() - startDate.getTime()
+                        );
+                        const diffDays = Math.ceil(
+                          diffTime / (1000 * 60 * 60 * 24)
+                        );
+
+                        return (
+                          <tr key={idx} className="border-b hover:bg-gray-50">
+                            <td className="py-2 px-3">
+                              {new Date(item.tanggalMulai).toLocaleDateString(
+                                "id-ID",
+                                {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                }
+                              )}
+                            </td>
+                            <td className="py-2 px-3">
+                              {new Date(item.tanggalSelesai).toLocaleDateString(
+                                "id-ID",
+                                {
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                }
+                              )}
+                            </td>
+                            <td className="text-center py-2 px-3">
+                              <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#52B788]/20 text-[#1B4332] font-semibold rounded-full">
+                                {diffDays} Hari
+                              </span>
+                            </td>
+                            <td className="text-center py-2 px-3">
+                              <span className="inline-flex items-center justify-center w-8 h-8 bg-[#2D6A4F]/20 text-[#1B4332] font-bold rounded-full">
+                                {item.items.length}
+                              </span>
+                            </td>
+                            <td className="text-center py-2 px-3">
+                              <div className="flex gap-2 justify-center">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() =>
+                                    setViewPertaModal({
+                                      show: true,
+                                      data: item,
+                                    })
+                                  }
+                                  className="h-9 w-9 p-0 border-blue-300 text-blue-600 hover:bg-blue-600 hover:text-white"
+                                >
+                                  <Eye className="w-5 h-5" />
+                                </Button>
+                                {canEditDelete() && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() =>
+                                        handleEdit(actualIdx, "perta")
+                                      }
+                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                    >
+                                      <Edit className="w-5 h-5" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() =>
+                                        handleDelete(actualIdx, "perta", item)
+                                      }
+                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                    >
+                                      <Trash2 className="w-5 h-5" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  currentPage={currentPage.perta}
+                  totalPages={getTotalPages(pertaData.length, itemsPerPage)}
+                  onPageChange={(page) => handlePageChange("perta", page)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
     }
 
     if (activeNav === "setting") {
@@ -8053,6 +8594,7 @@ export default function ProduksiNPKApp() {
         { id: "bahanbaku", label: "Bahan Baku" },
         { id: "vibrasi", label: "Vibrasi" },
         { id: "gatepass", label: "Gate Pass" },
+        { id: "perta", label: "Perta" },
       ],
     },
     {
@@ -8261,7 +8803,7 @@ export default function ProduksiNPKApp() {
         <div className="mt-auto border-t border-white/20">
           <div className="p-4">
             <p className="text-xs opacity-75">
-              v1.18 - 2025 | NPKG-2 Production
+              V 1.20 - 2025 | NPKG-2 Production
             </p>
             <p className="text-xs opacity-75 mt-1">
               Made with <span className="text-red-500">🤍</span>

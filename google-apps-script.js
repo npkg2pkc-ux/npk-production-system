@@ -16,6 +16,7 @@
  *    - gate_pass
  *    - akun
  *    - rkap
+ *    - perta
  *    - sessions (untuk multi-login detection)
  *
  * 3. Buka Extensions > Apps Script
@@ -168,6 +169,25 @@ function readData(sheetName) {
         cellValue.includes(" Jam")
       ) {
         cellValue = parseFloat(cellValue.replace(" Jam", ""));
+      }
+
+      // Khusus untuk perta: parse items jika dalam format JSON string
+      if (sheetName === "perta" && headers[j] === "items") {
+        Logger.log("🔍 Perta items raw value: " + cellValue);
+        Logger.log("🔍 Type: " + typeof cellValue);
+        if (typeof cellValue === "string" && cellValue.trim() !== "") {
+          try {
+            cellValue = JSON.parse(cellValue);
+            Logger.log(
+              "✅ Parsed perta items successfully, length: " + cellValue.length
+            );
+          } catch (e) {
+            Logger.log("❌ Error parsing perta items: " + e);
+            cellValue = [{ item: "", deskripsi: "" }];
+          }
+        } else if (typeof cellValue !== "object") {
+          cellValue = [{ item: "", deskripsi: "" }];
+        }
       }
 
       row[headers[j]] = cellValue;
@@ -728,6 +748,7 @@ function getHeadersForSheet(sheetName) {
       "tanggalUpdate",
     ],
     rkap: ["id", "bulan", "targetRKAP"],
+    perta: ["id", "tanggalMulai", "tanggalSelesai", "items"],
   };
 
   return headersMap[sheetName] || [];
@@ -748,6 +769,7 @@ function getIdField(sheetName) {
     gate_pass: "noFile",
     akun: "noBadge",
     rkap: "bulan",
+    perta: "id",
   };
 
   return idFieldMap[sheetName] || "tanggal";
