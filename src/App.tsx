@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -75,7 +75,7 @@ const LoginPage = ({
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Animation */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#1B4332] via-[#2D6A4F] to-[#52B788] relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#192231] via-[#494E6B] to-[#98878F] relative overflow-hidden">
         <div className="absolute inset-0">
           {/* Animated circles */}
           <div className="absolute top-20 left-20 w-64 h-64 bg-white/10 rounded-full animate-pulse"></div>
@@ -132,10 +132,10 @@ const LoginPage = ({
           <div className="bg-white rounded-2xl shadow-2xl p-8 border border-gray-100">
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#2D6A4F] to-[#52B788] rounded-full mb-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-[#494E6B] to-[#98878F] rounded-full mb-4">
                 <Factory className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-3xl font-bold text-[#1B4332] mb-2">
+              <h2 className="text-3xl font-bold text-[#192231] mb-2">
                 Welcome Back
               </h2>
               <p className="text-gray-600">Silakan login untuk melanjutkan</p>
@@ -167,7 +167,7 @@ const LoginPage = ({
                     setError("");
                   }}
                   placeholder="Masukkan username"
-                  className="mt-2 h-12 border-gray-300 focus:border-[#2D6A4F] focus:ring-[#2D6A4F]"
+                  className="mt-2 h-12 border-gray-300 focus:border-[#494E6B] focus:ring-[#494E6B]"
                   required
                   autoFocus
                 />
@@ -189,14 +189,14 @@ const LoginPage = ({
                     setError("");
                   }}
                   placeholder="Masukkan password"
-                  className="mt-2 h-12 border-gray-300 focus:border-[#2D6A4F] focus:ring-[#2D6A4F]"
+                  className="mt-2 h-12 border-gray-300 focus:border-[#494E6B] focus:ring-[#494E6B]"
                   required
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full h-12 bg-gradient-to-r from-[#2D6A4F] to-[#52B788] hover:from-[#1B4332] hover:to-[#2D6A4F] text-white font-semibold text-lg shadow-lg transition-all duration-300 transform hover:scale-105"
+                className="w-full h-12 bg-gradient-to-r from-[#494E6B] to-[#98878F] hover:from-[#192231] hover:to-[#494E6B] text-white font-semibold text-lg shadow-lg transition-all duration-300 transform hover:scale-105"
               >
                 Login
               </Button>
@@ -204,7 +204,7 @@ const LoginPage = ({
 
             {/* Footer */}
             <div className="mt-6 text-center text-sm text-gray-500">
-              <p>� 2025 Reguler System. All rights reserved.</p>
+              <p>? 2025 Reguler System. All rights reserved.</p>
             </div>
           </div>
         </div>
@@ -261,7 +261,7 @@ const Pagination = ({
         size="sm"
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
-        className="h-9 px-4 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed font-medium"
+        className="h-9 px-4 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed font-medium"
       >
         Previous
       </Button>
@@ -270,7 +270,7 @@ const Pagination = ({
           page === "..." ? (
             <span
               key={`ellipsis-${idx}`}
-              className="h-9 px-3 flex items-center text-[#1B4332]"
+              className="h-9 px-3 flex items-center text-[#192231]"
             >
               ...
             </span>
@@ -282,8 +282,8 @@ const Pagination = ({
               onClick={() => onPageChange(page as number)}
               className={
                 currentPage === page
-                  ? "h-9 w-9 p-0 bg-[#FFD700] text-[#1B4332] hover:bg-[#F4B942] font-semibold shadow-sm"
-                  : "h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F]/10 hover:text-[#1B4332] font-medium"
+                  ? "h-9 w-9 p-0 bg-[#985E6D] text-[#192231] hover:bg-[#985E6D] font-semibold shadow-sm"
+                  : "h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B]/10 hover:text-[#192231] font-medium"
               }
             >
               {page}
@@ -296,7 +296,7 @@ const Pagination = ({
         size="sm"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="h-9 px-4 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed font-medium"
+        className="h-9 px-4 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed font-medium"
       >
         Next
       </Button>
@@ -868,14 +868,14 @@ export default function ProduksiNPKApp() {
         // Check if it's a different session (different browser/device)
         if (result.sessionData.sessionId !== currentSessionId.current) {
           console.log(
-            "[CHECK] ⛔ BLOCKING LOGIN - Different session detected!"
+            "[CHECK] ? BLOCKING LOGIN - Different session detected!"
           );
           return true; // Block login - account in use elsewhere
         } else {
-          console.log("[CHECK] ✅ Same session - allowing login");
+          console.log("[CHECK] ? Same session - allowing login");
         }
       } else {
-        console.log("[CHECK] ✅ No active session found - allowing login");
+        console.log("[CHECK] ? No active session found - allowing login");
       }
 
       return false; // Account free to use
@@ -963,7 +963,7 @@ export default function ProduksiNPKApp() {
     console.log("[LOGIN] Account in use check result:", accountInUse);
 
     if (accountInUse) {
-      console.log("[LOGIN] 🚨 Showing warning modal - account in use!");
+      console.log("[LOGIN] ?? Showing warning modal - account in use!");
       const warningMsg = `Akun "${username}" sedang aktif di perangkat/browser lain. Untuk keamanan, hanya satu sesi yang diperbolehkan per akun. Silakan logout dari perangkat lain atau tunggu 2 menit.`;
 
       setAccountInUseMessage(warningMsg);
@@ -981,7 +981,7 @@ export default function ProduksiNPKApp() {
       return; // Block login attempt
     }
 
-    console.log("[LOGIN] ✅ Account free - proceeding with login");
+    console.log("[LOGIN] ? Account free - proceeding with login");
 
     // Proceed with login if account is free
     await proceedWithLogin(username, role);
@@ -1498,9 +1498,9 @@ export default function ProduksiNPKApp() {
       const normalizedPerta = (perta || []).map((item: any) => {
         let parsedItems = item.items;
 
-        console.log("🔍 Raw perta item from backend:", item);
+        console.log("?? Raw perta item from backend:", item);
         console.log(
-          "🔍 Raw items field type:",
+          "?? Raw items field type:",
           typeof parsedItems,
           "value:",
           parsedItems
@@ -1509,7 +1509,7 @@ export default function ProduksiNPKApp() {
         // Jika items sudah array, gunakan langsung
         if (Array.isArray(parsedItems)) {
           console.log(
-            "✅ Items already array with length:",
+            "? Items already array with length:",
             parsedItems.length
           );
           return {
@@ -1523,16 +1523,16 @@ export default function ProduksiNPKApp() {
           try {
             parsedItems = JSON.parse(parsedItems);
             console.log(
-              "✅ Parsed items from string, length:",
+              "? Parsed items from string, length:",
               parsedItems.length
             );
           } catch (e) {
-            console.error("❌ Error parsing perta items:", e);
+            console.error("? Error parsing perta items:", e);
             parsedItems = [{ item: "", deskripsi: "" }];
           }
         } else {
           // Fallback jika bukan string dan bukan array
-          console.warn("⚠️ Items bukan string dan bukan array, using default");
+          console.warn("?? Items bukan string dan bukan array, using default");
           parsedItems = [{ item: "", deskripsi: "" }];
         }
 
@@ -2201,8 +2201,8 @@ export default function ProduksiNPKApp() {
     e.preventDefault();
     setShowLoadingOverlay(true);
     try {
-      console.log("💾 Saving Perta - formPerta.items:", formPerta.items);
-      console.log("💾 Items array length:", formPerta.items.length);
+      console.log("?? Saving Perta - formPerta.items:", formPerta.items);
+      console.log("?? Items array length:", formPerta.items.length);
 
       // Prepare data with stringified items for Google Sheets
       const preparedData = {
@@ -2210,7 +2210,7 @@ export default function ProduksiNPKApp() {
         items: JSON.stringify(formPerta.items), // Stringify items array
       };
 
-      console.log("💾 Stringified items:", preparedData.items);
+      console.log("?? Stringified items:", preparedData.items);
 
       if (editingIndex !== null) {
         const current: any = formPerta as any;
@@ -3935,7 +3935,7 @@ export default function ProduksiNPKApp() {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="bg-gradient-to-br from-[#2D6A4F] to-[#52B788] text-white shadow-lg border-none">
+          <Card className="bg-gradient-to-br from-[#494E6B] to-[#98878F] text-white shadow-lg border-none">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <TrendingUp className="w-4 h-4" />
@@ -3952,7 +3952,7 @@ export default function ProduksiNPKApp() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-[#2D6A4F] to-[#52B788] text-white shadow-lg border-none">
+          <Card className="bg-gradient-to-br from-[#494E6B] to-[#98878F] text-white shadow-lg border-none">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Target className="w-4 h-4" />
@@ -3974,7 +3974,7 @@ export default function ProduksiNPKApp() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-[#1B4332] to-[#2D6A4F] text-white shadow-lg border-none">
+          <Card className="bg-gradient-to-br from-[#192231] to-[#494E6B] text-white shadow-lg border-none">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Factory className="w-4 h-4" />
@@ -3991,7 +3991,7 @@ export default function ProduksiNPKApp() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-[#FFD700] to-[#F4B942] text-[#1B4332] shadow-lg border-none">
+          <Card className="bg-gradient-to-br from-[#985E6D] to-[#985E6D] text-[#192231] shadow-lg border-none">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 {metrics.yearlyPercentage >= 100 ? (
@@ -4006,9 +4006,9 @@ export default function ProduksiNPKApp() {
               <div className="text-3xl font-bold">
                 {metrics.yearlyPercentage.toFixed(1)}%
               </div>
-              <div className="w-full bg-[#1B4332]/20 rounded-full h-2 mt-3">
+              <div className="w-full bg-[#192231]/20 rounded-full h-2 mt-3">
                 <div
-                  className="bg-[#1B4332] h-2 rounded-full transition-all duration-500"
+                  className="bg-[#192231] h-2 rounded-full transition-all duration-500"
                   style={{
                     width: `${Math.min(metrics.yearlyPercentage, 100)}%`,
                   }}
@@ -4019,9 +4019,9 @@ export default function ProduksiNPKApp() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">
                 Grafik Produksi vs RKAP Tahunan
               </CardTitle>
               <CardDescription>
@@ -4037,7 +4037,7 @@ export default function ProduksiNPKApp() {
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "#fff",
-                      border: "1px solid #2D6A4F",
+                      border: "1px solid #494E6B",
                     }}
                     formatter={(value: number) => `${value.toFixed(2)} Ton`}
                   />
@@ -4045,13 +4045,13 @@ export default function ProduksiNPKApp() {
                   <Bar
                     dataKey="produksi"
                     name="Produksi Aktual"
-                    fill="#FFD700"
+                    fill="#985E6D"
                     radius={[8, 8, 0, 0]}
                   />
                   <Bar
                     dataKey="rkap"
                     name="Target RKAP"
-                    fill="#2D6A4F"
+                    fill="#494E6B"
                     radius={[8, 8, 0, 0]}
                   />
                 </BarChart>
@@ -4059,9 +4059,9 @@ export default function ProduksiNPKApp() {
             </CardContent>
           </Card>
 
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">
                 Persentase Pencapaian Bulanan
               </CardTitle>
               <CardDescription>
@@ -4077,7 +4077,7 @@ export default function ProduksiNPKApp() {
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "#fff",
-                      border: "1px solid #2D6A4F",
+                      border: "1px solid #494E6B",
                     }}
                     formatter={(value: number) => `${value.toFixed(1)}%`}
                   />
@@ -4086,9 +4086,9 @@ export default function ProduksiNPKApp() {
                     type="monotone"
                     dataKey="percentage"
                     name="Pencapaian (%)"
-                    stroke="#FFD700"
+                    stroke="#985E6D"
                     strokeWidth={3}
-                    dot={{ fill: "#F4B942", r: 5 }}
+                    dot={{ fill: "#985E6D", r: 5 }}
                     activeDot={{ r: 8 }}
                   />
                 </LineChart>
@@ -4097,9 +4097,9 @@ export default function ProduksiNPKApp() {
           </Card>
         </div>
 
-        <Card className="border-[#2D6A4F]/30 shadow-md">
-          <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-            <CardTitle className="text-[#1B4332]">
+        <Card className="border-[#494E6B]/30 shadow-md">
+          <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+            <CardTitle className="text-[#192231]">
               Detail Pencapaian Bulanan
             </CardTitle>
             <CardDescription>
@@ -4110,20 +4110,20 @@ export default function ProduksiNPKApp() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-[#2D6A4F]/30">
-                    <th className="text-left py-3 px-4 font-semibold text-[#1B4332]">
+                  <tr className="border-b border-[#494E6B]/30">
+                    <th className="text-left py-3 px-4 font-semibold text-[#192231]">
                       Bulan
                     </th>
-                    <th className="text-right py-3 px-4 font-semibold text-[#1B4332]">
+                    <th className="text-right py-3 px-4 font-semibold text-[#192231]">
                       Produksi (Ton)
                     </th>
-                    <th className="text-right py-3 px-4 font-semibold text-[#1B4332]">
+                    <th className="text-right py-3 px-4 font-semibold text-[#192231]">
                       Target RKAP (Ton)
                     </th>
-                    <th className="text-right py-3 px-4 font-semibold text-[#1B4332]">
+                    <th className="text-right py-3 px-4 font-semibold text-[#192231]">
                       Pencapaian (%)
                     </th>
-                    <th className="text-center py-3 px-4 font-semibold text-[#1B4332]">
+                    <th className="text-center py-3 px-4 font-semibold text-[#192231]">
                       Status
                     </th>
                   </tr>
@@ -4132,7 +4132,7 @@ export default function ProduksiNPKApp() {
                   {metrics.monthlyBreakdown.map((month, idx) => (
                     <tr
                       key={idx}
-                      className="border-b border-gray-100 hover:bg-[#2D6A4F]/5"
+                      className="border-b border-gray-100 hover:bg-[#494E6B]/5"
                     >
                       <td className="py-3 px-4 font-medium">{month.bulan}</td>
                       <td className="text-right py-3 px-4">
@@ -4146,7 +4146,7 @@ export default function ProduksiNPKApp() {
                       </td>
                       <td className="text-center py-3 px-4">
                         {month.percentage >= 100 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[#2D6A4F]/20 text-[#1B4332]">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[#494E6B]/20 text-[#192231]">
                             <CheckCircle className="w-3 h-3" /> Target Tercapai
                           </span>
                         ) : month.percentage >= 80 ? (
@@ -4168,27 +4168,27 @@ export default function ProduksiNPKApp() {
           </CardContent>
         </Card>
 
-        <Card className="border-[#2D6A4F]/30 shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
+        <Card className="border-[#494E6B]/30 shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-[#1B4332] flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-[#2D6A4F]" />
+                <CardTitle className="text-[#192231] flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-[#494E6B]" />
                   Analisis Downtime Per Item
                 </CardTitle>
                 <CardDescription className="mt-1">
                   Monitoring waktu downtime equipment/item berdasarkan periode
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#2D6A4F]/20 shadow-sm">
-                <label className="text-sm font-semibold text-[#1B4332] whitespace-nowrap">
-                  📅 Periode:
+              <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#494E6B]/20 shadow-sm">
+                <label className="text-sm font-semibold text-[#192231] whitespace-nowrap">
+                  ?? Periode:
                 </label>
                 <input
                   type="month"
                   value={downtimeChartMonth}
                   onChange={(e) => setDowntimeChartMonth(e.target.value)}
-                  className="border-none bg-transparent text-sm font-medium text-[#2D6A4F] focus:outline-none focus:ring-0 cursor-pointer"
+                  className="border-none bg-transparent text-sm font-medium text-[#494E6B] focus:outline-none focus:ring-0 cursor-pointer"
                 />
               </div>
             </div>
@@ -4227,7 +4227,7 @@ export default function ProduksiNPKApp() {
                       value: "Total Downtime (Jam)",
                       position: "insideBottom",
                       offset: -5,
-                      style: { fill: "#1B4332", fontWeight: 600, fontSize: 13 },
+                      style: { fill: "#192231", fontWeight: 600, fontSize: 13 },
                     }}
                   />
                   <YAxis
@@ -4235,19 +4235,19 @@ export default function ProduksiNPKApp() {
                     dataKey="item"
                     stroke="#6b7280"
                     width={120}
-                    tick={{ fill: "#1B4332", fontSize: 12, fontWeight: 500 }}
+                    tick={{ fill: "#192231", fontSize: 12, fontWeight: 500 }}
                   />
                   <Tooltip
                     cursor={{ fill: "rgba(45, 106, 79, 0.05)" }}
                     contentStyle={{
                       backgroundColor: "#fff",
-                      border: "2px solid #2D6A4F",
+                      border: "2px solid #494E6B",
                       borderRadius: "12px",
                       boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                       padding: "12px",
                     }}
                     labelStyle={{
-                      color: "#1B4332",
+                      color: "#192231",
                       fontWeight: 600,
                       marginBottom: 4,
                     }}
@@ -4267,7 +4267,7 @@ export default function ProduksiNPKApp() {
                     label={{
                       position: "right",
                       formatter: (value: number) => `${value.toFixed(1)} Jam`,
-                      fill: "#1B4332",
+                      fill: "#192231",
                       fontSize: 11,
                       fontWeight: 600,
                     }}
@@ -4284,12 +4284,12 @@ export default function ProduksiNPKApp() {
           </CardContent>
         </Card>
 
-        <Card className="border-[#2D6A4F]/30 shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
+        <Card className="border-[#494E6B]/30 shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-[#1B4332] flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-[#2D6A4F]" />
+                <CardTitle className="text-[#192231] flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-[#494E6B]" />
                   Work Request Per Eksekutor
                 </CardTitle>
                 <CardDescription className="mt-1">
@@ -4297,28 +4297,28 @@ export default function ProduksiNPKApp() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#2D6A4F]/20 shadow-sm">
-                  <label className="text-sm font-semibold text-[#1B4332] whitespace-nowrap">
-                    📅 Periode:
+                <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#494E6B]/20 shadow-sm">
+                  <label className="text-sm font-semibold text-[#192231] whitespace-nowrap">
+                    ?? Periode:
                   </label>
                   <select
                     value={wrChartPeriod}
                     onChange={(e) =>
                       setWrChartPeriod(e.target.value as "monthly" | "yearly")
                     }
-                    className="border-none bg-transparent text-sm font-medium text-[#2D6A4F] focus:outline-none focus:ring-0 cursor-pointer"
+                    className="border-none bg-transparent text-sm font-medium text-[#494E6B] focus:outline-none focus:ring-0 cursor-pointer"
                   >
                     <option value="monthly">Bulanan</option>
                     <option value="yearly">Tahunan</option>
                   </select>
                 </div>
                 {wrChartPeriod === "monthly" && (
-                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#2D6A4F]/20 shadow-sm">
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#494E6B]/20 shadow-sm">
                     <input
                       type="month"
                       value={wrChartMonth}
                       onChange={(e) => setWrChartMonth(e.target.value)}
-                      className="border-none bg-transparent text-sm font-medium text-[#2D6A4F] focus:outline-none focus:ring-0 cursor-pointer"
+                      className="border-none bg-transparent text-sm font-medium text-[#494E6B] focus:outline-none focus:ring-0 cursor-pointer"
                     />
                   </div>
                 )}
@@ -4335,8 +4335,8 @@ export default function ProduksiNPKApp() {
                 >
                   <defs>
                     <linearGradient id="wrGradient" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#2D6A4F" stopOpacity={0.9} />
-                      <stop offset="100%" stopColor="#52B788" stopOpacity={1} />
+                      <stop offset="0%" stopColor="#494E6B" stopOpacity={0.9} />
+                      <stop offset="100%" stopColor="#98878F" stopOpacity={1} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid
@@ -4353,7 +4353,7 @@ export default function ProduksiNPKApp() {
                       value: "Total Work Request",
                       position: "insideBottom",
                       offset: -5,
-                      style: { fill: "#1B4332", fontWeight: 600, fontSize: 13 },
+                      style: { fill: "#192231", fontWeight: 600, fontSize: 13 },
                     }}
                   />
                   <YAxis
@@ -4361,24 +4361,24 @@ export default function ProduksiNPKApp() {
                     dataKey="eksekutor"
                     stroke="#6b7280"
                     width={140}
-                    tick={{ fill: "#1B4332", fontSize: 12, fontWeight: 500 }}
+                    tick={{ fill: "#192231", fontSize: 12, fontWeight: 500 }}
                   />
                   <Tooltip
                     cursor={{ fill: "rgba(45, 106, 79, 0.05)" }}
                     contentStyle={{
                       backgroundColor: "#fff",
-                      border: "2px solid #2D6A4F",
+                      border: "2px solid #494E6B",
                       borderRadius: "12px",
                       boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                       padding: "12px",
                     }}
                     labelStyle={{
-                      color: "#1B4332",
+                      color: "#192231",
                       fontWeight: 600,
                       marginBottom: 4,
                     }}
                     formatter={(value: number) => [
-                      <span style={{ color: "#2D6A4F", fontWeight: 600 }}>
+                      <span style={{ color: "#494E6B", fontWeight: 600 }}>
                         {value} WR
                       </span>,
                       "Total",
@@ -4393,7 +4393,7 @@ export default function ProduksiNPKApp() {
                     label={{
                       position: "right",
                       formatter: (value: number) => `${value} WR`,
-                      fill: "#1B4332",
+                      fill: "#192231",
                       fontSize: 11,
                       fontWeight: 600,
                     }}
@@ -4413,14 +4413,14 @@ export default function ProduksiNPKApp() {
         </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-[#2D6A4F]/30 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-sm text-[#1B4332]">
+          <Card className="border-[#494E6B]/30 shadow-md hover:shadow-lg transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-sm text-[#192231]">
                 Total Produksi Blending
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#1B4332]">
+              <div className="text-2xl font-bold text-[#192231]">
                 {produksiBlendingData
                   .reduce((sum, item) => sum + (Number(item.tonase) || 0), 0)
                   .toFixed(2)}{" "}
@@ -4432,14 +4432,14 @@ export default function ProduksiNPKApp() {
             </CardContent>
           </Card>
 
-          <Card className="border-[#2D6A4F]/30 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-sm text-[#1B4332]">
+          <Card className="border-[#494E6B]/30 shadow-md hover:shadow-lg transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-sm text-[#192231]">
                 Total Produksi NPK Mini
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#1B4332]">
+              <div className="text-2xl font-bold text-[#192231]">
                 {produksiNPKMiniData
                   .reduce((sum, item) => sum + (Number(item.tonase) || 0), 0)
                   .toFixed(2)}{" "}
@@ -4451,14 +4451,14 @@ export default function ProduksiNPKApp() {
             </CardContent>
           </Card>
 
-          <Card className="border-[#2D6A4F]/30 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-sm text-[#1B4332]">
+          <Card className="border-[#494E6B]/30 shadow-md hover:shadow-lg transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-sm text-[#192231]">
                 Total Downtime
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-[#1B4332]">
+              <div className="text-2xl font-bold text-[#192231]">
                 {downtimeData
                   .reduce((sum, item) => sum + (item.downtime || 0), 0)
                   .toFixed(1)}{" "}
@@ -4483,9 +4483,9 @@ export default function ProduksiNPKApp() {
     if (activeNav === "produksi") {
       if (activeTab === "npk") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">Produksi Granul</CardTitle>
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">Produksi Granul</CardTitle>
               <CardDescription>
                 Data produksi NPK Granul harian per shift
               </CardDescription>
@@ -4524,7 +4524,7 @@ export default function ProduksiNPKApp() {
                   </div>
 
                   <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3 text-[#1B4332]">
+                    <h4 className="font-semibold mb-3 text-[#192231]">
                       Shift Malam
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -4565,7 +4565,7 @@ export default function ProduksiNPKApp() {
                   </div>
 
                   <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3 text-[#1B4332]">
+                    <h4 className="font-semibold mb-3 text-[#192231]">
                       Shift Pagi
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -4605,7 +4605,7 @@ export default function ProduksiNPKApp() {
                   </div>
 
                   <div className="border-t pt-4">
-                    <h4 className="font-semibold mb-3 text-[#1B4332]">
+                    <h4 className="font-semibold mb-3 text-[#192231]">
                       Shift Sore
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -4644,8 +4644,8 @@ export default function ProduksiNPKApp() {
                     </div>
                   </div>
 
-                  <div className="border-t pt-4 bg-[#2D6A4F]/10 p-4 rounded-lg">
-                    <h4 className="font-semibold mb-3 text-[#1B4332]">
+                  <div className="border-t pt-4 bg-[#494E6B]/10 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3 text-[#192231]">
                       Total (Otomatis)
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -4686,7 +4686,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2 pt-4 border-t">
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -4779,7 +4779,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2 pt-4 border-t">
                     <Button
                       onClick={handlePrintNPK}
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                     >
                       <Printer className="w-4 h-4 mr-2" />
                       Print Laporan
@@ -4797,14 +4797,14 @@ export default function ProduksiNPKApp() {
 
               <div>
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332] text-lg">
+                  <h4 className="font-semibold text-[#192231] text-lg">
                     Data Produksi NPK Granul
                   </h4>
                   <div className="flex gap-2">
                     <Button
                       onClick={() => setShowPrintModal(true)}
                       variant="outline"
-                      className="border-[#2D6A4F] text-[#2D6A4F] hover:bg-[#2D6A4F] hover:text-white"
+                      className="border-[#494E6B] text-[#494E6B] hover:bg-[#494E6B] hover:text-white"
                     >
                       <Printer className="w-4 h-4 mr-2" />
                       Print Laporan
@@ -4823,16 +4823,16 @@ export default function ProduksiNPKApp() {
                           shiftSoreOffspek: 0,
                         });
                       }}
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Tambah Data
                     </Button>
                   </div>
                 </div>
-                <div className="overflow-x-auto border border-[#2D6A4F]/30 rounded-lg">
+                <div className="overflow-x-auto border border-[#494E6B]/30 rounded-lg">
                   <table className="w-full text-sm">
-                    <thead className="bg-gradient-to-r from-[#2D6A4F] to-[#52B788] text-white">
+                    <thead className="bg-gradient-to-r from-[#494E6B] to-[#98878F] text-white">
                       <tr>
                         <th className="text-left py-3 px-4 font-semibold">
                           Tanggal
@@ -4884,7 +4884,7 @@ export default function ProduksiNPKApp() {
                         return (
                           <tr
                             key={idx}
-                            className="border-b border-[#2D6A4F]/20 hover:bg-[#2D6A4F]/5 transition-colors"
+                            className="border-b border-[#494E6B]/20 hover:bg-[#494E6B]/5 transition-colors"
                           >
                             <td className="py-3 px-4 text-gray-700">
                               {new Date(item.tanggal).toLocaleDateString(
@@ -4920,7 +4920,7 @@ export default function ProduksiNPKApp() {
                             <td className="text-right py-3 px-4 text-gray-700 font-semibold">
                               {Number(item.totalOffspek || 0).toFixed(2)}
                             </td>
-                            <td className="text-right py-3 px-4 font-bold text-[#1B4332]">
+                            <td className="text-right py-3 px-4 font-bold text-[#192231]">
                               {Number(item.total || 0).toFixed(2)}
                             </td>
                             <td className="text-center py-3 px-4">
@@ -4933,7 +4933,7 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "produksi_npk")
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -4975,9 +4975,9 @@ export default function ProduksiNPKApp() {
 
       if (activeTab === "blending") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">
                 Produksi Blending
               </CardTitle>
               <CardDescription>Data produksi blending</CardDescription>
@@ -5050,7 +5050,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2 pt-4 border-t">
                     <Button
                       onClick={handlePrintBlending}
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                     >
                       <Printer className="w-4 h-4 mr-2" />
                       Print Laporan
@@ -5161,7 +5161,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2">
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -5187,14 +5187,14 @@ export default function ProduksiNPKApp() {
 
               <div>
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332] text-lg">
+                  <h4 className="font-semibold text-[#192231] text-lg">
                     Data Produksi Blending
                   </h4>
                   <div className="flex gap-2">
                     <Button
                       onClick={() => setShowPrintModal(true)}
                       variant="outline"
-                      className="border-[#2D6A4F] text-[#2D6A4F] hover:bg-[#2D6A4F] hover:text-white"
+                      className="border-[#494E6B] text-[#494E6B] hover:bg-[#494E6B] hover:text-white"
                     >
                       <Printer className="w-4 h-4 mr-2" />
                       Print Laporan
@@ -5210,16 +5210,16 @@ export default function ProduksiNPKApp() {
                           tonase: 0,
                         });
                       }}
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Tambah Data
                     </Button>
                   </div>
                 </div>
-                <div className="overflow-x-auto border border-[#2D6A4F]/30 rounded-lg">
+                <div className="overflow-x-auto border border-[#494E6B]/30 rounded-lg">
                   <table className="w-full text-sm">
-                    <thead className="bg-gradient-to-r from-[#2D6A4F] to-[#52B788] text-white">
+                    <thead className="bg-gradient-to-r from-[#494E6B] to-[#98878F] text-white">
                       <tr>
                         <th className="text-left py-3 px-4 font-semibold">
                           Tanggal
@@ -5254,7 +5254,7 @@ export default function ProduksiNPKApp() {
                         return (
                           <tr
                             key={idx}
-                            className="border-b border-[#2D6A4F]/20 hover:bg-[#2D6A4F]/5 transition-colors"
+                            className="border-b border-[#494E6B]/20 hover:bg-[#494E6B]/5 transition-colors"
                           >
                             <td className="py-3 px-4 text-gray-700">
                               {new Date(item.tanggal).toLocaleDateString(
@@ -5288,7 +5288,7 @@ export default function ProduksiNPKApp() {
                                           "produksi_blending"
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -5333,9 +5333,9 @@ export default function ProduksiNPKApp() {
 
       if (activeTab === "mini") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">
                 Produksi NPK Mini
               </CardTitle>
               <CardDescription>Data produksi NPK mini</CardDescription>
@@ -5385,7 +5385,7 @@ export default function ProduksiNPKApp() {
                       Batal
                     </Button>
                     <Button
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       onClick={() => {
                         setShowPrintModal(false);
                         handlePrintNPKMini();
@@ -5473,7 +5473,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2">
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -5499,13 +5499,13 @@ export default function ProduksiNPKApp() {
 
               <div>
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332] text-lg">
+                  <h4 className="font-semibold text-[#192231] text-lg">
                     Data Produksi NPK Mini
                   </h4>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      className="border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                      className="border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                       onClick={() => {
                         setShowPrintModal(true);
                         setPrintMiniDateRange({
@@ -5527,16 +5527,16 @@ export default function ProduksiNPKApp() {
                           tonase: 0,
                         });
                       }}
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Tambah Data
                     </Button>
                   </div>
                 </div>
-                <div className="overflow-x-auto border border-[#2D6A4F]/30 rounded-lg">
+                <div className="overflow-x-auto border border-[#494E6B]/30 rounded-lg">
                   <table className="w-full text-sm">
-                    <thead className="bg-gradient-to-r from-[#2D6A4F] to-[#52B788] text-white">
+                    <thead className="bg-gradient-to-r from-[#494E6B] to-[#98878F] text-white">
                       <tr>
                         <th className="text-left py-3 px-4 font-semibold">
                           Tanggal
@@ -5567,7 +5567,7 @@ export default function ProduksiNPKApp() {
                         return (
                           <tr
                             key={idx}
-                            className="border-b border-[#2D6A4F]/20 hover:bg-[#2D6A4F]/5 transition-colors"
+                            className="border-b border-[#494E6B]/20 hover:bg-[#494E6B]/5 transition-colors"
                           >
                             <td className="py-3 px-4 text-gray-700">
                               {new Date(item.tanggal).toLocaleDateString(
@@ -5598,7 +5598,7 @@ export default function ProduksiNPKApp() {
                                           "produksi_npk_mini"
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -5645,9 +5645,9 @@ export default function ProduksiNPKApp() {
     if (activeNav === "laporan") {
       if (activeTab === "forklift") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">
                 Timesheet Forklift
               </CardTitle>
               <CardDescription>
@@ -5697,7 +5697,7 @@ export default function ProduksiNPKApp() {
                       Batal
                     </Button>
                     <Button
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       onClick={() => {
                         setShowPrintModal(false);
                         handlePrintTimesheetForklift();
@@ -5819,8 +5819,8 @@ export default function ProduksiNPKApp() {
                     </div>
                   </div>
 
-                  <div className="border-t pt-4 bg-[#2D6A4F]/10 p-4 rounded-lg">
-                    <h4 className="font-semibold mb-3 text-[#1B4332]">
+                  <div className="border-t pt-4 bg-[#494E6B]/10 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3 text-[#192231]">
                       Kalkulasi Otomatis
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -5867,7 +5867,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2">
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -5893,13 +5893,13 @@ export default function ProduksiNPKApp() {
 
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332]">
+                  <h4 className="font-semibold text-[#192231]">
                     Data Timesheet Forklift
                   </h4>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      className="border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                      className="border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                       onClick={() => {
                         setShowPrintModal(true);
                       }}
@@ -5919,7 +5919,7 @@ export default function ProduksiNPKApp() {
                           jamStart: "",
                         });
                       }}
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Tambah Data
@@ -5928,7 +5928,7 @@ export default function ProduksiNPKApp() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#2D6A4F]/20">
+                    <thead className="bg-[#494E6B]/20">
                       <tr>
                         <th className="text-left py-2 px-3">Tanggal</th>
                         <th className="text-left py-2 px-3">Forklift</th>
@@ -6002,7 +6002,7 @@ export default function ProduksiNPKApp() {
                                           "timesheet_forklift"
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -6047,9 +6047,9 @@ export default function ProduksiNPKApp() {
 
       if (activeTab === "loader") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">Timesheet Loader</CardTitle>
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">Timesheet Loader</CardTitle>
               <CardDescription>
                 Input timesheet dan tracking downtime loader per shift
               </CardDescription>
@@ -6079,7 +6079,7 @@ export default function ProduksiNPKApp() {
                       Batal
                     </Button>
                     <Button
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       onClick={() => {
                         setShowPrintModal(false);
                         handlePrintTimesheetLoader();
@@ -6199,8 +6199,8 @@ export default function ProduksiNPKApp() {
                     </div>
                   </div>
 
-                  <div className="border-t pt-4 bg-[#2D6A4F]/10 p-4 rounded-lg">
-                    <h4 className="font-semibold mb-3 text-[#1B4332]">
+                  <div className="border-t pt-4 bg-[#494E6B]/10 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3 text-[#192231]">
                       Kalkulasi Otomatis
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -6245,7 +6245,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2">
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -6271,13 +6271,13 @@ export default function ProduksiNPKApp() {
 
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332]">
+                  <h4 className="font-semibold text-[#192231]">
                     Data Timesheet Loader
                   </h4>
                   <div className="flex gap-2">
                     <Button
                       variant="outline"
-                      className="border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                      className="border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                       onClick={() => {
                         setShowPrintModal(true);
                       }}
@@ -6297,7 +6297,7 @@ export default function ProduksiNPKApp() {
                           jamStart: "",
                         });
                       }}
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Tambah Data
@@ -6306,7 +6306,7 @@ export default function ProduksiNPKApp() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#2D6A4F]/20">
+                    <thead className="bg-[#494E6B]/20">
                       <tr>
                         <th className="text-left py-2 px-3">Tanggal</th>
                         <th className="text-left py-2 px-3">Shift</th>
@@ -6379,7 +6379,7 @@ export default function ProduksiNPKApp() {
                                           "timesheet_loader"
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -6424,9 +6424,9 @@ export default function ProduksiNPKApp() {
 
       if (activeTab === "downtime") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">Downtime</CardTitle>
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">Downtime</CardTitle>
               <CardDescription>Input data downtime peralatan</CardDescription>
             </CardHeader>
             <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
@@ -6526,8 +6526,8 @@ export default function ProduksiNPKApp() {
                     </div>
                   </div>
 
-                  <div className="border-t pt-4 bg-[#2D6A4F]/10 p-4 rounded-lg">
-                    <h4 className="font-semibold mb-3 text-[#1B4332]">
+                  <div className="border-t pt-4 bg-[#494E6B]/10 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-3 text-[#192231]">
                       Kalkulasi Otomatis
                     </h4>
                     <div>
@@ -6544,7 +6544,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2">
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -6570,7 +6570,7 @@ export default function ProduksiNPKApp() {
 
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332]">
+                  <h4 className="font-semibold text-[#192231]">
                     Data Downtime
                   </h4>
                   <Button
@@ -6585,7 +6585,7 @@ export default function ProduksiNPKApp() {
                         jamStart: "",
                       });
                     }}
-                    className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                    className="bg-[#494E6B] hover:bg-[#98878F]"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah Data
@@ -6593,7 +6593,7 @@ export default function ProduksiNPKApp() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#2D6A4F]/20">
+                    <thead className="bg-[#494E6B]/20">
                       <tr>
                         <th className="text-left py-2 px-3">Tanggal</th>
                         <th className="text-left py-2 px-3">Item</th>
@@ -6645,7 +6645,7 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "downtime")
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -6688,9 +6688,9 @@ export default function ProduksiNPKApp() {
     if (activeNav === "data") {
       if (activeTab === "workrequest") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">Work Request</CardTitle>
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">Work Request</CardTitle>
               <CardDescription>
                 Input data work request pekerjaan
               </CardDescription>
@@ -6822,7 +6822,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2">
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -6848,7 +6848,7 @@ export default function ProduksiNPKApp() {
 
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332]">
+                  <h4 className="font-semibold text-[#192231]">
                     Data Work Request
                   </h4>
                   <Button
@@ -6865,7 +6865,7 @@ export default function ProduksiNPKApp() {
                         deskripsiPekerjaan: "",
                       });
                     }}
-                    className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                    className="bg-[#494E6B] hover:bg-[#98878F]"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah Data
@@ -6873,7 +6873,7 @@ export default function ProduksiNPKApp() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#2D6A4F]/20">
+                    <thead className="bg-[#494E6B]/20">
                       <tr>
                         <th className="text-left py-2 px-3">Tanggal</th>
                         <th className="text-left py-2 px-3">No. WR</th>
@@ -6925,7 +6925,7 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "work_request")
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -6971,9 +6971,9 @@ export default function ProduksiNPKApp() {
 
       if (activeTab === "bahanbaku") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">Bahan Baku</CardTitle>
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">Bahan Baku</CardTitle>
               <CardDescription>Input data bahan baku</CardDescription>
             </CardHeader>
             <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
@@ -7072,7 +7072,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2">
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -7098,7 +7098,7 @@ export default function ProduksiNPKApp() {
 
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332]">
+                  <h4 className="font-semibold text-[#192231]">
                     Data Bahan Baku
                   </h4>
                   <Button
@@ -7112,7 +7112,7 @@ export default function ProduksiNPKApp() {
                         keterangan: "",
                       });
                     }}
-                    className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                    className="bg-[#494E6B] hover:bg-[#98878F]"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah Data
@@ -7120,7 +7120,7 @@ export default function ProduksiNPKApp() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#2D6A4F]/20">
+                    <thead className="bg-[#494E6B]/20">
                       <tr>
                         <th className="text-left py-2 px-3">Tanggal</th>
                         <th className="text-left py-2 px-3">Jenis Bahan</th>
@@ -7164,7 +7164,7 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "bahan_baku")
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -7205,9 +7205,9 @@ export default function ProduksiNPKApp() {
 
       if (activeTab === "vibrasi") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">Vibrasi</CardTitle>
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">Vibrasi</CardTitle>
               <CardDescription>
                 Input data pengukuran vibrasi equipment
               </CardDescription>
@@ -7332,7 +7332,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2">
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -7358,7 +7358,7 @@ export default function ProduksiNPKApp() {
 
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332]">Data Vibrasi</h4>
+                  <h4 className="font-semibold text-[#192231]">Data Vibrasi</h4>
                   <Button
                     onClick={() => {
                       setShowForm(true);
@@ -7372,7 +7372,7 @@ export default function ProduksiNPKApp() {
                         keterangan: "",
                       });
                     }}
-                    className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                    className="bg-[#494E6B] hover:bg-[#98878F]"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah Data
@@ -7380,7 +7380,7 @@ export default function ProduksiNPKApp() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#2D6A4F]/20">
+                    <thead className="bg-[#494E6B]/20">
                       <tr>
                         <th className="text-left py-2 px-3">Tanggal</th>
                         <th className="text-left py-2 px-3">Equipment</th>
@@ -7428,7 +7428,7 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "vibrasi")
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -7465,9 +7465,9 @@ export default function ProduksiNPKApp() {
 
       if (activeTab === "gatepass") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">Gate Pass</CardTitle>
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">Gate Pass</CardTitle>
               <CardDescription>
                 Input data gate pass untuk pengeluaran barang
               </CardDescription>
@@ -7608,7 +7608,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2">
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -7634,7 +7634,7 @@ export default function ProduksiNPKApp() {
 
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332]">
+                  <h4 className="font-semibold text-[#192231]">
                     Data Gate Pass
                   </h4>
                   <Button
@@ -7653,7 +7653,7 @@ export default function ProduksiNPKApp() {
                         approver: "",
                       });
                     }}
-                    className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                    className="bg-[#494E6B] hover:bg-[#98878F]"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah Data
@@ -7661,7 +7661,7 @@ export default function ProduksiNPKApp() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#2D6A4F]/20">
+                    <thead className="bg-[#494E6B]/20">
                       <tr>
                         <th className="text-left py-2 px-3">No. File</th>
                         <th className="text-left py-2 px-3">Tanggal</th>
@@ -7723,7 +7723,7 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "gate_pass")
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -7760,9 +7760,9 @@ export default function ProduksiNPKApp() {
 
       if (activeTab === "perta") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">Perta</CardTitle>
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">Perta</CardTitle>
               <CardDescription>Permintaan barang dan alat</CardDescription>
             </CardHeader>
             <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
@@ -7817,7 +7817,7 @@ export default function ProduksiNPKApp() {
 
                   <div className="border-t pt-4">
                     <div className="flex justify-between items-center mb-3">
-                      <h4 className="font-semibold text-[#1B4332]">
+                      <h4 className="font-semibold text-[#192231]">
                         Item yang Diganti / Upgrade
                       </h4>
                       <Button
@@ -7832,7 +7832,7 @@ export default function ProduksiNPKApp() {
                             ],
                           });
                         }}
-                        className="bg-[#2D6A4F] hover:bg-[#52B788] h-8 w-8 p-0"
+                        className="bg-[#494E6B] hover:bg-[#98878F] h-8 w-8 p-0"
                       >
                         <Plus className="w-4 h-4" />
                       </Button>
@@ -7840,7 +7840,7 @@ export default function ProduksiNPKApp() {
 
                     {formPerta.items.map((itemData, index) => (
                       <div key={index} className="flex gap-2 mb-3 items-end">
-                        <div className="text-center font-semibold text-[#1B4332] pt-8 w-8 flex-shrink-0">
+                        <div className="text-center font-semibold text-[#192231] pt-8 w-8 flex-shrink-0">
                           {index + 1}
                         </div>
                         <div className="flex-1">
@@ -7910,7 +7910,7 @@ export default function ProduksiNPKApp() {
                     </Button>
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -7934,9 +7934,9 @@ export default function ProduksiNPKApp() {
                 {viewPertaModal.data && (
                   <div className="space-y-4">
                     <div>
-                      <h4 className="font-semibold text-[#1B4332] mb-3 flex items-center gap-2">
-                        <span className="w-8 h-8 bg-[#2D6A4F] text-white rounded flex items-center justify-center">
-                          📋
+                      <h4 className="font-semibold text-[#192231] mb-3 flex items-center gap-2">
+                        <span className="w-8 h-8 bg-[#494E6B] text-white rounded flex items-center justify-center">
+                          ??
                         </span>
                         Item yang Diganti / Upgrade
                       </h4>
@@ -7946,11 +7946,11 @@ export default function ProduksiNPKApp() {
                             key={index}
                             className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100"
                           >
-                            <div className="w-8 h-8 bg-[#2D6A4F] text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                            <div className="w-8 h-8 bg-[#494E6B] text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
                               {index + 1}
                             </div>
                             <div className="flex-1">
-                              <p className="font-medium text-[#1B4332]">
+                              <p className="font-medium text-[#192231]">
                                 {itemData.item}
                               </p>
                               <p className="text-sm text-gray-600 mt-1">
@@ -7967,7 +7967,7 @@ export default function ProduksiNPKApp() {
 
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332]">Data Perta</h4>
+                  <h4 className="font-semibold text-[#192231]">Data Perta</h4>
                   <Button
                     onClick={() => {
                       setShowForm(true);
@@ -7978,7 +7978,7 @@ export default function ProduksiNPKApp() {
                         items: [{ item: "", deskripsi: "" }],
                       });
                     }}
-                    className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                    className="bg-[#494E6B] hover:bg-[#98878F]"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah Data
@@ -7986,7 +7986,7 @@ export default function ProduksiNPKApp() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#2D6A4F]/20">
+                    <thead className="bg-[#494E6B]/20">
                       <tr>
                         <th className="text-left py-2 px-3">Tanggal Mulai</th>
                         <th className="text-left py-2 px-3">Tanggal Selesai</th>
@@ -8039,12 +8039,12 @@ export default function ProduksiNPKApp() {
                               )}
                             </td>
                             <td className="text-center py-2 px-3">
-                              <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#52B788]/20 text-[#1B4332] font-semibold rounded-full">
+                              <span className="inline-flex items-center gap-1 px-3 py-1 bg-[#98878F]/20 text-[#192231] font-semibold rounded-full">
                                 {diffDays} Hari
                               </span>
                             </td>
                             <td className="text-center py-2 px-3">
-                              <span className="inline-flex items-center justify-center w-8 h-8 bg-[#2D6A4F]/20 text-[#1B4332] font-bold rounded-full">
+                              <span className="inline-flex items-center justify-center w-8 h-8 bg-[#494E6B]/20 text-[#192231] font-bold rounded-full">
                                 {item.items.length}
                               </span>
                             </td>
@@ -8071,7 +8071,7 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "perta")
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -8110,9 +8110,9 @@ export default function ProduksiNPKApp() {
     if (activeNav === "setting") {
       if (activeTab === "akun") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">Akun</CardTitle>
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">Akun</CardTitle>
               <CardDescription>Manajemen akun dan password</CardDescription>
             </CardHeader>
             <CardContent className="bg-gradient-to-b from-white to-[#F8FAF7] p-6">
@@ -8234,7 +8234,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2">
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -8260,7 +8260,7 @@ export default function ProduksiNPKApp() {
 
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332]">Data Akun</h4>
+                  <h4 className="font-semibold text-[#192231]">Data Akun</h4>
                   <Button
                     onClick={() => {
                       setShowForm(true);
@@ -8275,7 +8275,7 @@ export default function ProduksiNPKApp() {
                         tanggalUpdate: new Date().toISOString().split("T")[0],
                       });
                     }}
-                    className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                    className="bg-[#494E6B] hover:bg-[#98878F]"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah Data
@@ -8283,7 +8283,7 @@ export default function ProduksiNPKApp() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#2D6A4F]/20">
+                    <thead className="bg-[#494E6B]/20">
                       <tr>
                         <th className="text-left py-2 px-3">No. Badge</th>
                         <th className="text-left py-2 px-3">Nama</th>
@@ -8333,7 +8333,7 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "akun")
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -8370,9 +8370,9 @@ export default function ProduksiNPKApp() {
 
       if (activeTab === "rkap") {
         return (
-          <Card className="border-[#2D6A4F]/30 shadow-md">
-            <CardHeader className="bg-gradient-to-r from-[#2D6A4F]/10 to-[#52B788]/10 border-b border-[#2D6A4F]/20">
-              <CardTitle className="text-[#1B4332]">
+          <Card className="border-[#494E6B]/30 shadow-md">
+            <CardHeader className="bg-gradient-to-r from-[#494E6B]/10 to-[#98878F]/10 border-b border-[#494E6B]/20">
+              <CardTitle className="text-[#192231]">
                 RKAP (Rencana Kerja dan Anggaran Perusahaan)
               </CardTitle>
               <CardDescription>Setting target produksi bulanan</CardDescription>
@@ -8438,7 +8438,7 @@ export default function ProduksiNPKApp() {
                   <div className="flex gap-2">
                     <Button
                       type="submit"
-                      className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                      className="bg-[#494E6B] hover:bg-[#98878F]"
                       disabled={loading}
                     >
                       <Plus className="w-4 h-4 mr-2" />
@@ -8464,7 +8464,7 @@ export default function ProduksiNPKApp() {
 
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#1B4332]">Data RKAP</h4>
+                  <h4 className="font-semibold text-[#192231]">Data RKAP</h4>
                   <Button
                     onClick={() => {
                       setShowForm(true);
@@ -8474,7 +8474,7 @@ export default function ProduksiNPKApp() {
                         targetRKAP: 0,
                       });
                     }}
-                    className="bg-[#2D6A4F] hover:bg-[#52B788]"
+                    className="bg-[#494E6B] hover:bg-[#98878F]"
                   >
                     <Plus className="w-4 h-4 mr-2" />
                     Tambah Data
@@ -8482,7 +8482,7 @@ export default function ProduksiNPKApp() {
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="bg-[#2D6A4F]/20">
+                    <thead className="bg-[#494E6B]/20">
                       <tr>
                         <th className="text-left py-2 px-3">Bulan</th>
                         <th className="text-right py-2 px-3">
@@ -8516,7 +8516,7 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "rkap")
                                       }
-                                      className="h-9 w-9 p-0 border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+                                      className="h-9 w-9 p-0 border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
                                     >
                                       <Edit className="w-5 h-5" />
                                     </Button>
@@ -8668,7 +8668,7 @@ export default function ProduksiNPKApp() {
 
                 <div className="text-center">
                   <p className="text-xs text-red-600 font-medium">
-                    ⛔ Login Ditolak - Akun Sedang Aktif
+                    ? Login Ditolak - Akun Sedang Aktif
                   </p>
                 </div>
               </div>
@@ -8678,11 +8678,11 @@ export default function ProduksiNPKApp() {
 
         {/* Login Success Overlay Animation */}
         {showLoginOverlay && (
-          <div className="fixed inset-0 bg-gradient-to-br from-[#1B4332] via-[#2D6A4F] to-[#52B788] flex items-center justify-center z-[100]">
+          <div className="fixed inset-0 bg-gradient-to-br from-[#192231] via-[#494E6B] to-[#98878F] flex items-center justify-center z-[100]">
             <div className="text-center">
               <div className="relative mb-8">
                 <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center shadow-2xl animate-pulse">
-                  <div className="w-20 h-20 bg-gradient-to-br from-[#2D6A4F] to-[#52B788] rounded-full flex items-center justify-center">
+                  <div className="w-20 h-20 bg-gradient-to-br from-[#494E6B] to-[#98878F] rounded-full flex items-center justify-center">
                     <span className="text-4xl font-bold text-white">
                       {loginUsername === "admin"
                         ? "A"
@@ -8711,9 +8711,9 @@ export default function ProduksiNPKApp() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F8FAF5] to-[#E8F5E9] flex">
-      <aside className="w-64 bg-gradient-to-b from-[#1B4332] to-[#2D6A4F] text-white flex flex-col fixed left-0 top-0 bottom-0 overflow-y-auto">
+      <aside className="w-64 bg-gradient-to-b from-[#192231] to-[#494E6B] text-white flex flex-col fixed left-0 top-0 bottom-0 overflow-y-auto">
         <div className="p-6 border-b border-white/20">
-          <h1 className="text-2xl font-bold text-[#FFD700]">NPK Production</h1>
+          <h1 className="text-2xl font-bold text-[#985E6D]">NPK Production</h1>
           <p className="text-sm opacity-90 mt-1">Management System</p>
         </div>
 
@@ -8806,7 +8806,7 @@ export default function ProduksiNPKApp() {
               V 1.20 - 2025 | NPKG-2 Production
             </p>
             <p className="text-xs opacity-75 mt-1">
-              Made with <span className="text-red-500">🤍</span>
+              Made with <span className="text-red-500">??</span>
             </p>
           </div>
         </div>
@@ -8819,7 +8819,7 @@ export default function ProduksiNPKApp() {
           <Button
             onClick={() => setShowUserMenu(!showUserMenu)}
             size="sm"
-            className="relative bg-gradient-to-br from-[#2D6A4F] to-[#52B788] hover:from-[#1B4332] hover:to-[#2D6A4F] text-white w-10 h-10 rounded-full p-0 font-bold text-base shadow-md"
+            className="relative bg-gradient-to-br from-[#494E6B] to-[#98878F] hover:from-[#192231] hover:to-[#494E6B] text-white w-10 h-10 rounded-full p-0 font-bold text-base shadow-md"
           >
             {userRole === "admin" ? "A" : userRole === "supervisor" ? "S" : "U"}
           </Button>
@@ -8827,7 +8827,7 @@ export default function ProduksiNPKApp() {
           {/* User Dropdown Menu */}
           {showUserMenu && (
             <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
-              <div className="p-4 bg-gradient-to-br from-[#2D6A4F] to-[#52B788] text-white">
+              <div className="p-4 bg-gradient-to-br from-[#494E6B] to-[#98878F] text-white">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                     <span className="text-xl font-bold">
@@ -8894,7 +8894,7 @@ export default function ProduksiNPKApp() {
               onClick={() => setShowNotifications(!showNotifications)}
               variant="outline"
               size="sm"
-              className="relative border-[#2D6A4F] text-[#1B4332] hover:bg-[#2D6A4F] hover:text-white"
+              className="relative border-[#494E6B] text-[#192231] hover:bg-[#494E6B] hover:text-white"
             >
               <Bell className="w-5 h-5" />
               {notifications.filter((n) => !n.read).length > 0 && (
@@ -8908,7 +8908,7 @@ export default function ProduksiNPKApp() {
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center">
-                  <h3 className="font-semibold text-[#1B4332]">Notifikasi</h3>
+                  <h3 className="font-semibold text-[#192231]">Notifikasi</h3>
                   <div className="flex gap-2">
                     {notifications.filter((n) => !n.read).length > 0 && (
                       <Button
@@ -8928,7 +8928,7 @@ export default function ProduksiNPKApp() {
                             )
                           );
                         }}
-                        className="text-xs text-[#2D6A4F] hover:text-[#1B4332]"
+                        className="text-xs text-[#494E6B] hover:text-[#192231]"
                       >
                         Tandai Semua Dibaca
                       </Button>
@@ -9040,7 +9040,7 @@ export default function ProduksiNPKApp() {
       <main className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
-            <h2 className="text-3xl font-bold text-[#1B4332]">
+            <h2 className="text-3xl font-bold text-[#192231]">
               {navItems.find((item) => item.id === activeNav)?.label}
             </h2>
             {activeTab && (
@@ -9063,7 +9063,7 @@ export default function ProduksiNPKApp() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
             <form onSubmit={handlePasswordSubmit} className="p-6">
-              <h3 className="text-xl font-bold text-[#1B4332] mb-4">
+              <h3 className="text-xl font-bold text-[#192231] mb-4">
                 Masukkan Password
               </h3>
               <input
@@ -9071,13 +9071,13 @@ export default function ProduksiNPKApp() {
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="Password"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#2D6A4F] focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#494E6B] focus:border-transparent"
                 autoFocus
               />
               <div className="flex gap-3 mt-4">
                 <Button
                   type="submit"
-                  className="flex-1 bg-[#2D6A4F] hover:bg-[#1B4332]"
+                  className="flex-1 bg-[#494E6B] hover:bg-[#192231]"
                 >
                   OK
                 </Button>
@@ -9103,14 +9103,14 @@ export default function ProduksiNPKApp() {
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-[#1B4332]">
+                <h3 className="text-xl font-bold text-[#192231]">
                   Detail Akun
                 </h3>
                 <button
                   onClick={() => setViewAkunModal({ show: false, data: null })}
                   className="text-gray-500 hover:text-gray-700 text-2xl"
                 >
-                  �
+                  ?
                 </button>
               </div>
               {viewAkunModal.data && (
@@ -9389,7 +9389,7 @@ export default function ProduksiNPKApp() {
               <div className="mt-6 flex justify-end">
                 <Button
                   onClick={() => setViewAkunModal({ show: false, data: null })}
-                  className="bg-[#2D6A4F] hover:bg-[#1B4332]"
+                  className="bg-[#494E6B] hover:bg-[#192231]"
                 >
                   Tutup
                 </Button>
@@ -9403,7 +9403,7 @@ export default function ProduksiNPKApp() {
       {showLoadingOverlay && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[100]">
           <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4">
-            <Loader2 className="w-16 h-16 text-[#2D6A4F] animate-spin" />
+            <Loader2 className="w-16 h-16 text-[#494E6B] animate-spin" />
             <p className="text-lg font-semibold text-gray-700">
               Memproses data...
             </p>
@@ -9425,11 +9425,11 @@ export default function ProduksiNPKApp() {
 
       {/* Logout Overlay */}
       {showLogoutOverlay && (
-        <div className="fixed inset-0 bg-gradient-to-br from-[#1B4332] via-[#2D6A4F] to-[#52B788] flex items-center justify-center z-[100]">
+        <div className="fixed inset-0 bg-gradient-to-br from-[#192231] via-[#494E6B] to-[#98878F] flex items-center justify-center z-[100]">
           <div className="text-center">
             <div className="relative mb-8">
               <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center shadow-2xl animate-pulse">
-                <div className="w-20 h-20 bg-gradient-to-br from-[#2D6A4F] to-[#52B788] rounded-full flex items-center justify-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-[#494E6B] to-[#98878F] rounded-full flex items-center justify-center">
                   <span className="text-4xl font-bold text-white">
                     {userRole === "admin"
                       ? "A"
@@ -9489,7 +9489,7 @@ export default function ProduksiNPKApp() {
 
               <div className="text-center">
                 <p className="text-xs text-red-600 font-medium">
-                  ⛔ Login Ditolak - Akun Sedang Aktif
+                  ? Login Ditolak - Akun Sedang Aktif
                 </p>
               </div>
             </div>
