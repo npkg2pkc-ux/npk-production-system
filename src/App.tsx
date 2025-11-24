@@ -848,16 +848,20 @@ export default function ProduksiNPKApp() {
     if (!chatInput.trim() || isSendingMessage) return;
 
     setIsSendingMessage(true);
+    const messageText = chatInput.trim();
+    setChatInput(""); // Clear input immediately
+
     try {
       const username = localStorage.getItem("username") || "Unknown";
       const message = {
         sender: username,
         role: userRole,
-        message: chatInput.trim(),
+        message: messageText,
         timestamp: new Date().toISOString(),
       };
 
-      await fetch(API_URL, {
+      // Send to server (using JSONP workaround for no-cors)
+      fetch(API_URL, {
         method: "POST",
         mode: "no-cors",
         headers: { "Content-Type": "application/json" },
@@ -867,19 +871,25 @@ export default function ProduksiNPKApp() {
         }),
       });
 
-      // Add message locally
+      // Add message locally immediately for instant feedback
       const newMessage: ChatMessage = {
         id: Date.now().toString(),
-        ...message,
+        sender: username,
+        role: userRole,
+        message: messageText,
         timestamp: new Date(),
       };
-      setChatMessages([...chatMessages, newMessage]);
-      setChatInput("");
+      setChatMessages((prev) => [...prev, newMessage]);
 
       // Scroll to bottom
       setTimeout(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 100);
+
+      // Reload messages after 1 second to get server version
+      setTimeout(() => {
+        loadChatMessages();
+      }, 1000);
     } catch (error) {
       console.error("Error sending message:", error);
     } finally {

@@ -966,19 +966,40 @@ function getChatMessages() {
   if (!sheet) {
     sheet = ss.insertSheet("chat_messages");
     sheet.appendRow(["ID", "Sender", "Role", "Message", "Timestamp"]);
+    // Format header
+    const headerRange = sheet.getRange("A1:E1");
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#4a5568");
+    headerRange.setFontColor("#ffffff");
+    return { success: true, data: [] };
+  }
+
+  // Check if sheet has header
+  const lastRow = sheet.getLastRow();
+  if (lastRow === 0) {
+    sheet.appendRow(["ID", "Sender", "Role", "Message", "Timestamp"]);
+    const headerRange = sheet.getRange("A1:E1");
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#4a5568");
+    headerRange.setFontColor("#ffffff");
+    return { success: true, data: [] };
   }
 
   const data = sheet.getDataRange().getValues();
   const messages = [];
 
+  // Start from row 2 (skip header)
   for (let i = 1; i < data.length; i++) {
-    messages.push({
-      id: data[i][0],
-      sender: data[i][1],
-      role: data[i][2],
-      message: data[i][3],
-      timestamp: data[i][4],
-    });
+    if (data[i][0]) {
+      // Only add if ID exists
+      messages.push({
+        id: data[i][0].toString(),
+        sender: data[i][1],
+        role: data[i][2],
+        message: data[i][3],
+        timestamp: data[i][4],
+      });
+    }
   }
 
   return { success: true, data: messages };
@@ -995,6 +1016,25 @@ function addChatMessage(messageData) {
   if (!sheet) {
     sheet = ss.insertSheet("chat_messages");
     sheet.appendRow(["ID", "Sender", "Role", "Message", "Timestamp"]);
+    // Format header
+    const headerRange = sheet.getRange("A1:E1");
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#4a5568");
+    headerRange.setFontColor("#ffffff");
+  }
+
+  // Check if row 1 has proper header
+  const firstRow = sheet.getRange("A1:E1").getValues()[0];
+  if (firstRow[0] !== "ID" || firstRow[1] !== "Sender") {
+    // No proper header, insert one at the top
+    sheet.insertRowBefore(1);
+    sheet
+      .getRange("A1:E1")
+      .setValues([["ID", "Sender", "Role", "Message", "Timestamp"]]);
+    const headerRange = sheet.getRange("A1:E1");
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#4a5568");
+    headerRange.setFontColor("#ffffff");
   }
 
   const id = new Date().getTime().toString();
@@ -1008,5 +1048,40 @@ function addChatMessage(messageData) {
     timestamp,
   ]);
 
+  // Auto-resize columns for better readability
+  sheet.autoResizeColumns(1, 5);
+
   return { success: true, message: "Chat message added", id: id };
+}
+
+/**
+ * Fix chat_messages sheet - Add header if missing
+ * Run this once manually if your sheet doesn't have header
+ */
+function fixChatMessagesSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("chat_messages");
+
+  if (!sheet) {
+    Logger.log("Sheet chat_messages not found");
+    return;
+  }
+
+  // Check if row 1 has proper header
+  const firstRow = sheet.getRange("A1:E1").getValues()[0];
+  if (firstRow[0] !== "ID" || firstRow[1] !== "Sender") {
+    // Insert header at the top
+    sheet.insertRowBefore(1);
+    sheet
+      .getRange("A1:E1")
+      .setValues([["ID", "Sender", "Role", "Message", "Timestamp"]]);
+    const headerRange = sheet.getRange("A1:E1");
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#4a5568");
+    headerRange.setFontColor("#ffffff");
+    sheet.autoResizeColumns(1, 5);
+    Logger.log("Header added successfully!");
+  } else {
+    Logger.log("Header already exists");
+  }
 }
