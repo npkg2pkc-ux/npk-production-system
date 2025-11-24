@@ -906,15 +906,20 @@ export default function ProduksiNPKApp() {
     }
   }, [isLoggedIn]);
 
-  // Check for new messages
+  // Check for new messages (only from other users)
   useEffect(() => {
     if (!showChat && chatMessages.length > 0) {
+      const currentUsername = localStorage.getItem("username");
       const lastMessageTime = localStorage.getItem("lastChatCheck");
-      const hasNew = chatMessages.some(
-        (msg) =>
+
+      const hasNew = chatMessages.some((msg) => {
+        // Only show badge for messages from OTHER users
+        const isFromOthers = msg.sender !== currentUsername;
+        const isNew =
           !lastMessageTime ||
-          new Date(msg.timestamp) > new Date(parseInt(lastMessageTime))
-      );
+          new Date(msg.timestamp) > new Date(parseInt(lastMessageTime));
+        return isFromOthers && isNew;
+      });
       setHasNewMessages(hasNew);
     }
   }, [chatMessages, showChat]);
