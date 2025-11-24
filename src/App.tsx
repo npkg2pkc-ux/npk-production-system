@@ -599,6 +599,15 @@ export default function ProduksiNPKApp() {
     "monthly"
   );
 
+  // Downtime Frequency chart filter (for home dashboard)
+  const [downtimeFreqMonth, setDowntimeFreqMonth] = useState(
+    new Date().toISOString().slice(0, 7)
+  );
+  const [downtimeFreqPeriod, setDowntimeFreqPeriod] = useState<
+    "monthly" | "yearly"
+  >("monthly");
+  const [showAllFreqItems, setShowAllFreqItems] = useState(false);
+
   // Login states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<
@@ -3421,6 +3430,46 @@ export default function ProduksiNPKApp() {
     }
   };
 
+  // Calculate downtime frequency per item (count occurrences)
+  const calculateDowntimeFrequency = () => {
+    let filteredData = downtimeData;
+
+    if (downtimeFreqPeriod === "monthly") {
+      const [year, month] = downtimeFreqMonth.split("-").map(Number);
+      filteredData = downtimeData.filter((item) => {
+        const [itemYear, itemMonth] = String(item.tanggal)
+          .split("-")
+          .map(Number);
+        return itemYear === year && itemMonth === month;
+      });
+    } else if (downtimeFreqPeriod === "yearly") {
+      const year = parseInt(downtimeFreqMonth.split("-")[0]);
+      filteredData = downtimeData.filter((item) => {
+        const itemYear = parseInt(String(item.tanggal).split("-")[0]);
+        return itemYear === year;
+      });
+    }
+
+    // Count frequency by item
+    const itemFreqMap = new Map<string, number>();
+
+    filteredData.forEach((item) => {
+      const itemName = item.item || "Unknown";
+      itemFreqMap.set(itemName, (itemFreqMap.get(itemName) || 0) + 1);
+    });
+
+    // Convert to array and sort by frequency descending
+    const chartData = Array.from(itemFreqMap.entries())
+      .map(([item, frequency]) => ({
+        item,
+        frequency,
+      }))
+      .sort((a, b) => b.frequency - a.frequency);
+
+    // Limit to top 15 items unless showAllFreqItems is true
+    return showAllFreqItems ? chartData : chartData.slice(0, 15);
+  };
+
   // Calculate downtime per item for selected period
   const calculateDowntimePerItem = () => {
     let filteredData = downtimeData;
@@ -4374,6 +4423,276 @@ export default function ProduksiNPKApp() {
                 </tbody>
               </table>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Grafik Frekuensi Downtime Per Item */}
+        <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+          <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-[#001B44] flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-[#00B4D8]" />
+                  Frekuensi Downtime Per Item
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Jumlah kejadian downtime per equipment/item berdasarkan
+                  periode
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
+                  <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
+                    📆 Periode:
+                  </label>
+                  <select
+                    value={downtimeFreqPeriod}
+                    onChange={(e) =>
+                      setDowntimeFreqPeriod(
+                        e.target.value as "monthly" | "yearly"
+                      )
+                    }
+                    className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
+                  >
+                    <option value="monthly">Bulanan</option>
+                    <option value="yearly">Tahunan</option>
+                  </select>
+                </div>
+                {downtimeFreqPeriod === "monthly" ? (
+                  <input
+                    type="month"
+                    value={downtimeFreqMonth}
+                    onChange={(e) => setDowntimeFreqMonth(e.target.value)}
+                    className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
+                  />
+                ) : (
+                  <select
+                    value={downtimeFreqMonth.split("-")[0]}
+                    onChange={(e) =>
+                      setDowntimeFreqMonth(`${e.target.value}-01`)
+                    }
+                    className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
+                  >
+                    {Array.from(
+                      { length: 10 },
+                      (_, i) => new Date().getFullYear() - i
+                    ).map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {calculateDowntimeFrequency().length > 0 ? (
+              <>
+                <div className="mb-4 flex justify-between items-center">
+                  <div className="text-sm text-gray-600">
+                    Menampilkan{" "}
+                    <span className="font-semibold text-[#001B44]">
+                      {calculateDowntimeFrequency().length}
+                    </span>{" "}
+                    item
+                    {!showAllFreqItems &&
+                      downtimeData.length > 15 &&
+                      (() => {
+                        const totalUniqueItems = Array.from(
+                          new Set(
+                            downtimeData
+                              .filter((d) => {
+                                if (downtimeFreqPeriod === "monthly") {
+                                  const [year, month] = downtimeFreqMonth
+                                    .split("-")
+                                    .map(Number);
+                                  const [itemYear, itemMonth] = String(
+                                    d.tanggal
+                                  )
+                                    .split("-")
+                                    .map(Number);
+                                  return (
+                                    itemYear === year && itemMonth === month
+                                  );
+                                } else {
+                                  const year = parseInt(
+                                    downtimeFreqMonth.split("-")[0]
+                                  );
+                                  const itemYear = parseInt(
+                                    String(d.tanggal).split("-")[0]
+                                  );
+                                  return itemYear === year;
+                                }
+                              })
+                              .map((d) => d.item)
+                          )
+                        ).length;
+                        return totalUniqueItems > 15 ? (
+                          <span className="ml-1">
+                            dari{" "}
+                            <span className="font-semibold text-[#001B44]">
+                              {totalUniqueItems}
+                            </span>{" "}
+                            total
+                          </span>
+                        ) : null;
+                      })()}
+                  </div>
+                  {(() => {
+                    const totalUniqueItems = Array.from(
+                      new Set(
+                        downtimeData
+                          .filter((d) => {
+                            if (downtimeFreqPeriod === "monthly") {
+                              const [year, month] = downtimeFreqMonth
+                                .split("-")
+                                .map(Number);
+                              const [itemYear, itemMonth] = String(d.tanggal)
+                                .split("-")
+                                .map(Number);
+                              return itemYear === year && itemMonth === month;
+                            } else {
+                              const year = parseInt(
+                                downtimeFreqMonth.split("-")[0]
+                              );
+                              const itemYear = parseInt(
+                                String(d.tanggal).split("-")[0]
+                              );
+                              return itemYear === year;
+                            }
+                          })
+                          .map((d) => d.item)
+                      )
+                    ).length;
+                    return totalUniqueItems > 15 ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAllFreqItems(!showAllFreqItems)}
+                        className="text-[#00B4D8] border-[#00B4D8] hover:bg-[#00B4D8] hover:text-white transition-colors"
+                      >
+                        {showAllFreqItems ? (
+                          <>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Tampilkan Top 15
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="w-4 h-4 mr-2" />
+                            Tampilkan Semua
+                          </>
+                        )}
+                      </Button>
+                    ) : null;
+                  })()}
+                </div>
+                <ResponsiveContainer
+                  width="100%"
+                  height={
+                    showAllFreqItems
+                      ? Math.max(450, calculateDowntimeFrequency().length * 30)
+                      : 450
+                  }
+                >
+                  <BarChart
+                    data={calculateDowntimeFrequency()}
+                    layout="vertical"
+                    margin={{ top: 10, right: 40, left: 120, bottom: 10 }}
+                  >
+                    <defs>
+                      <linearGradient
+                        id="frequencyGradient"
+                        x1="0"
+                        y1="0"
+                        x2="1"
+                        y2="0"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#00B4D8"
+                          stopOpacity={0.9}
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#0096C7"
+                          stopOpacity={1}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#e5e7eb"
+                      horizontal={true}
+                      vertical={false}
+                    />
+                    <XAxis
+                      type="number"
+                      stroke="#6b7280"
+                      tick={{ fill: "#6b7280", fontSize: 12 }}
+                      label={{
+                        value: "Frekuensi Kejadian",
+                        position: "insideBottom",
+                        offset: -5,
+                        style: {
+                          fill: "#001B44",
+                          fontWeight: 600,
+                          fontSize: 13,
+                        },
+                      }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="item"
+                      stroke="#6b7280"
+                      width={130}
+                      tick={{ fill: "#001B44", fontSize: 12, fontWeight: 500 }}
+                    />
+                    <Tooltip
+                      cursor={{ fill: "rgba(0, 180, 216, 0.05)" }}
+                      contentStyle={{
+                        backgroundColor: "#fff",
+                        border: "2px solid #00B4D8",
+                        borderRadius: "12px",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                        padding: "12px",
+                      }}
+                      labelStyle={{
+                        color: "#001B44",
+                        fontWeight: 600,
+                        marginBottom: 4,
+                      }}
+                      formatter={(value: number) => [
+                        <span style={{ color: "#00B4D8", fontWeight: 600 }}>
+                          {value} kali
+                        </span>,
+                        "Frekuensi",
+                      ]}
+                    />
+                    <Bar
+                      dataKey="frequency"
+                      fill="url(#frequencyGradient)"
+                      radius={[0, 12, 12, 0]}
+                      animationDuration={1000}
+                      animationBegin={0}
+                      label={{
+                        position: "right",
+                        formatter: (value: number) => `${value}x`,
+                        fill: "#001B44",
+                        fontSize: 11,
+                        fontWeight: 600,
+                      }}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[450px] text-gray-400">
+                <AlertCircle className="w-16 h-16 mb-4 opacity-50" />
+                <p className="text-lg font-medium">Tidak ada data downtime</p>
+                <p className="text-sm">untuk periode yang dipilih</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
