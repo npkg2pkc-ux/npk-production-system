@@ -4313,7 +4313,7 @@ export default function ProduksiNPKApp() {
               </div>
               <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
                 <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
-                  ?? Periode:
+                  📆 Periode:
                 </label>
                 <input
                   type="month"
@@ -4430,7 +4430,7 @@ export default function ProduksiNPKApp() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
                   <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
-                    ?? Periode:
+                    📆 Periode:
                   </label>
                   <select
                     value={wrChartPeriod}
@@ -8939,7 +8939,7 @@ export default function ProduksiNPKApp() {
               V 1.20 - 2025 | NPKG-2 Production
             </p>
             <p className="text-xs opacity-75 mt-1">
-              Made with <span className="text-red-500">??</span>
+              Made with <span className="text-red-500">🤍</span>
             </p>
           </div>
         </div>
