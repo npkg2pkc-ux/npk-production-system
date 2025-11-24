@@ -589,6 +589,7 @@ export default function ProduksiNPKApp() {
   const [downtimeChartPeriod, setDowntimeChartPeriod] = useState<
     "monthly" | "yearly"
   >("monthly");
+  const [showAllDowntimeItems, setShowAllDowntimeItems] = useState(false);
 
   // Work Request chart filter
   const [wrChartMonth, setWrChartMonth] = useState(
@@ -3457,7 +3458,8 @@ export default function ProduksiNPKApp() {
       }))
       .sort((a, b) => b.downtime - a.downtime);
 
-    return chartData;
+    // Limit to top 15 items unless showAllDowntimeItems is true
+    return showAllDowntimeItems ? chartData : chartData.slice(0, 15);
   };
 
   // Calculate Work Request per Eksekutor for selected period
@@ -4479,85 +4481,150 @@ export default function ProduksiNPKApp() {
           </CardHeader>
           <CardContent className="pt-6">
             {calculateDowntimePerItem().length > 0 ? (
-              <ResponsiveContainer width="100%" height={450}>
-                <BarChart
-                  data={calculateDowntimePerItem()}
-                  layout="vertical"
-                  margin={{ top: 10, right: 40, left: 100, bottom: 10 }}
-                >
-                  <defs>
-                    <linearGradient
-                      id="downtimeGradient"
-                      x1="0"
-                      y1="0"
-                      x2="1"
-                      y2="0"
+              <>
+                <div className="mb-4 flex justify-between items-center">
+                  <div className="text-sm text-gray-600">
+                    Menampilkan{" "}
+                    <span className="font-semibold text-[#001B44]">
+                      {calculateDowntimePerItem().length}
+                    </span>{" "}
+                    item
+                    {!showAllDowntimeItems && downtimeData.length > 15 && (
+                      <span className="ml-1">
+                        dari{" "}
+                        <span className="font-semibold text-[#001B44]">
+                          {
+                            Array.from(new Set(downtimeData.map((d) => d.item)))
+                              .length
+                          }
+                        </span>{" "}
+                        total
+                      </span>
+                    )}
+                  </div>
+                  {Array.from(new Set(downtimeData.map((d) => d.item))).length >
+                    15 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setShowAllDowntimeItems(!showAllDowntimeItems)
+                      }
+                      className="text-[#00B4D8] border-[#00B4D8] hover:bg-[#00B4D8] hover:text-white transition-colors"
                     >
-                      <stop offset="0%" stopColor="#ef4444" stopOpacity={0.9} />
-                      <stop offset="100%" stopColor="#dc2626" stopOpacity={1} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#e5e7eb"
-                    horizontal={true}
-                    vertical={false}
-                  />
-                  <XAxis
-                    type="number"
-                    stroke="#6b7280"
-                    tick={{ fill: "#6b7280", fontSize: 12 }}
-                    label={{
-                      value: "Total Downtime (Jam)",
-                      position: "insideBottom",
-                      offset: -5,
-                      style: { fill: "#001B44", fontWeight: 600, fontSize: 13 },
-                    }}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="item"
-                    stroke="#6b7280"
-                    width={120}
-                    tick={{ fill: "#001B44", fontSize: 12, fontWeight: 500 }}
-                  />
-                  <Tooltip
-                    cursor={{ fill: "rgba(45, 106, 79, 0.05)" }}
-                    contentStyle={{
-                      backgroundColor: "#fff",
-                      border: "2px solid #00B4D8",
-                      borderRadius: "12px",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                      padding: "12px",
-                    }}
-                    labelStyle={{
-                      color: "#001B44",
-                      fontWeight: 600,
-                      marginBottom: 4,
-                    }}
-                    formatter={(value: number) => [
-                      <span style={{ color: "#dc2626", fontWeight: 600 }}>
-                        {value.toFixed(2)} Jam
-                      </span>,
-                      "Total Downtime",
-                    ]}
-                  />
-                  <Bar
-                    dataKey="downtime"
-                    fill="url(#downtimeGradient)"
-                    radius={[0, 12, 12, 0]}
-                    animationDuration={1000}
-                    animationBegin={0}
-                    label={{
-                      position: "right",
-                      formatter: (value: number) => `${value.toFixed(1)} Jam`,
-                      fill: "#001B44",
-                      fontSize: 11,
-                      fontWeight: 600,
-                    }}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+                      {showAllDowntimeItems ? (
+                        <>
+                          <Eye className="w-4 h-4 mr-2" />
+                          Tampilkan Top 15
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-4 h-4 mr-2" />
+                          Tampilkan Semua
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+                <ResponsiveContainer
+                  width="100%"
+                  height={
+                    showAllDowntimeItems
+                      ? Math.max(450, calculateDowntimePerItem().length * 30)
+                      : 450
+                  }
+                >
+                  <BarChart
+                    data={calculateDowntimePerItem()}
+                    layout="vertical"
+                    margin={{ top: 10, right: 40, left: 100, bottom: 10 }}
+                  >
+                    <defs>
+                      <linearGradient
+                        id="downtimeGradient"
+                        x1="0"
+                        y1="0"
+                        x2="1"
+                        y2="0"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor="#ef4444"
+                          stopOpacity={0.9}
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor="#dc2626"
+                          stopOpacity={1}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#e5e7eb"
+                      horizontal={true}
+                      vertical={false}
+                    />
+                    <XAxis
+                      type="number"
+                      stroke="#6b7280"
+                      tick={{ fill: "#6b7280", fontSize: 12 }}
+                      label={{
+                        value: "Total Downtime (Jam)",
+                        position: "insideBottom",
+                        offset: -5,
+                        style: {
+                          fill: "#001B44",
+                          fontWeight: 600,
+                          fontSize: 13,
+                        },
+                      }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="item"
+                      stroke="#6b7280"
+                      width={120}
+                      tick={{ fill: "#001B44", fontSize: 12, fontWeight: 500 }}
+                    />
+                    <Tooltip
+                      cursor={{ fill: "rgba(45, 106, 79, 0.05)" }}
+                      contentStyle={{
+                        backgroundColor: "#fff",
+                        border: "2px solid #00B4D8",
+                        borderRadius: "12px",
+                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                        padding: "12px",
+                      }}
+                      labelStyle={{
+                        color: "#001B44",
+                        fontWeight: 600,
+                        marginBottom: 4,
+                      }}
+                      formatter={(value: number) => [
+                        <span style={{ color: "#dc2626", fontWeight: 600 }}>
+                          {value.toFixed(2)} Jam
+                        </span>,
+                        "Total Downtime",
+                      ]}
+                    />
+                    <Bar
+                      dataKey="downtime"
+                      fill="url(#downtimeGradient)"
+                      radius={[0, 12, 12, 0]}
+                      animationDuration={1000}
+                      animationBegin={0}
+                      label={{
+                        position: "right",
+                        formatter: (value: number) => `${value.toFixed(1)} Jam`,
+                        fill: "#001B44",
+                        fontSize: 11,
+                        fontWeight: 600,
+                      }}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center h-[450px] text-gray-400">
                 <AlertCircle className="w-16 h-16 mb-4 opacity-50" />
