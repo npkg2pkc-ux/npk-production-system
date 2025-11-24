@@ -98,6 +98,19 @@ https://script.google.com/macros/s/AKfycbwURvYXyBD0-SrqomO4eNbE16-KtdD1g6e8G0LLI
 4. Deploy sebagai Web App (Execute as: Me, Access: Anyone)
 5. Copy webhook URL dan update di `src/App.tsx` baris 10
 
+## Login Credentials
+
+Aplikasi memiliki 4 role dengan hak akses berbeda:
+
+| Role              | Username     | Password       | Permissions                              |
+| ----------------- | ------------ | -------------- | ---------------------------------------- |
+| 👑 **Admin**      | `admin`      | `adminreguler` | Full access (Create, Edit, Delete, View) |
+| 👔 **AVP**        | `avp`        | `avpnpk`       | Full access (Create, Edit, Delete, View) |
+| 👨‍💼 **Supervisor** | `supervisor` | `3972103`      | Full access (Create, Edit, Delete, View) |
+| 👤 **User**       | `user`       | `usernpk`      | Limited access (Create, View only)       |
+
+**Lihat detail role AVP:** [ROLE_AVP.md](ROLE_AVP.md)
+
 **Testing API:**
 Buka browser console dan jalankan:
 

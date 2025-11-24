@@ -596,9 +596,9 @@ export default function ProduksiNPKApp() {
 
   // Login states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState<"admin" | "user" | "supervisor">(
-    "admin"
-  );
+  const [userRole, setUserRole] = useState<
+    "admin" | "user" | "supervisor" | "avp"
+  >("admin");
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
@@ -813,7 +813,11 @@ export default function ProduksiNPKApp() {
   // Check login status from localStorage on mount
   useEffect(() => {
     const savedLoginStatus = localStorage.getItem("isLoggedIn");
-    const savedUserRole = localStorage.getItem("userRole") as "admin" | "user";
+    const savedUserRole = localStorage.getItem("userRole") as
+      | "admin"
+      | "user"
+      | "supervisor"
+      | "avp";
     if (savedLoginStatus === "true") {
       setIsLoggedIn(true);
       setUserRole(savedUserRole || "admin");
@@ -968,7 +972,9 @@ export default function ProduksiNPKApp() {
 
   // Helper to check if user has edit/delete permission
   const canEditDelete = () => {
-    return userRole === "admin" || userRole === "supervisor";
+    return (
+      userRole === "admin" || userRole === "supervisor" || userRole === "avp"
+    );
   };
 
   // Generate unique session ID for current browser
@@ -1060,7 +1066,7 @@ export default function ProduksiNPKApp() {
 
     // Validate credentials
     let validCredentials = false;
-    let role: "admin" | "user" | "supervisor" = "admin";
+    let role: "admin" | "user" | "supervisor" | "avp" = "admin";
     let username = "";
 
     if (loginUsername === "admin" && loginPassword === "adminreguler") {
@@ -1075,6 +1081,10 @@ export default function ProduksiNPKApp() {
       validCredentials = true;
       role = "supervisor";
       username = "supervisor";
+    } else if (loginUsername === "avp" && loginPassword === "avpnpk") {
+      validCredentials = true;
+      role = "avp";
+      username = "avp";
     }
 
     if (!validCredentials) {
@@ -1114,7 +1124,7 @@ export default function ProduksiNPKApp() {
   // Proceed with login after checks (Google Sheets session creation)
   const proceedWithLogin = async (
     username: string,
-    role: "admin" | "user" | "supervisor"
+    role: "admin" | "user" | "supervisor" | "avp"
   ) => {
     // Show login overlay animation
     setShowLoginOverlay(true);
@@ -8809,6 +8819,8 @@ export default function ProduksiNPKApp() {
                         ? "A"
                         : loginUsername === "supervisor"
                         ? "S"
+                        : loginUsername === "avp"
+                        ? "V"
                         : "U"}
                     </span>
                   </div>
@@ -8942,7 +8954,13 @@ export default function ProduksiNPKApp() {
             size="sm"
             className="relative bg-gradient-to-br from-[#494E6B] to-[#98878F] hover:from-[#192231] hover:to-[#494E6B] text-white w-10 h-10 rounded-full p-0 font-bold text-base shadow-md"
           >
-            {userRole === "admin" ? "A" : userRole === "supervisor" ? "S" : "U"}
+            {userRole === "admin"
+              ? "A"
+              : userRole === "supervisor"
+              ? "S"
+              : userRole === "avp"
+              ? "V"
+              : "U"}
           </Button>
 
           {/* User Dropdown Menu */}
@@ -8956,6 +8974,8 @@ export default function ProduksiNPKApp() {
                         ? "A"
                         : userRole === "supervisor"
                         ? "S"
+                        : userRole === "avp"
+                        ? "V"
                         : "U"}
                     </span>
                   </div>
@@ -8965,6 +8985,8 @@ export default function ProduksiNPKApp() {
                         ? "Admin"
                         : userRole === "supervisor"
                         ? "Supervisor"
+                        : userRole === "avp"
+                        ? "AVP"
                         : "User"}
                     </p>
                     <p className="text-xs opacity-90">
@@ -8972,6 +8994,8 @@ export default function ProduksiNPKApp() {
                         ? "Administrator"
                         : userRole === "supervisor"
                         ? "Supervisor"
+                        : userRole === "avp"
+                        ? "Assistant Vice President"
                         : "User"}
                     </p>
                   </div>
@@ -9564,6 +9588,8 @@ export default function ProduksiNPKApp() {
                       ? "A"
                       : userRole === "supervisor"
                       ? "S"
+                      : userRole === "avp"
+                      ? "V"
                       : "U"}
                   </span>
                 </div>
@@ -9693,6 +9719,8 @@ export default function ProduksiNPKApp() {
                                   ? "bg-red-500/20 text-red-700"
                                   : msg.role === "supervisor"
                                   ? "bg-blue-500/20 text-blue-700"
+                                  : msg.role === "avp"
+                                  ? "bg-purple-500/20 text-purple-700"
                                   : "bg-green-500/20 text-green-700"
                               } ${
                                 isOwnMessage ? "bg-white/20 text-white" : ""
