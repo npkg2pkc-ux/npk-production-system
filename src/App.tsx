@@ -9385,13 +9385,13 @@ export default function ProduksiNPKApp() {
     <div className="min-h-screen bg-gray-50 flex">
       <aside className="w-64 bg-[#001B44] text-white flex flex-col fixed left-0 top-0 bottom-0 overflow-y-auto shadow-xl">
         <div className="p-6 border-b border-white/10">
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col items-center gap-3">
             <img
               src="/logo-kujang.png"
               alt="Logo Kujang"
-              className="w-12 h-12 object-contain"
+              className="w-20 h-20 object-contain"
             />
-            <div>
+            <div className="text-center">
               <h1 className="text-xl font-bold text-white leading-tight">
                 NPK Production
               </h1>
