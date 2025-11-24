@@ -38,7 +38,7 @@ const SelectTrigger = React.forwardRef<
     <button
       ref={ref}
       type="button"
-      className={`flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
+      className={`flex h-10 w-full items-center justify-between rounded-md border border-gray-300 bg-white text-gray-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-[#00B4D8] disabled:cursor-not-allowed disabled:opacity-50 ${
         className || ""
       }`}
       onClick={() => context.setOpen(!context.open)}
@@ -80,7 +80,7 @@ const SelectContent: React.FC<{
 
   return (
     <div
-      className={`absolute z-50 mt-1 w-full rounded-md border border-gray-300 bg-white shadow-lg ${
+      className={`absolute z-50 mt-1 w-full rounded-md border border-gray-200 bg-white text-gray-900 shadow-lg ${
         className || ""
       }`}
     >
@@ -100,8 +100,8 @@ const SelectItem: React.FC<SelectItemProps> = ({ value, children }) => {
 
   return (
     <div
-      className={`cursor-pointer rounded-sm px-2 py-1.5 text-sm hover:bg-gray-100 ${
-        context.value === value ? "bg-gray-100" : ""
+      className={`cursor-pointer rounded-sm px-2 py-1.5 text-sm hover:bg-[#00B4D8]/10 ${
+        context.value === value ? "bg-[#00B4D8]/20 font-semibold" : ""
       }`}
       onClick={() => {
         context.onValueChange(value);

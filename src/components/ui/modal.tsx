@@ -33,7 +33,7 @@ const Modal: React.FC<ModalProps> = ({
         className={`relative bg-white rounded-lg shadow-xl ${sizeClasses[size]} w-full max-h-[90vh] flex flex-col`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-[#494E6B]/20 bg-gradient-to-r from-[#494E6B] to-[#98878F]">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-[#00B4D8]">
           <h3 className="text-xl font-semibold text-white">{title}</h3>
           <button
             onClick={onClose}

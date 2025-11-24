@@ -24,6 +24,16 @@ Web aplikasi untuk manajemen produksi NPK dengan fitur lengkap tracking produksi
 - Recharts (untuk grafik)
 - Lucide React (untuk icon)
 
+## 🎨 Design Theme
+
+Aplikasi ini menggunakan **Kadido Theme** yang terinspirasi dari Kadido Farming Technology:
+
+- 🔵 **Navy Blue** (#001B44) - Primary backgrounds
+- 💎 **Cyan** (#00B4D8) - Buttons & accents
+- 🌿 **Mint Green** (#7FFFD4) - Highlights & success states
+
+**Lihat detail lengkap:** [THEME_KADIDO.md](THEME_KADIDO.md)
+
 ## Instalasi
 
 1. Install dependencies:
