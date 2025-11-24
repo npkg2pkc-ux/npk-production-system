@@ -685,6 +685,14 @@ export default function ProduksiNPKApp() {
   const [rkapData, setRkapData] = useState<RKAP[]>([]);
   const [pertaData, setPertaData] = useState<Perta[]>([]);
 
+  // Monthly notes state
+  const [monthlyNotes, setMonthlyNotes] = useState<{ [key: string]: string }>(
+    () => {
+      const saved = localStorage.getItem("monthlyNotes");
+      return saved ? JSON.parse(saved) : {};
+    }
+  );
+
   // Form states for Produksi NPK
   const [formProduksiNPK, setFormProduksiNPK] = useState<ProduksiNPK>({
     tanggal: new Date().toISOString().split("T")[0],
@@ -829,6 +837,19 @@ export default function ProduksiNPKApp() {
       setNotifications(JSON.parse(savedNotifications));
     }
   }, []);
+
+  // Save monthly notes to localStorage
+  useEffect(() => {
+    localStorage.setItem("monthlyNotes", JSON.stringify(monthlyNotes));
+  }, [monthlyNotes]);
+
+  // Handle monthly note change
+  const handleMonthlyNoteChange = (bulan: string, note: string) => {
+    setMonthlyNotes((prev) => ({
+      ...prev,
+      [bulan]: note,
+    }));
+  };
 
   // Load chat messages
   const loadChatMessages = async () => {
@@ -4257,6 +4278,9 @@ export default function ProduksiNPKApp() {
                     <th className="text-center py-3 px-4 font-semibold text-[#001B44]">
                       Status
                     </th>
+                    <th className="text-left py-3 px-4 font-semibold text-[#001B44]">
+                      Catatan
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -4290,6 +4314,17 @@ export default function ProduksiNPKApp() {
                             Peningkatan
                           </span>
                         )}
+                      </td>
+                      <td className="py-3 px-4">
+                        <input
+                          type="text"
+                          value={monthlyNotes[month.bulan] || ""}
+                          onChange={(e) =>
+                            handleMonthlyNoteChange(month.bulan, e.target.value)
+                          }
+                          placeholder="Tambah catatan..."
+                          className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent"
+                        />
                       </td>
                     </tr>
                   ))}
