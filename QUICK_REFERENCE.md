@@ -40,7 +40,7 @@ npm run lint
 
 2. **Buat Google Sheets**
 
-   - Buat 12 sheet: produksi_npk, produksi_blending, dll
+   - Buat 14 sheet: produksi_npk, produksi_blending, sessions, chat_messages, dll
 
 3. **Deploy Apps Script**
 

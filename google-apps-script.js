@@ -42,6 +42,14 @@ function doGet(e) {
       ).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // Chat messages endpoint
+    if (action === "getChatMessages") {
+      const result = getChatMessages();
+      return ContentService.createTextOutput(
+        JSON.stringify(result)
+      ).setMimeType(ContentService.MimeType.JSON);
+    }
+
     if (action === "read" && sheet) {
       const data = readData(sheet);
       return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(
@@ -87,6 +95,9 @@ function doPost(e) {
         break;
       case "deleteSession":
         result = deleteSession(data.username);
+        break;
+      case "addChatMessage":
+        result = addChatMessage(rowData);
         break;
       default:
         result = { error: "Invalid action" };
@@ -942,4 +953,60 @@ function cleanupExpiredSessions() {
   }
 
   Logger.log("Expired sessions cleaned up");
+}
+
+/**
+ * Get all chat messages
+ */
+function getChatMessages() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("chat_messages");
+
+  // Create sheet if it doesn't exist
+  if (!sheet) {
+    sheet = ss.insertSheet("chat_messages");
+    sheet.appendRow(["ID", "Sender", "Role", "Message", "Timestamp"]);
+  }
+
+  const data = sheet.getDataRange().getValues();
+  const messages = [];
+
+  for (let i = 1; i < data.length; i++) {
+    messages.push({
+      id: data[i][0],
+      sender: data[i][1],
+      role: data[i][2],
+      message: data[i][3],
+      timestamp: data[i][4],
+    });
+  }
+
+  return { success: true, data: messages };
+}
+
+/**
+ * Add new chat message
+ */
+function addChatMessage(messageData) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("chat_messages");
+
+  // Create sheet if it doesn't exist
+  if (!sheet) {
+    sheet = ss.insertSheet("chat_messages");
+    sheet.appendRow(["ID", "Sender", "Role", "Message", "Timestamp"]);
+  }
+
+  const id = new Date().getTime().toString();
+  const timestamp = new Date();
+
+  sheet.appendRow([
+    id,
+    messageData.sender,
+    messageData.role,
+    messageData.message,
+    timestamp,
+  ]);
+
+  return { success: true, message: "Chat message added", id: id };
 }

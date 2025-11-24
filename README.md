@@ -13,6 +13,7 @@ Web aplikasi untuk manajemen produksi NPK dengan fitur lengkap tracking produksi
 - 🔧 Monitoring Vibrasi Equipment
 - 🚪 Gate Pass System
 - ⚙️ Setting RKAP dan Akun
+- 💬 **Chat Room** - Komunikasi real-time untuk semua role (Admin, Supervisor, User)
 
 ## Teknologi
 

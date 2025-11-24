@@ -49,6 +49,8 @@ import {
   Loader2,
   Bell,
   X,
+  MessageCircle,
+  Send,
 } from "lucide-react";
 
 const WEBHOOK_URL =
@@ -627,6 +629,21 @@ export default function ProduksiNPKApp() {
   const [showLoginOverlay, setShowLoginOverlay] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
+  // Chat states
+  interface ChatMessage {
+    id: string;
+    sender: string;
+    role: string;
+    message: string;
+    timestamp: Date;
+  }
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [showChat, setShowChat] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState<{ [key: string]: number }>({
     produksi_npk: 1,
@@ -808,6 +825,100 @@ export default function ProduksiNPKApp() {
       setNotifications(JSON.parse(savedNotifications));
     }
   }, []);
+
+  // Load chat messages
+  const loadChatMessages = async () => {
+    try {
+      const response = await fetch(`${API_URL}?action=getChatMessages`);
+      const data = await response.json();
+      if (data.success) {
+        const messages = data.data.map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setChatMessages(messages);
+      }
+    } catch (error) {
+      console.error("Error loading chat messages:", error);
+    }
+  };
+
+  // Send chat message
+  const sendChatMessage = async () => {
+    if (!chatInput.trim() || isSendingMessage) return;
+
+    setIsSendingMessage(true);
+    try {
+      const username = localStorage.getItem("username") || "Unknown";
+      const message = {
+        sender: username,
+        role: userRole,
+        message: chatInput.trim(),
+        timestamp: new Date().toISOString(),
+      };
+
+      await fetch(API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "addChatMessage",
+          data: message,
+        }),
+      });
+
+      // Add message locally
+      const newMessage: ChatMessage = {
+        id: Date.now().toString(),
+        ...message,
+        timestamp: new Date(),
+      };
+      setChatMessages([...chatMessages, newMessage]);
+      setChatInput("");
+
+      // Scroll to bottom
+      setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    } catch (error) {
+      console.error("Error sending message:", error);
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
+  // Poll for new messages
+  useEffect(() => {
+    if (isLoggedIn) {
+      loadChatMessages();
+      const interval = setInterval(loadChatMessages, 5000); // Poll every 5 seconds
+      return () => clearInterval(interval);
+    }
+  }, [isLoggedIn]);
+
+  // Check for new messages
+  useEffect(() => {
+    if (!showChat && chatMessages.length > 0) {
+      const lastMessageTime = localStorage.getItem("lastChatCheck");
+      const hasNew = chatMessages.some(
+        (msg) =>
+          !lastMessageTime ||
+          new Date(msg.timestamp) > new Date(parseInt(lastMessageTime))
+      );
+      setHasNewMessages(hasNew);
+    }
+  }, [chatMessages, showChat]);
+
+  // Update last check time when chat is opened
+  useEffect(() => {
+    if (showChat) {
+      setHasNewMessages(false);
+      localStorage.setItem("lastChatCheck", Date.now().toString());
+      setTimeout(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+  }, [showChat]);
 
   // Helper function to add notification (only for user role)
   const addNotification = (type: string, message: string) => {
@@ -9497,6 +9608,150 @@ export default function ProduksiNPKApp() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Floating Chat Widget */}
+      {isLoggedIn && (
+        <div className="fixed bottom-6 right-6 z-50">
+          {/* Chat Window */}
+          {showChat && (
+            <div className="mb-4 w-96 h-[500px] bg-white rounded-2xl shadow-2xl border-2 border-[#494E6B] flex flex-col overflow-hidden animate-[slideUp_0.3s_ease-out]">
+              {/* Chat Header */}
+              <div className="bg-gradient-to-r from-[#192231] via-[#494E6B] to-[#98878F] text-white p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="w-6 h-6" />
+                  <div>
+                    <h3 className="font-bold text-lg">Chat Room</h3>
+                    <p className="text-xs opacity-80">
+                      Semua user dapat berkomunikasi
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => setShowChat(false)}
+                  variant="ghost"
+                  size="sm"
+                  className="text-white hover:bg-white/20 p-1 h-auto"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {/* Chat Messages */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50">
+                {chatMessages.length === 0 ? (
+                  <div className="text-center text-gray-400 mt-20">
+                    <MessageCircle className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">Belum ada pesan</p>
+                    <p className="text-xs mt-1">Mulai percakapan baru</p>
+                  </div>
+                ) : (
+                  chatMessages.map((msg) => {
+                    const isOwnMessage =
+                      msg.sender === localStorage.getItem("username");
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`flex ${
+                          isOwnMessage ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        <div
+                          className={`max-w-[75%] ${
+                            isOwnMessage
+                              ? "bg-gradient-to-r from-[#494E6B] to-[#98878F] text-white"
+                              : "bg-white border border-gray-200 text-gray-800"
+                          } rounded-2xl px-4 py-2 shadow-sm`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span
+                              className={`text-xs font-semibold ${
+                                isOwnMessage ? "text-white/90" : "text-gray-600"
+                              }`}
+                            >
+                              {msg.sender}
+                            </span>
+                            <span
+                              className={`text-[10px] px-2 py-0.5 rounded-full ${
+                                msg.role === "admin"
+                                  ? "bg-red-500/20 text-red-700"
+                                  : msg.role === "supervisor"
+                                  ? "bg-blue-500/20 text-blue-700"
+                                  : "bg-green-500/20 text-green-700"
+                              } ${
+                                isOwnMessage ? "bg-white/20 text-white" : ""
+                              }`}
+                            >
+                              {msg.role}
+                            </span>
+                          </div>
+                          <p className="text-sm break-words">{msg.message}</p>
+                          <p
+                            className={`text-[10px] mt-1 ${
+                              isOwnMessage ? "text-white/60" : "text-gray-400"
+                            }`}
+                          >
+                            {new Date(msg.timestamp).toLocaleTimeString(
+                              "id-ID",
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Chat Input */}
+              <div className="p-4 bg-white border-t border-gray-200">
+                <div className="flex gap-2">
+                  <Input
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        sendChatMessage();
+                      }
+                    }}
+                    placeholder="Ketik pesan..."
+                    className="flex-1 border-[#494E6B]/30 focus:border-[#494E6B]"
+                    disabled={isSendingMessage}
+                  />
+                  <Button
+                    onClick={sendChatMessage}
+                    disabled={!chatInput.trim() || isSendingMessage}
+                    className="bg-gradient-to-r from-[#494E6B] to-[#98878F] hover:from-[#192231] hover:to-[#494E6B] text-white"
+                  >
+                    {isSendingMessage ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <Send className="w-5 h-5" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Chat Toggle Button */}
+          <Button
+            onClick={() => setShowChat(!showChat)}
+            className="relative w-14 h-14 rounded-full bg-gradient-to-br from-[#494E6B] to-[#98878F] hover:from-[#192231] hover:to-[#494E6B] text-white shadow-2xl transition-all duration-300 hover:scale-110"
+          >
+            <MessageCircle className="w-6 h-6" />
+            {hasNewMessages && !showChat && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-pulse">
+                !
+              </span>
+            )}
+          </Button>
         </div>
       )}
     </div>

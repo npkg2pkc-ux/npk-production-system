@@ -9,7 +9,7 @@
 - [ ] Klik "Blank" untuk spreadsheet baru
 - [ ] Rename: "NPK Production Database"
 
-### Buat 12 Sheet
+### Buat 14 Sheet
 
 - [ ] Sheet 1: `produksi_npk`
 - [ ] Sheet 2: `produksi_blending`
@@ -23,6 +23,8 @@
 - [ ] Sheet 10: `gate_pass`
 - [ ] Sheet 11: `akun`
 - [ ] Sheet 12: `rkap`
+- [ ] Sheet 13: `sessions` (untuk multi-login detection)
+- [ ] Sheet 14: `chat_messages` (untuk fitur chat) ⭐ **NEW**
 
 **Catatan:** Nama sheet harus persis sama (case-sensitive)!
 
@@ -297,8 +299,8 @@ Lihat file: `QUICK_REFERENCE.md` bagian "Common Issues & Fixes"
 
 ---
 
-**Setup Date:** ******\_\_\_******  
-**Setup By:** ******\_\_\_******  
-**Webhook URL:** ******\_\_\_******  
-**Google Sheets URL:** ******\_\_\_******  
-**Production URL:** ******\_\_\_******
+**Setup Date:** **\*\***\_\_\_**\*\***  
+**Setup By:** **\*\***\_\_\_**\*\***  
+**Webhook URL:** **\*\***\_\_\_**\*\***  
+**Google Sheets URL:** **\*\***\_\_\_**\*\***  
+**Production URL:** **\*\***\_\_\_**\*\***
