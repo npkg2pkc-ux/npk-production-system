@@ -51,6 +51,7 @@ import {
   X,
   MessageCircle,
   Send,
+  StickyNote,
 } from "lucide-react";
 
 const WEBHOOK_URL =
@@ -644,6 +645,11 @@ export default function ProduksiNPKApp() {
   const [hasNewMessages, setHasNewMessages] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  // Monthly note modal state
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [currentNoteMonth, setCurrentNoteMonth] = useState("");
+  const [tempNote, setTempNote] = useState("");
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState<{ [key: string]: number }>({
     produksi_npk: 1,
@@ -849,6 +855,21 @@ export default function ProduksiNPKApp() {
       ...prev,
       [bulan]: note,
     }));
+  };
+
+  // Open note modal
+  const openNoteModal = (bulan: string) => {
+    setCurrentNoteMonth(bulan);
+    setTempNote(monthlyNotes[bulan] || "");
+    setShowNoteModal(true);
+  };
+
+  // Save note from modal
+  const saveNote = () => {
+    handleMonthlyNoteChange(currentNoteMonth, tempNote);
+    setShowNoteModal(false);
+    setTempNote("");
+    setCurrentNoteMonth("");
   };
 
   // Load chat messages
@@ -4278,7 +4299,7 @@ export default function ProduksiNPKApp() {
                     <th className="text-center py-3 px-4 font-semibold text-[#001B44]">
                       Status
                     </th>
-                    <th className="text-left py-3 px-4 font-semibold text-[#001B44]">
+                    <th className="text-center py-3 px-4 font-semibold text-[#001B44]">
                       Catatan
                     </th>
                   </tr>
@@ -4315,16 +4336,22 @@ export default function ProduksiNPKApp() {
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4">
-                        <input
-                          type="text"
-                          value={monthlyNotes[month.bulan] || ""}
-                          onChange={(e) =>
-                            handleMonthlyNoteChange(month.bulan, e.target.value)
-                          }
-                          placeholder="Tambah catatan..."
-                          className="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent"
-                        />
+                      <td className="text-center py-3 px-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openNoteModal(month.bulan)}
+                          className={`${
+                            monthlyNotes[month.bulan]
+                              ? "border-[#00B4D8] bg-[#00B4D8]/10 text-[#00B4D8] hover:bg-[#00B4D8] hover:text-white"
+                              : "border-gray-300 text-gray-600 hover:border-[#00B4D8] hover:text-[#00B4D8]"
+                          }`}
+                        >
+                          <StickyNote className="w-4 h-4 mr-2" />
+                          {monthlyNotes[month.bulan]
+                            ? "Lihat Catatan"
+                            : "Tambah Catatan"}
+                        </Button>
                       </td>
                     </tr>
                   ))}
@@ -4333,6 +4360,50 @@ export default function ProduksiNPKApp() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modal Catatan Bulanan */}
+        <Modal
+          isOpen={showNoteModal}
+          onClose={() => {
+            setShowNoteModal(false);
+            setTempNote("");
+            setCurrentNoteMonth("");
+          }}
+          title={`Catatan Bulan ${currentNoteMonth}`}
+          size="md"
+        >
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="monthNote">Catatan</Label>
+              <textarea
+                id="monthNote"
+                value={tempNote}
+                onChange={(e) => setTempNote(e.target.value)}
+                placeholder="Tulis catatan untuk bulan ini..."
+                rows={5}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowNoteModal(false);
+                  setTempNote("");
+                  setCurrentNoteMonth("");
+                }}
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={saveNote}
+                className="bg-[#00B4D8] hover:bg-[#0096C7]"
+              >
+                Simpan Catatan
+              </Button>
+            </div>
+          </div>
+        </Modal>
 
         <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
