@@ -9385,8 +9385,19 @@ export default function ProduksiNPKApp() {
     <div className="min-h-screen bg-gray-50 flex">
       <aside className="w-64 bg-[#001B44] text-white flex flex-col fixed left-0 top-0 bottom-0 overflow-y-auto shadow-xl">
         <div className="p-6 border-b border-white/10">
-          <h1 className="text-2xl font-bold text-white">NPK Production</h1>
-          <p className="text-sm text-[#00B4D8] mt-1">Management System</p>
+          <div className="flex items-center gap-3">
+            <img
+              src="/logo-kujang.png"
+              alt="Logo Kujang"
+              className="w-12 h-12 object-contain"
+            />
+            <div>
+              <h1 className="text-xl font-bold text-white leading-tight">
+                NPK Production
+              </h1>
+              <p className="text-xs text-[#00B4D8] mt-0.5">Management System</p>
+            </div>
+          </div>
         </div>
 
         <nav className="flex-1 py-4">
