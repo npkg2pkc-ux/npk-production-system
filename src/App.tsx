@@ -9209,7 +9209,7 @@ export default function ProduksiNPKApp() {
           <div className="bg-white rounded-lg shadow-2xl max-w-md w-full mx-4 border-4 border-[#00B4D8]">
             <div className="bg-[#00B4D8] p-4 rounded-t-lg">
               <h3 className="text-xl font-bold text-white text-center">
-                ?? Masukkan Password
+                🔑 Masukkan Password
               </h3>
             </div>
             <form onSubmit={handlePasswordSubmit} className="p-6">
@@ -9255,7 +9255,7 @@ export default function ProduksiNPKApp() {
                   onClick={() => setViewAkunModal({ show: false, data: null })}
                   className="text-white hover:text-gray-200 text-2xl font-bold transition-colors p-2 rounded-full hover:bg-white/20"
                 >
-                  �
+                  ❌
                 </button>
               </div>
             </div>
