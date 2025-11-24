@@ -586,6 +586,9 @@ export default function ProduksiNPKApp() {
   const [downtimeChartMonth, setDowntimeChartMonth] = useState(
     new Date().toISOString().slice(0, 7)
   );
+  const [downtimeChartPeriod, setDowntimeChartPeriod] = useState<
+    "monthly" | "yearly"
+  >("monthly");
 
   // Work Request chart filter
   const [wrChartMonth, setWrChartMonth] = useState(
@@ -3417,14 +3420,25 @@ export default function ProduksiNPKApp() {
     }
   };
 
-  // Calculate downtime per item for selected month
+  // Calculate downtime per item for selected period
   const calculateDowntimePerItem = () => {
-    const [year, month] = downtimeChartMonth.split("-").map(Number);
+    let filteredData = downtimeData;
 
-    const filteredData = downtimeData.filter((item) => {
-      const [itemYear, itemMonth] = String(item.tanggal).split("-").map(Number);
-      return itemYear === year && itemMonth === month;
-    });
+    if (downtimeChartPeriod === "monthly") {
+      const [year, month] = downtimeChartMonth.split("-").map(Number);
+      filteredData = downtimeData.filter((item) => {
+        const [itemYear, itemMonth] = String(item.tanggal)
+          .split("-")
+          .map(Number);
+        return itemYear === year && itemMonth === month;
+      });
+    } else if (downtimeChartPeriod === "yearly") {
+      const year = parseInt(downtimeChartMonth.split("-")[0]);
+      filteredData = downtimeData.filter((item) => {
+        const itemYear = parseInt(String(item.tanggal).split("-")[0]);
+        return itemYear === year;
+      });
+    }
 
     // Group by item and sum downtime
     const itemMap = new Map<string, number>();
@@ -4417,16 +4431,49 @@ export default function ProduksiNPKApp() {
                   Monitoring waktu downtime equipment/item berdasarkan periode
                 </CardDescription>
               </div>
-              <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
-                <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
-                  📆 Periode:
-                </label>
-                <input
-                  type="month"
-                  value={downtimeChartMonth}
-                  onChange={(e) => setDowntimeChartMonth(e.target.value)}
-                  className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
-                />
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
+                  <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
+                    📆 Periode:
+                  </label>
+                  <select
+                    value={downtimeChartPeriod}
+                    onChange={(e) =>
+                      setDowntimeChartPeriod(
+                        e.target.value as "monthly" | "yearly"
+                      )
+                    }
+                    className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
+                  >
+                    <option value="monthly">Bulanan</option>
+                    <option value="yearly">Tahunan</option>
+                  </select>
+                </div>
+                {downtimeChartPeriod === "monthly" ? (
+                  <input
+                    type="month"
+                    value={downtimeChartMonth}
+                    onChange={(e) => setDowntimeChartMonth(e.target.value)}
+                    className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
+                  />
+                ) : (
+                  <select
+                    value={downtimeChartMonth.split("-")[0]}
+                    onChange={(e) =>
+                      setDowntimeChartMonth(`${e.target.value}-01`)
+                    }
+                    className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
+                  >
+                    {Array.from(
+                      { length: 10 },
+                      (_, i) => new Date().getFullYear() - i
+                    ).map((year) => (
+                      <option key={year} value={year}>
+                        {year}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </div>
             </div>
           </CardHeader>
