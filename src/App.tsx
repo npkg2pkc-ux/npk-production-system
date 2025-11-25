@@ -663,6 +663,10 @@ export default function ProduksiNPKApp() {
   const [currentNoteMonth, setCurrentNoteMonth] = useState("");
   const [tempNote, setTempNote] = useState("");
 
+  // Search states
+  const [searchDowntime, setSearchDowntime] = useState("");
+  const [searchWorkRequest, setSearchWorkRequest] = useState("");
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState<{ [key: string]: number }>({
     produksi_npk: 1,
@@ -7261,6 +7265,17 @@ export default function ProduksiNPKApp() {
                     Tambah Data
                   </Button>
                 </div>
+                <div className="mb-4">
+                  <Input
+                    placeholder="Cari berdasarkan item atau deskripsi..."
+                    value={searchDowntime}
+                    onChange={(e) => {
+                      setSearchDowntime(e.target.value);
+                      setCurrentPage((prev) => ({ ...prev, downtime: 1 }));
+                    }}
+                    className="max-w-md"
+                  />
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-[#00B4D8]/20">
@@ -7275,77 +7290,97 @@ export default function ProduksiNPKApp() {
                       </tr>
                     </thead>
                     <tbody>
-                      {paginateData(
-                        sortByDateDesc(downtimeData),
-                        currentPage.downtime,
-                        itemsPerPage
-                      ).map((item, idx) => {
-                        const actualIdx =
-                          sortByDateDesc(downtimeData).indexOf(item);
-                        return (
-                          <tr key={idx} className="border-b hover:bg-gray-50">
-                            <td className="py-2 px-3">
-                              {new Date(item.tanggal).toLocaleDateString(
-                                "id-ID",
-                                {
-                                  year: "numeric",
-                                  month: "2-digit",
-                                  day: "2-digit",
-                                }
-                              )}
-                            </td>
-                            <td className="py-2 px-3">{item.item}</td>
-                            <td className="py-2 px-3">{item.deskripsi}</td>
-                            <td className="text-right py-2 px-3">
-                              {item.jamOff}
-                            </td>
-                            <td className="text-right py-2 px-3">
-                              {item.jamStart}
-                            </td>
-                            <td className="text-right py-2 px-3 font-semibold">
-                              {item.downtime?.toFixed(1)} jam
-                            </td>
-                            <td className="text-center py-2 px-3">
-                              <div className="flex gap-2 justify-center">
-                                {canEditDelete() && (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() =>
-                                        handleEdit(actualIdx, "downtime")
-                                      }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
-                                    >
-                                      <Edit className="w-5 h-5" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() =>
-                                        handleDelete(
-                                          actualIdx,
-                                          "downtime",
-                                          item
-                                        )
-                                      }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
-                                    >
-                                      <Trash2 className="w-5 h-5" />
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
+                      {(() => {
+                        const filtered = sortByDateDesc(downtimeData).filter(
+                          (item) => {
+                            const searchLower = searchDowntime.toLowerCase();
+                            return (
+                              item.item.toLowerCase().includes(searchLower) ||
+                              item.deskripsi.toLowerCase().includes(searchLower)
+                            );
+                          }
                         );
-                      })}
+                        return paginateData(
+                          filtered,
+                          currentPage.downtime,
+                          itemsPerPage
+                        ).map((item, idx) => {
+                          const actualIdx =
+                            sortByDateDesc(downtimeData).indexOf(item);
+                          return (
+                            <tr key={idx} className="border-b hover:bg-gray-50">
+                              <td className="py-2 px-3">
+                                {new Date(item.tanggal).toLocaleDateString(
+                                  "id-ID",
+                                  {
+                                    year: "numeric",
+                                    month: "2-digit",
+                                    day: "2-digit",
+                                  }
+                                )}
+                              </td>
+                              <td className="py-2 px-3">{item.item}</td>
+                              <td className="py-2 px-3">{item.deskripsi}</td>
+                              <td className="text-right py-2 px-3">
+                                {item.jamOff}
+                              </td>
+                              <td className="text-right py-2 px-3">
+                                {item.jamStart}
+                              </td>
+                              <td className="text-right py-2 px-3 font-semibold">
+                                {item.downtime?.toFixed(1)} jam
+                              </td>
+                              <td className="text-center py-2 px-3">
+                                <div className="flex gap-2 justify-center">
+                                  {canEditDelete() && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                          handleEdit(actualIdx, "downtime")
+                                        }
+                                        className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      >
+                                        <Edit className="w-5 h-5" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                          handleDelete(
+                                            actualIdx,
+                                            "downtime",
+                                            item
+                                          )
+                                        }
+                                        className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      >
+                                        <Trash2 className="w-5 h-5" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
                 <Pagination
                   currentPage={currentPage.downtime}
-                  totalPages={getTotalPages(downtimeData.length, itemsPerPage)}
+                  totalPages={getTotalPages(
+                    sortByDateDesc(downtimeData).filter((item) => {
+                      const searchLower = searchDowntime.toLowerCase();
+                      return (
+                        item.item.toLowerCase().includes(searchLower) ||
+                        item.deskripsi.toLowerCase().includes(searchLower)
+                      );
+                    }).length,
+                    itemsPerPage
+                  )}
                   onPageChange={(page) => handlePageChange("downtime", page)}
                 />
               </div>
@@ -7541,6 +7576,17 @@ export default function ProduksiNPKApp() {
                     Tambah Data
                   </Button>
                 </div>
+                <div className="mb-4">
+                  <Input
+                    placeholder="Cari berdasarkan No. WR, item, area, atau eksekutor..."
+                    value={searchWorkRequest}
+                    onChange={(e) => {
+                      setSearchWorkRequest(e.target.value);
+                      setCurrentPage((prev) => ({ ...prev, work_request: 1 }));
+                    }}
+                    className="max-w-md"
+                  />
+                </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-[#00B4D8]/20">
@@ -7558,75 +7604,98 @@ export default function ProduksiNPKApp() {
                       </tr>
                     </thead>
                     <tbody>
-                      {paginateData(
-                        sortByDateDesc(workRequestData),
-                        currentPage.work_request,
-                        itemsPerPage
-                      ).map((item, idx) => {
-                        const actualIdx =
-                          sortByDateDesc(workRequestData).indexOf(item);
-                        return (
-                          <tr key={idx} className="border-b hover:bg-gray-50">
-                            <td className="py-2 px-3">
-                              {new Date(item.tanggal).toLocaleDateString(
-                                "id-ID",
-                                {
-                                  year: "numeric",
-                                  month: "2-digit",
-                                  day: "2-digit",
-                                }
-                              )}
-                            </td>
-                            <td className="py-2 px-3">{item.nomorWR}</td>
-                            <td className="py-2 px-3">{item.item}</td>
-                            <td className="py-2 px-3">{item.area}</td>
-                            <td className="py-2 px-3">{item.eksekutor}</td>
-                            <td className="py-2 px-3">{item.include}</td>
-                            <td className="py-2 px-3">
-                              {item.deskripsiPekerjaan}
-                            </td>
-                            <td className="text-center py-2 px-3">
-                              <div className="flex gap-2 justify-center">
-                                {canEditDelete() && (
-                                  <>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() =>
-                                        handleEdit(actualIdx, "work_request")
-                                      }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
-                                    >
-                                      <Edit className="w-5 h-5" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      onClick={() =>
-                                        handleDelete(
-                                          actualIdx,
-                                          "work_request",
-                                          item
-                                        )
-                                      }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
-                                    >
-                                      <Trash2 className="w-5 h-5" />
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
+                      {(() => {
+                        const filtered = sortByDateDesc(workRequestData).filter(
+                          (item) => {
+                            const searchLower = searchWorkRequest.toLowerCase();
+                            return (
+                              item.nomorWR
+                                .toLowerCase()
+                                .includes(searchLower) ||
+                              item.item.toLowerCase().includes(searchLower) ||
+                              item.area.toLowerCase().includes(searchLower) ||
+                              item.eksekutor.toLowerCase().includes(searchLower)
+                            );
+                          }
                         );
-                      })}
+                        return paginateData(
+                          filtered,
+                          currentPage.work_request,
+                          itemsPerPage
+                        ).map((item, idx) => {
+                          const actualIdx =
+                            sortByDateDesc(workRequestData).indexOf(item);
+                          return (
+                            <tr key={idx} className="border-b hover:bg-gray-50">
+                              <td className="py-2 px-3">
+                                {new Date(item.tanggal).toLocaleDateString(
+                                  "id-ID",
+                                  {
+                                    year: "numeric",
+                                    month: "2-digit",
+                                    day: "2-digit",
+                                  }
+                                )}
+                              </td>
+                              <td className="py-2 px-3">{item.nomorWR}</td>
+                              <td className="py-2 px-3">{item.item}</td>
+                              <td className="py-2 px-3">{item.area}</td>
+                              <td className="py-2 px-3">{item.eksekutor}</td>
+                              <td className="py-2 px-3">{item.include}</td>
+                              <td className="py-2 px-3">
+                                {item.deskripsiPekerjaan}
+                              </td>
+                              <td className="text-center py-2 px-3">
+                                <div className="flex gap-2 justify-center">
+                                  {canEditDelete() && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                          handleEdit(actualIdx, "work_request")
+                                        }
+                                        className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      >
+                                        <Edit className="w-5 h-5" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                          handleDelete(
+                                            actualIdx,
+                                            "work_request",
+                                            item
+                                          )
+                                        }
+                                        className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      >
+                                        <Trash2 className="w-5 h-5" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        });
+                      })()}
                     </tbody>
                   </table>
                 </div>
                 <Pagination
                   currentPage={currentPage.work_request}
                   totalPages={getTotalPages(
-                    workRequestData.length,
+                    sortByDateDesc(workRequestData).filter((item) => {
+                      const searchLower = searchWorkRequest.toLowerCase();
+                      return (
+                        item.nomorWR.toLowerCase().includes(searchLower) ||
+                        item.item.toLowerCase().includes(searchLower) ||
+                        item.area.toLowerCase().includes(searchLower) ||
+                        item.eksekutor.toLowerCase().includes(searchLower)
+                      );
+                    }).length,
                     itemsPerPage
                   )}
                   onPageChange={(page) =>
