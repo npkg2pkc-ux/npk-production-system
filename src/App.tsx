@@ -553,6 +553,7 @@ export default function ProduksiNPKApp() {
   const [activeNav, setActiveNav] = useState("home");
   const [activeTab, setActiveTab] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
@@ -1567,9 +1568,12 @@ export default function ProduksiNPKApp() {
     }
   };
 
-  // Load all data on mount
+  // Load all data on mount (after login)
   useEffect(() => {
+    if (!isLoggedIn) return;
+
     const loadAllData = async () => {
+      setLoadingData(true);
       const [
         npk,
         blending,
@@ -1733,12 +1737,15 @@ export default function ProduksiNPKApp() {
       });
 
       setPertaData(normalizedPerta);
+
+      // Loading selesai setelah semua data dimuat
+      setTimeout(() => {
+        setLoadingData(false);
+      }, 1500);
     };
 
     loadAllData();
-  }, []);
-
-  // Handle form submissions
+  }, [isLoggedIn]); // Handle form submissions
   const handleSubmitProduksiNPK = async (e: React.FormEvent) => {
     e.preventDefault();
     setShowLoadingOverlay(true);
@@ -4328,9 +4335,9 @@ export default function ProduksiNPKApp() {
                     type="monotone"
                     dataKey="percentage"
                     name="Pencapaian (%)"
-                    stroke="#7FFFD4"
+                    stroke="#00B4D8"
                     strokeWidth={3}
-                    dot={{ fill: "#7FFFD4", r: 5 }}
+                    dot={{ fill: "#00B4D8", r: 5 }}
                     activeDot={{ r: 8 }}
                   />
                 </LineChart>
@@ -10200,7 +10207,74 @@ export default function ProduksiNPKApp() {
         </div>
       )}
 
-      {/* Loading Overlay */}
+      {/* Loading Data Overlay (After Login) */}
+      {loadingData && (
+        <div className="fixed inset-0 bg-gradient-to-br from-[#001B44] via-[#003366] to-[#00B4D8] flex items-center justify-center overflow-hidden z-[100]">
+          {/* Animated background elements */}
+          <div className="absolute inset-0">
+            <div className="absolute top-20 left-20 w-72 h-72 bg-white/5 rounded-full animate-pulse"></div>
+            <div
+              className="absolute bottom-32 right-20 w-96 h-96 bg-white/5 rounded-full animate-pulse"
+              style={{ animationDelay: "1s" }}
+            ></div>
+            <div
+              className="absolute top-1/2 left-1/3 w-48 h-48 bg-white/5 rounded-full animate-pulse"
+              style={{ animationDelay: "2s" }}
+            ></div>
+          </div>
+
+          {/* Loading content */}
+          <div className="relative z-10 flex flex-col items-center gap-8 animate-fade-in">
+            {/* Logo dengan animasi */}
+            <div className="relative">
+              <div className="absolute inset-0 w-40 h-40 bg-[#7FFFD4]/20 rounded-full animate-ping"></div>
+              <div className="absolute inset-0 w-40 h-40 bg-[#00B4D8]/20 rounded-full animate-pulse"></div>
+              <div className="relative w-40 h-40 bg-white rounded-full shadow-2xl flex items-center justify-center p-4 animate-bounce">
+                <img
+                  src="/icon-new.png"
+                  alt="Loading"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            </div>
+
+            {/* Text dan progress */}
+            <div className="text-center space-y-4">
+              <h2 className="text-4xl font-bold text-white animate-fade-in">
+                Reguler System
+              </h2>
+              <p
+                className="text-xl text-[#7FFFD4] animate-fade-in"
+                style={{ animationDelay: "0.3s" }}
+              >
+                Sistem Manajemen Produksi NPK
+              </p>
+
+              {/* Loading spinner */}
+              <div className="flex justify-center gap-2 mt-6">
+                <div className="w-3 h-3 bg-white rounded-full animate-bounce"></div>
+                <div
+                  className="w-3 h-3 bg-white rounded-full animate-bounce"
+                  style={{ animationDelay: "0.1s" }}
+                ></div>
+                <div
+                  className="w-3 h-3 bg-white rounded-full animate-bounce"
+                  style={{ animationDelay: "0.2s" }}
+                ></div>
+              </div>
+
+              <p
+                className="text-sm text-white/70 mt-4 animate-fade-in"
+                style={{ animationDelay: "0.6s" }}
+              >
+                Memuat data dashboard...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading Overlay (for other operations) */}
       {showLoadingOverlay && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[100]">
           <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-4 shadow-2xl border-4 border-[#00B4D8]">
