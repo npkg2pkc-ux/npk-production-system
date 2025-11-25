@@ -9461,10 +9461,10 @@ export default function ProduksiNPKApp() {
             <img
               src="/logo-kujang.png"
               alt="Logo Kujang"
-              className="w-20 h-20 object-contain"
+              className="w-28 h-28 object-contain"
             />
             <div className="text-center">
-              <h1 className="text-xl font-bold text-white leading-tight">
+              <h1 className="text-base font-bold text-white leading-tight">
                 NPK Production
               </h1>
               <p className="text-xs text-[#00B4D8] mt-0.5">Management System</p>
