@@ -7243,38 +7243,38 @@ export default function ProduksiNPKApp() {
               </Modal>
 
               <div className="mt-8">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#001B44]">
+                <div className="mb-4">
+                  <h4 className="font-semibold text-[#001B44] mb-3">
                     Data Downtime
                   </h4>
-                  <Button
-                    onClick={() => {
-                      setShowForm(true);
-                      setEditingIndex(null);
-                      setFormDowntime({
-                        tanggal: new Date().toISOString().split("T")[0],
-                        item: "",
-                        deskripsi: "",
-                        jamOff: "",
-                        jamStart: "",
-                      });
-                    }}
-                    className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Data
-                  </Button>
-                </div>
-                <div className="mb-4">
-                  <Input
-                    placeholder="Cari berdasarkan item atau deskripsi..."
-                    value={searchDowntime}
-                    onChange={(e) => {
-                      setSearchDowntime(e.target.value);
-                      setCurrentPage((prev) => ({ ...prev, downtime: 1 }));
-                    }}
-                    className="max-w-md"
-                  />
+                  <div className="flex justify-between items-center gap-4">
+                    <Input
+                      placeholder="Cari berdasarkan item atau deskripsi..."
+                      value={searchDowntime}
+                      onChange={(e) => {
+                        setSearchDowntime(e.target.value);
+                        setCurrentPage((prev) => ({ ...prev, downtime: 1 }));
+                      }}
+                      className="flex-1 max-w-md"
+                    />
+                    <Button
+                      onClick={() => {
+                        setShowForm(true);
+                        setEditingIndex(null);
+                        setFormDowntime({
+                          tanggal: new Date().toISOString().split("T")[0],
+                          item: "",
+                          deskripsi: "",
+                          jamOff: "",
+                          jamStart: "",
+                        });
+                      }}
+                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Data
+                    </Button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -7552,40 +7552,43 @@ export default function ProduksiNPKApp() {
               </Modal>
 
               <div className="mt-8">
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="font-semibold text-[#001B44]">
+                <div className="mb-4">
+                  <h4 className="font-semibold text-[#001B44] mb-3">
                     Data Work Request
                   </h4>
-                  <Button
-                    onClick={() => {
-                      setShowForm(true);
-                      setEditingIndex(null);
-                      setFormWorkRequest({
-                        tanggal: new Date().toISOString().split("T")[0],
-                        nomorWR: "",
-                        item: "",
-                        area: "",
-                        eksekutor: "",
-                        include: "",
-                        deskripsiPekerjaan: "",
-                      });
-                    }}
-                    className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Data
-                  </Button>
-                </div>
-                <div className="mb-4">
-                  <Input
-                    placeholder="Cari berdasarkan No. WR, item, area, atau eksekutor..."
-                    value={searchWorkRequest}
-                    onChange={(e) => {
-                      setSearchWorkRequest(e.target.value);
-                      setCurrentPage((prev) => ({ ...prev, work_request: 1 }));
-                    }}
-                    className="max-w-md"
-                  />
+                  <div className="flex justify-between items-center gap-4">
+                    <Input
+                      placeholder="Cari berdasarkan No. WR, item, area, atau eksekutor..."
+                      value={searchWorkRequest}
+                      onChange={(e) => {
+                        setSearchWorkRequest(e.target.value);
+                        setCurrentPage((prev) => ({
+                          ...prev,
+                          work_request: 1,
+                        }));
+                      }}
+                      className="flex-1 max-w-md"
+                    />
+                    <Button
+                      onClick={() => {
+                        setShowForm(true);
+                        setEditingIndex(null);
+                        setFormWorkRequest({
+                          tanggal: new Date().toISOString().split("T")[0],
+                          nomorWR: "",
+                          item: "",
+                          area: "",
+                          eksekutor: "",
+                          include: "",
+                          deskripsiPekerjaan: "",
+                        });
+                      }}
+                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Data
+                    </Button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
