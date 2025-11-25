@@ -7293,10 +7293,15 @@ export default function ProduksiNPKApp() {
                       {(() => {
                         const filtered = sortByDateDesc(downtimeData).filter(
                           (item) => {
+                            if (!searchDowntime) return true;
                             const searchLower = searchDowntime.toLowerCase();
                             return (
-                              item.item.toLowerCase().includes(searchLower) ||
-                              item.deskripsi.toLowerCase().includes(searchLower)
+                              (item.item || "")
+                                .toLowerCase()
+                                .includes(searchLower) ||
+                              (item.deskripsi || "")
+                                .toLowerCase()
+                                .includes(searchLower)
                             );
                           }
                         );
@@ -7373,10 +7378,13 @@ export default function ProduksiNPKApp() {
                   currentPage={currentPage.downtime}
                   totalPages={getTotalPages(
                     sortByDateDesc(downtimeData).filter((item) => {
+                      if (!searchDowntime) return true;
                       const searchLower = searchDowntime.toLowerCase();
                       return (
-                        item.item.toLowerCase().includes(searchLower) ||
-                        item.deskripsi.toLowerCase().includes(searchLower)
+                        (item.item || "").toLowerCase().includes(searchLower) ||
+                        (item.deskripsi || "")
+                          .toLowerCase()
+                          .includes(searchLower)
                       );
                     }).length,
                     itemsPerPage
@@ -7610,15 +7618,32 @@ export default function ProduksiNPKApp() {
                       {(() => {
                         const filtered = sortByDateDesc(workRequestData).filter(
                           (item) => {
-                            const searchLower = searchWorkRequest.toLowerCase();
-                            return (
-                              item.nomorWR
-                                .toLowerCase()
-                                .includes(searchLower) ||
-                              item.item.toLowerCase().includes(searchLower) ||
-                              item.area.toLowerCase().includes(searchLower) ||
-                              item.eksekutor.toLowerCase().includes(searchLower)
-                            );
+                            if (!searchWorkRequest) return true;
+                            try {
+                              const searchLower =
+                                searchWorkRequest.toLowerCase();
+                              const nomorWR = String(
+                                item.nomorWR || ""
+                              ).toLowerCase();
+                              const itemName = String(
+                                item.item || ""
+                              ).toLowerCase();
+                              const area = String(
+                                item.area || ""
+                              ).toLowerCase();
+                              const eksekutor = String(
+                                item.eksekutor || ""
+                              ).toLowerCase();
+
+                              return (
+                                nomorWR.includes(searchLower) ||
+                                itemName.includes(searchLower) ||
+                                area.includes(searchLower) ||
+                                eksekutor.includes(searchLower)
+                              );
+                            } catch (e) {
+                              return true;
+                            }
                           }
                         );
                         return paginateData(
@@ -7691,13 +7716,27 @@ export default function ProduksiNPKApp() {
                   currentPage={currentPage.work_request}
                   totalPages={getTotalPages(
                     sortByDateDesc(workRequestData).filter((item) => {
-                      const searchLower = searchWorkRequest.toLowerCase();
-                      return (
-                        item.nomorWR.toLowerCase().includes(searchLower) ||
-                        item.item.toLowerCase().includes(searchLower) ||
-                        item.area.toLowerCase().includes(searchLower) ||
-                        item.eksekutor.toLowerCase().includes(searchLower)
-                      );
+                      if (!searchWorkRequest) return true;
+                      try {
+                        const searchLower = searchWorkRequest.toLowerCase();
+                        const nomorWR = String(
+                          item.nomorWR || ""
+                        ).toLowerCase();
+                        const itemName = String(item.item || "").toLowerCase();
+                        const area = String(item.area || "").toLowerCase();
+                        const eksekutor = String(
+                          item.eksekutor || ""
+                        ).toLowerCase();
+
+                        return (
+                          nomorWR.includes(searchLower) ||
+                          itemName.includes(searchLower) ||
+                          area.includes(searchLower) ||
+                          eksekutor.includes(searchLower)
+                        );
+                      } catch (e) {
+                        return true;
+                      }
                     }).length,
                     itemsPerPage
                   )}
@@ -9457,18 +9496,11 @@ export default function ProduksiNPKApp() {
     <div className="min-h-screen bg-gray-50 flex">
       <aside className="w-64 bg-[#001B44] text-white flex flex-col fixed left-0 top-0 bottom-0 overflow-y-auto shadow-xl">
         <div className="p-6 border-b border-white/10">
-          <div className="flex flex-col items-center gap-3">
-            <img
-              src="/logo-kujang.png"
-              alt="Logo Kujang"
-              className="w-28 h-28 object-contain"
-            />
-            <div className="text-center">
-              <h1 className="text-base font-bold text-white leading-tight">
-                NPK Production
-              </h1>
-              <p className="text-xs text-[#00B4D8] mt-0.5">Management System</p>
-            </div>
+          <div className="text-center">
+            <h1 className="text-xl font-bold text-white leading-tight">
+              NPK Production
+            </h1>
+            <p className="text-xs text-[#00B4D8] mt-0.5">Management System</p>
           </div>
         </div>
 
