@@ -9554,45 +9554,46 @@ export default function ProduksiNPKApp() {
             })}
         </nav>
 
-        {(() => {
-          const settingItem = navItems.find((item) => item.id === "setting");
-          const Icon = settingItem?.icon || Settings;
-          return (
-            <div className="border-t border-white/20">
-              <button
-                onClick={() => handleNavClick("setting")}
-                className={`w-full flex items-center gap-3 px-6 py-3 transition-all ${
-                  activeNav === "setting"
-                    ? "bg-white/20 border-l-4 border-white"
-                    : "hover:bg-white/10"
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                <span className="font-medium">Setting</span>
-              </button>
+        {(userRole === "admin" || userRole === "avp") &&
+          (() => {
+            const settingItem = navItems.find((item) => item.id === "setting");
+            const Icon = settingItem?.icon || Settings;
+            return (
+              <div className="border-t border-white/20">
+                <button
+                  onClick={() => handleNavClick("setting")}
+                  className={`w-full flex items-center gap-3 px-6 py-3 transition-all ${
+                    activeNav === "setting"
+                      ? "bg-white/20 border-l-4 border-white"
+                      : "hover:bg-white/10"
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="font-medium">Setting</span>
+                </button>
 
-              {activeNav === "setting" &&
-                settingItem?.tabs &&
-                settingItem.tabs.length > 0 && (
-                  <div className="bg-black/10 py-2">
-                    {settingItem.tabs.map((tab) => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`w-full text-left px-12 py-2 text-sm transition-all ${
-                          activeTab === tab.id
-                            ? "bg-white/20 font-semibold"
-                            : "hover:bg-white/10 opacity-80"
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-            </div>
-          );
-        })()}
+                {activeNav === "setting" &&
+                  settingItem?.tabs &&
+                  settingItem.tabs.length > 0 && (
+                    <div className="bg-black/10 py-2">
+                      {settingItem.tabs.map((tab) => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setActiveTab(tab.id)}
+                          className={`w-full text-left px-12 py-2 text-sm transition-all ${
+                            activeTab === tab.id
+                              ? "bg-white/20 font-semibold"
+                              : "hover:bg-white/10 opacity-80"
+                          }`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+              </div>
+            );
+          })()}
 
         <div className="mt-auto border-t border-white/20">
           <div className="p-4">
