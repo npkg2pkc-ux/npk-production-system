@@ -440,6 +440,33 @@ interface Perta {
   items: PertaItem[];
 }
 
+interface KronologisItem {
+  text: string;
+}
+
+interface PembahasanItem {
+  text: string;
+}
+
+interface TindakanItem {
+  text: string;
+}
+
+interface TroubleRecord {
+  id?: string;
+  nomorBerkas: string;
+  tanggalKejadian: string;
+  kodePeralatan: string;
+  deskripsiMasalah: string;
+  dataKronologis: KronologisItem[];
+  pembahasan: PembahasanItem[];
+  tindakanPerbaikan: TindakanItem[];
+  catatan: string;
+  status: "Open" | "Closed";
+  tanggalSelesai?: string;
+  catatanPenyelesaian?: string;
+}
+
 // Google Sheets API URL - Replace with your deployed script URL
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwURvYXyBD0-SrqomO4eNbE16-KtdD1g6e8G0LLIZA0_nb_jkz9FHDp_SPA1r57vkVE/exec";
@@ -683,6 +710,7 @@ export default function ProduksiNPKApp() {
     akun: 1,
     rkap: 1,
     perta: 1,
+    trouble_record: 1,
   });
   const itemsPerPage = 15;
 
@@ -708,6 +736,9 @@ export default function ProduksiNPKApp() {
   const [akunData, setAkunData] = useState<Akun[]>([]);
   const [rkapData, setRkapData] = useState<RKAP[]>([]);
   const [pertaData, setPertaData] = useState<Perta[]>([]);
+  const [troubleRecordData, setTroubleRecordData] = useState<TroubleRecord[]>(
+    []
+  );
 
   // Monthly notes state
   const [monthlyNotes, setMonthlyNotes] = useState<{ [key: string]: string }>(
@@ -827,10 +858,37 @@ export default function ProduksiNPKApp() {
     items: [{ item: "", deskripsi: "" }],
   });
 
+  const [formTroubleRecord, setFormTroubleRecord] = useState<TroubleRecord>({
+    nomorBerkas: "",
+    tanggalKejadian: new Date().toISOString().split("T")[0],
+    kodePeralatan: "",
+    deskripsiMasalah: "",
+    dataKronologis: [{ text: "" }],
+    pembahasan: [{ text: "" }],
+    tindakanPerbaikan: [{ text: "" }],
+    catatan: "",
+    status: "Open",
+  });
+
   const [viewPertaModal, setViewPertaModal] = useState<{
     show: boolean;
     data: Perta | null;
   }>({ show: false, data: null });
+
+  const [viewTroubleRecordModal, setViewTroubleRecordModal] = useState<{
+    show: boolean;
+    data: TroubleRecord | null;
+  }>({ show: false, data: null });
+
+  const [closeTroubleModal, setCloseTroubleModal] = useState<{
+    show: boolean;
+    data: TroubleRecord | null;
+  }>({ show: false, data: null });
+
+  const [closeTroubleForm, setCloseTroubleForm] = useState({
+    tanggalSelesai: new Date().toISOString().split("T")[0],
+    catatanPenyelesaian: "",
+  });
 
   const [viewAkunModal, setViewAkunModal] = useState<{
     show: boolean;
@@ -1354,6 +1412,64 @@ export default function ProduksiNPKApp() {
     }
   }, [activeTab, gatePassData.length]);
 
+  // Generate Trouble Record number berdasarkan tanggal kejadian
+  const generateTroubleRecordNumber = (tanggalKejadian?: string) => {
+    // Gunakan tanggal kejadian dari form atau tanggal hari ini
+    const dateToUse =
+      tanggalKejadian ||
+      formTroubleRecord.tanggalKejadian ||
+      new Date().toISOString().split("T")[0];
+    const date = new Date(dateToUse);
+
+    const monthRoman = [
+      "I",
+      "II",
+      "III",
+      "IV",
+      "V",
+      "VI",
+      "VII",
+      "VIII",
+      "IX",
+      "X",
+      "XI",
+      "XII",
+    ][date.getMonth()];
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+
+    // Hitung nomor urut berdasarkan data yang ada di bulan & tahun yang sama
+    // Exclude current record saat edit (berdasarkan id yang sama)
+    const currentId =
+      (formTroubleRecord as any).__original?.id || formTroubleRecord.id;
+    const existingRecordsInSameMonth = troubleRecordData.filter((record) => {
+      if (!record.tanggalKejadian) return false;
+      if (currentId && record.id === currentId) return false; // Skip current record saat edit
+      const recordDate = new Date(record.tanggalKejadian);
+      return (
+        recordDate.getFullYear() === year && recordDate.getMonth() + 1 === month
+      );
+    });
+
+    const count = existingRecordsInSameMonth.length + 1;
+    const nomorBerkas = `${String(count).padStart(
+      3,
+      "0"
+    )}/PNPKP-2/${monthRoman}/${year}`;
+
+    console.log(
+      `📋 Generate Nomor Berkas: ${nomorBerkas} (${existingRecordsInSameMonth.length} existing records in ${monthRoman}/${year})`
+    );
+
+    setFormTroubleRecord((prev) => ({ ...prev, nomorBerkas }));
+  };
+
+  useEffect(() => {
+    if (activeTab === "troublerecord" && !formTroubleRecord.nomorBerkas) {
+      generateTroubleRecordNumber();
+    }
+  }, [activeTab, troubleRecordData.length]);
+
   // Helper function: Normalize date to YYYY-MM-DD format
   const normalizeDateForInput = (date: string | Date | any): string => {
     if (!date) {
@@ -1426,7 +1542,6 @@ export default function ProduksiNPKApp() {
   // Fetch data from Google Sheets
   const fetchData = async (sheetName: string) => {
     try {
-      setLoading(true);
       const response = await fetch(
         `${WEBHOOK_URL}?action=read&sheet=${sheetName}`,
         {
@@ -1442,10 +1557,8 @@ export default function ProduksiNPKApp() {
       const data = await response.json();
       return data;
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error(`Error fetching ${sheetName}:`, error);
       return [];
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -1574,174 +1687,225 @@ export default function ProduksiNPKApp() {
 
     const loadAllData = async () => {
       setLoadingData(true);
-      const [
-        npk,
-        blending,
-        mini,
-        forklift,
-        loader,
-        downtime,
-        wr,
-        bahan,
-        vibrasi,
-        gate,
-        akun,
-        rkap,
-        perta,
-      ] = await Promise.all([
-        fetchData("produksi_npk"),
-        fetchData("produksi_blending"),
-        fetchData("produksi_npk_mini"),
-        fetchData("timesheet_forklift"),
-        fetchData("timesheet_loader"),
-        fetchData("downtime"),
-        fetchData("work_request"),
-        fetchData("bahan_baku"),
-        fetchData("vibrasi"),
-        fetchData("gate_pass"),
-        fetchData("akun"),
-        fetchData("rkap"),
-        fetchData("perta"),
-      ]);
+      console.log("🔄 Mulai loading data prioritas tinggi...");
+      const startTime = Date.now();
 
-      setProduksiNPKData(npk || []);
-      setProduksiBlendingData(blending || []);
-      setProduksiNPKMiniData(mini || []);
-      setTimesheetForkliftData(forklift || []);
-      setTimesheetLoaderData(loader || []);
+      try {
+        // Load data prioritas tinggi dulu (untuk dashboard)
+        const [npk, blending, mini, downtime, akun] = await Promise.all([
+          fetchData("produksi_npk"),
+          fetchData("produksi_blending"),
+          fetchData("produksi_npk_mini"),
+          fetchData("downtime"),
+          fetchData("akun"),
+        ]);
 
-      // Normalisasi jam downtime (jamOff & jamStart) ke format HH:MM
-      const normalizedDowntime = (downtime || []).map((item: any) => {
-        const formatTime = (value: any) => {
-          if (value == null || value === "") return "";
+        const loadTime1 = Date.now() - startTime;
+        console.log(`✅ Data prioritas tinggi loaded in ${loadTime1}ms`);
 
-          // Jika string, cek dulu apakah HH:MM (JANGAN parse sebagai Date!)
-          if (typeof value === "string") {
-            // Hapus apostrof prefix kalau ada (dari Apps Script)
-            const cleaned = value.startsWith("'") ? value.substring(1) : value;
+        // Normalisasi jam downtime (jamOff & jamStart) ke format HH:MM
+        const normalizedDowntime = (downtime || []).map((item: any) => {
+          const formatTime = (value: any) => {
+            if (value == null || value === "") return "";
 
-            // Cek apakah string berformat HH:MM
-            const m = cleaned.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-            if (m) {
-              const h = String(Number(m[1])).padStart(2, "0");
-              const mm = m[2];
-              return `${h}:${mm}`;
+            // Jika string, cek dulu apakah HH:MM (JANGAN parse sebagai Date!)
+            if (typeof value === "string") {
+              // Hapus apostrof prefix kalau ada (dari Apps Script)
+              const cleaned = value.startsWith("'")
+                ? value.substring(1)
+                : value;
+
+              // Cek apakah string berformat HH:MM
+              const m = cleaned.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+              if (m) {
+                const h = String(Number(m[1])).padStart(2, "0");
+                const mm = m[2];
+                return `${h}:${mm}`;
+              }
+
+              // Kembalikan string asli kalau sudah format jam
+              return cleaned;
             }
 
-            // Kembalikan string asli kalau sudah format jam
-            return cleaned;
+            // Jika Date object, ambil jam & menit lokal
+            if (value instanceof Date) {
+              const hours = String(value.getHours()).padStart(2, "0");
+              const minutes = String(value.getMinutes()).padStart(2, "0");
+              return `${hours}:${minutes}`;
+            }
+
+            // Jika number (misal serial Excel) coba konversi via Date origin
+            if (typeof value === "number") {
+              const excelEpoch = new Date(1899, 11, 30);
+              const ms = value * 24 * 60 * 60 * 1000;
+              const d = new Date(excelEpoch.getTime() + ms);
+              const hours = String(d.getHours()).padStart(2, "0");
+              const minutes = String(d.getMinutes()).padStart(2, "0");
+              return `${hours}:${minutes}`;
+            }
+
+            // Fallback: kembalikan string asli
+            return String(value);
+          };
+
+          return {
+            ...item,
+            jamOff: formatTime(item.jamOff),
+            jamStart: formatTime(item.jamStart),
+          } as Downtime;
+        });
+
+        setDowntimeData(normalizedDowntime);
+
+        // Set data prioritas tinggi
+        setProduksiNPKData(npk || []);
+        setProduksiBlendingData(blending || []);
+        setProduksiNPKMiniData(mini || []);
+        setAkunData(akun || []);
+
+        // Hilangkan loading screen setelah data utama siap
+        setLoadingData(false);
+
+        // Load data lainnya di background
+        console.log("🔄 Loading data tambahan...");
+        const [
+          forklift,
+          loader,
+          wr,
+          bahan,
+          vibrasi,
+          gate,
+          rkap,
+          perta,
+          troubleRecord,
+        ] = await Promise.all([
+          fetchData("timesheet_forklift"),
+          fetchData("timesheet_loader"),
+          fetchData("work_request"),
+          fetchData("bahan_baku"),
+          fetchData("vibrasi"),
+          fetchData("gate_pass"),
+          fetchData("rkap"),
+          fetchData("perta"),
+          fetchData("trouble_record"),
+        ]);
+
+        const loadTime2 = Date.now() - startTime;
+        console.log(`✅ Semua data loaded in ${loadTime2}ms`);
+
+        setTimesheetForkliftData(forklift || []);
+        setTimesheetLoaderData(loader || []);
+
+        // Normalisasi tanggal work_request untuk menghindari masalah format
+        const normalizedWR = (wr || []).map((item: any) => {
+          let tanggal = item.tanggal;
+
+          // Jika Date object, konversi ke YYYY-MM-DD dengan local time
+          if (tanggal instanceof Date) {
+            const year = tanggal.getFullYear();
+            const month = String(tanggal.getMonth() + 1).padStart(2, "0");
+            const day = String(tanggal.getDate()).padStart(2, "0");
+            tanggal = `${year}-${month}-${day}`;
+          }
+          // Jika string tapi bukan format YYYY-MM-DD, normalize
+          else if (
+            typeof tanggal === "string" &&
+            !tanggal.match(/^\d{4}-\d{2}-\d{2}$/)
+          ) {
+            tanggal = normalizeDateForInput(tanggal);
           }
 
-          // Jika Date object, ambil jam & menit lokal
-          if (value instanceof Date) {
-            const hours = String(value.getHours()).padStart(2, "0");
-            const minutes = String(value.getMinutes()).padStart(2, "0");
-            return `${hours}:${minutes}`;
+          return { ...item, tanggal };
+        });
+        setWorkRequestData(normalizedWR);
+
+        setBahanBakuData(bahan || []);
+        setVibrasiData(vibrasi || []);
+        setGatePassData(gate || []);
+        setRkapData(rkap || []);
+
+        // Normalisasi data Perta - parse items jika dalam format string
+        const normalizedPerta = (perta || []).map((item: any) => {
+          let parsedItems = item.items;
+
+          console.log("?? Raw perta item from backend:", item);
+          console.log(
+            "?? Raw items field type:",
+            typeof parsedItems,
+            "value:",
+            parsedItems
+          );
+
+          // Jika items sudah array, gunakan langsung
+          if (Array.isArray(parsedItems)) {
+            console.log(
+              "? Items already array with length:",
+              parsedItems.length
+            );
+            return {
+              ...item,
+              items: parsedItems,
+            };
           }
 
-          // Jika number (misal serial Excel) coba konversi via Date origin
-          if (typeof value === "number") {
-            const excelEpoch = new Date(1899, 11, 30);
-            const ms = value * 24 * 60 * 60 * 1000;
-            const d = new Date(excelEpoch.getTime() + ms);
-            const hours = String(d.getHours()).padStart(2, "0");
-            const minutes = String(d.getMinutes()).padStart(2, "0");
-            return `${hours}:${minutes}`;
+          // Jika items adalah string, parse sebagai JSON
+          if (typeof parsedItems === "string") {
+            try {
+              parsedItems = JSON.parse(parsedItems);
+              console.log(
+                "? Parsed items from string, length:",
+                parsedItems.length
+              );
+            } catch (e) {
+              console.error("? Error parsing perta items:", e);
+              parsedItems = [{ item: "", deskripsi: "" }];
+            }
+          } else {
+            // Fallback jika bukan string dan bukan array
+            console.warn(
+              "?? Items bukan string dan bukan array, using default"
+            );
+            parsedItems = [{ item: "", deskripsi: "" }];
           }
 
-          // Fallback: kembalikan string asli
-          return String(value);
-        };
-
-        return {
-          ...item,
-          jamOff: formatTime(item.jamOff),
-          jamStart: formatTime(item.jamStart),
-        } as Downtime;
-      });
-
-      setDowntimeData(normalizedDowntime);
-
-      // Normalisasi tanggal work_request untuk menghindari masalah format
-      const normalizedWR = (wr || []).map((item: any) => {
-        let tanggal = item.tanggal;
-
-        // Jika Date object, konversi ke YYYY-MM-DD dengan local time
-        if (tanggal instanceof Date) {
-          const year = tanggal.getFullYear();
-          const month = String(tanggal.getMonth() + 1).padStart(2, "0");
-          const day = String(tanggal.getDate()).padStart(2, "0");
-          tanggal = `${year}-${month}-${day}`;
-        }
-        // Jika string tapi bukan format YYYY-MM-DD, normalize
-        else if (
-          typeof tanggal === "string" &&
-          !tanggal.match(/^\d{4}-\d{2}-\d{2}$/)
-        ) {
-          tanggal = normalizeDateForInput(tanggal);
-        }
-
-        return { ...item, tanggal };
-      });
-      setWorkRequestData(normalizedWR);
-
-      setBahanBakuData(bahan || []);
-      setVibrasiData(vibrasi || []);
-      setGatePassData(gate || []);
-      setAkunData(akun || []);
-      setRkapData(rkap || []);
-
-      // Normalisasi data Perta - parse items jika dalam format string
-      const normalizedPerta = (perta || []).map((item: any) => {
-        let parsedItems = item.items;
-
-        console.log("?? Raw perta item from backend:", item);
-        console.log(
-          "?? Raw items field type:",
-          typeof parsedItems,
-          "value:",
-          parsedItems
-        );
-
-        // Jika items sudah array, gunakan langsung
-        if (Array.isArray(parsedItems)) {
-          console.log("? Items already array with length:", parsedItems.length);
           return {
             ...item,
             items: parsedItems,
           };
-        }
+        });
 
-        // Jika items adalah string, parse sebagai JSON
-        if (typeof parsedItems === "string") {
-          try {
-            parsedItems = JSON.parse(parsedItems);
-            console.log(
-              "? Parsed items from string, length:",
-              parsedItems.length
-            );
-          } catch (e) {
-            console.error("? Error parsing perta items:", e);
-            parsedItems = [{ item: "", deskripsi: "" }];
-          }
-        } else {
-          // Fallback jika bukan string dan bukan array
-          console.warn("?? Items bukan string dan bukan array, using default");
-          parsedItems = [{ item: "", deskripsi: "" }];
-        }
+        setPertaData(normalizedPerta);
 
-        return {
-          ...item,
-          items: parsedItems,
-        };
-      });
+        // Normalisasi data Trouble Record - parse arrays jika dalam format string
+        const normalizedTroubleRecord = Array.isArray(troubleRecord)
+          ? troubleRecord.map((item: any) => {
+              const parseArray = (field: any) => {
+                if (Array.isArray(field)) return field;
+                if (typeof field === "string") {
+                  try {
+                    return JSON.parse(field);
+                  } catch (e) {
+                    return [{ text: "" }];
+                  }
+                }
+                return [{ text: "" }];
+              };
 
-      setPertaData(normalizedPerta);
+              return {
+                ...item,
+                dataKronologis: parseArray(item.dataKronologis),
+                pembahasan: parseArray(item.pembahasan),
+                tindakanPerbaikan: parseArray(item.tindakanPerbaikan),
+              };
+            })
+          : [];
 
-      // Loading selesai setelah semua data dimuat
-      setTimeout(() => {
+        setTroubleRecordData(normalizedTroubleRecord);
+      } catch (error) {
+        console.error("❌ Error loading data:", error);
         setLoadingData(false);
-      }, 1500);
+        // Tetap lanjut ke aplikasi meskipun ada error
+      }
     };
 
     loadAllData();
@@ -2485,6 +2649,148 @@ export default function ProduksiNPKApp() {
     }
   };
 
+  const handleSubmitTroubleRecord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowLoadingOverlay(true);
+    try {
+      // Prepare data with stringified arrays for Google Sheets
+      const preparedData = {
+        ...formTroubleRecord,
+        dataKronologis: JSON.stringify(formTroubleRecord.dataKronologis),
+        pembahasan: JSON.stringify(formTroubleRecord.pembahasan),
+        tindakanPerbaikan: JSON.stringify(formTroubleRecord.tindakanPerbaikan),
+      };
+
+      if (editingIndex !== null) {
+        const current: any = formTroubleRecord as any;
+        const oldById = troubleRecordData.find(
+          (r) => r.id && current.id && r.id === current.id
+        );
+        let oldItem = oldById;
+        if (!oldItem) {
+          oldItem = troubleRecordData[editingIndex];
+        }
+        const payload: any = { ...preparedData, id: oldItem?.id || current.id };
+        if (!payload.id && current.__original) {
+          payload.__original = current.__original;
+        }
+        await updateData("trouble_record", payload);
+        const refreshed = await fetchData("trouble_record");
+
+        const normalizedRefreshed = (refreshed || []).map((item: any) => ({
+          ...item,
+          dataKronologis:
+            typeof item.dataKronologis === "string"
+              ? JSON.parse(item.dataKronologis)
+              : item.dataKronologis,
+          pembahasan:
+            typeof item.pembahasan === "string"
+              ? JSON.parse(item.pembahasan)
+              : item.pembahasan,
+          tindakanPerbaikan:
+            typeof item.tindakanPerbaikan === "string"
+              ? JSON.parse(item.tindakanPerbaikan)
+              : item.tindakanPerbaikan,
+        }));
+
+        setTroubleRecordData(normalizedRefreshed);
+        showSuccess("Trouble Record berhasil diupdate!");
+      } else {
+        await saveData("trouble_record", preparedData);
+        addNotification(
+          "trouble_record",
+          `Trouble Record ${formTroubleRecord.nomorBerkas}`
+        );
+        const refreshed = await fetchData("trouble_record");
+
+        const normalizedRefreshed = (refreshed || []).map((item: any) => ({
+          ...item,
+          dataKronologis:
+            typeof item.dataKronologis === "string"
+              ? JSON.parse(item.dataKronologis)
+              : item.dataKronologis,
+          pembahasan:
+            typeof item.pembahasan === "string"
+              ? JSON.parse(item.pembahasan)
+              : item.pembahasan,
+          tindakanPerbaikan:
+            typeof item.tindakanPerbaikan === "string"
+              ? JSON.parse(item.tindakanPerbaikan)
+              : item.tindakanPerbaikan,
+        }));
+
+        setTroubleRecordData(normalizedRefreshed);
+        showSuccess("Trouble Record berhasil disimpan!");
+      }
+      setFormTroubleRecord({
+        nomorBerkas: "",
+        tanggalKejadian: new Date().toISOString().split("T")[0],
+        kodePeralatan: "",
+        deskripsiMasalah: "",
+        dataKronologis: [{ text: "" }],
+        pembahasan: [{ text: "" }],
+        tindakanPerbaikan: [{ text: "" }],
+        catatan: "",
+        status: "Open",
+      });
+      setShowForm(false);
+      setEditingIndex(null);
+    } catch (error) {
+      setShowLoadingOverlay(false);
+      alert("Terjadi kesalahan saat menyimpan Trouble Record");
+    }
+  };
+
+  const handleCloseTroubleRecord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!closeTroubleModal.data) return;
+
+    setShowLoadingOverlay(true);
+    try {
+      const updatedRecord = {
+        ...closeTroubleModal.data,
+        status: "Closed" as const,
+        tanggalSelesai: closeTroubleForm.tanggalSelesai,
+        catatanPenyelesaian: closeTroubleForm.catatanPenyelesaian,
+        dataKronologis: JSON.stringify(closeTroubleModal.data.dataKronologis),
+        pembahasan: JSON.stringify(closeTroubleModal.data.pembahasan),
+        tindakanPerbaikan: JSON.stringify(
+          closeTroubleModal.data.tindakanPerbaikan
+        ),
+      };
+
+      await updateData("trouble_record", updatedRecord);
+      const refreshed = await fetchData("trouble_record");
+
+      const normalizedRefreshed = (refreshed || []).map((item: any) => ({
+        ...item,
+        dataKronologis:
+          typeof item.dataKronologis === "string"
+            ? JSON.parse(item.dataKronologis)
+            : item.dataKronologis,
+        pembahasan:
+          typeof item.pembahasan === "string"
+            ? JSON.parse(item.pembahasan)
+            : item.pembahasan,
+        tindakanPerbaikan:
+          typeof item.tindakanPerbaikan === "string"
+            ? JSON.parse(item.tindakanPerbaikan)
+            : item.tindakanPerbaikan,
+      }));
+
+      setTroubleRecordData(normalizedRefreshed);
+      setCloseTroubleModal({ show: false, data: null });
+      setCloseTroubleForm({
+        tanggalSelesai: new Date().toISOString().split("T")[0],
+        catatanPenyelesaian: "",
+      });
+      showSuccess("Trouble Record berhasil ditutup!");
+    } catch (error) {
+      setShowLoadingOverlay(false);
+      alert("Terjadi kesalahan saat menutup Trouble Record");
+    }
+  };
+
   // Delete handlers
   const handleDelete = async (index: number, dataType: string, item?: any) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus data ini?")) {
@@ -2622,6 +2928,14 @@ export default function ProduksiNPKApp() {
               setPertaData(refreshed || []);
             }
             break;
+          case "trouble_record":
+            dataToDelete = item || troubleRecordData[index];
+            await deleteDataFromSheet("trouble_record", dataToDelete);
+            {
+              const refreshed = await fetchData("trouble_record");
+              setTroubleRecordData(refreshed || []);
+            }
+            break;
         }
         showSuccess("Data berhasil dihapus!");
       } catch (error) {
@@ -2749,6 +3063,16 @@ export default function ProduksiNPKApp() {
           tanggalMulai: normalizeDateForInput(pertaEditData.tanggalMulai),
           tanggalSelesai: normalizeDateForInput(pertaEditData.tanggalSelesai),
           __original: { ...pertaEditData },
+        } as any);
+        break;
+      case "trouble_record":
+        const troubleEditData: any = troubleRecordData[index];
+        setFormTroubleRecord({
+          ...troubleEditData,
+          tanggalKejadian: normalizeDateForInput(
+            troubleEditData.tanggalKejadian
+          ),
+          __original: { ...troubleEditData },
         } as any);
         break;
     }
@@ -5614,9 +5938,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "produksi_npk")
                                       }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
-                                      <Edit className="w-5 h-5" />
+                                      <Edit className="w-4 h-4" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -5624,9 +5948,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleDelete(actualIdx, "produksi_npk")
                                       }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
-                                      <Trash2 className="w-5 h-5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </>
                                 )}
@@ -5969,9 +6293,9 @@ export default function ProduksiNPKApp() {
                                           "produksi_blending"
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
-                                      <Edit className="w-5 h-5" />
+                                      <Edit className="w-4 h-4" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -5982,9 +6306,9 @@ export default function ProduksiNPKApp() {
                                           "produksi_blending"
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
-                                      <Trash2 className="w-5 h-5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </>
                                 )}
@@ -6279,9 +6603,9 @@ export default function ProduksiNPKApp() {
                                           "produksi_npk_mini"
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
-                                      <Edit className="w-5 h-5" />
+                                      <Edit className="w-4 h-4" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -6292,9 +6616,9 @@ export default function ProduksiNPKApp() {
                                           "produksi_npk_mini"
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
-                                      <Trash2 className="w-5 h-5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </>
                                 )}
@@ -6683,9 +7007,9 @@ export default function ProduksiNPKApp() {
                                           "timesheet_forklift"
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
-                                      <Edit className="w-5 h-5" />
+                                      <Edit className="w-4 h-4" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -6696,9 +7020,9 @@ export default function ProduksiNPKApp() {
                                           "timesheet_forklift"
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
-                                      <Trash2 className="w-5 h-5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </>
                                 )}
@@ -7060,9 +7384,9 @@ export default function ProduksiNPKApp() {
                                           "timesheet_loader"
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
-                                      <Edit className="w-5 h-5" />
+                                      <Edit className="w-4 h-4" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -7073,9 +7397,9 @@ export default function ProduksiNPKApp() {
                                           "timesheet_loader"
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
-                                      <Trash2 className="w-5 h-5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </>
                                 )}
@@ -7352,9 +7676,9 @@ export default function ProduksiNPKApp() {
                                         onClick={() =>
                                           handleEdit(actualIdx, "downtime")
                                         }
-                                        className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                        className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                       >
-                                        <Edit className="w-5 h-5" />
+                                        <Edit className="w-4 h-4" />
                                       </Button>
                                       <Button
                                         size="sm"
@@ -7366,9 +7690,9 @@ export default function ProduksiNPKApp() {
                                             item
                                           )
                                         }
-                                        className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                        className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                       >
-                                        <Trash2 className="w-5 h-5" />
+                                        <Trash2 className="w-4 h-4" />
                                       </Button>
                                     </>
                                   )}
@@ -7690,9 +8014,9 @@ export default function ProduksiNPKApp() {
                                         onClick={() =>
                                           handleEdit(actualIdx, "work_request")
                                         }
-                                        className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                        className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                       >
-                                        <Edit className="w-5 h-5" />
+                                        <Edit className="w-4 h-4" />
                                       </Button>
                                       <Button
                                         size="sm"
@@ -7704,9 +8028,9 @@ export default function ProduksiNPKApp() {
                                             item
                                           )
                                         }
-                                        className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                        className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                       >
-                                        <Trash2 className="w-5 h-5" />
+                                        <Trash2 className="w-4 h-4" />
                                       </Button>
                                     </>
                                   )}
@@ -7952,9 +8276,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "bahan_baku")
                                       }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
-                                      <Edit className="w-5 h-5" />
+                                      <Edit className="w-4 h-4" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -7966,9 +8290,9 @@ export default function ProduksiNPKApp() {
                                           item
                                         )
                                       }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
-                                      <Trash2 className="w-5 h-5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </>
                                 )}
@@ -8216,9 +8540,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "vibrasi")
                                       }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
-                                      <Edit className="w-5 h-5" />
+                                      <Edit className="w-4 h-4" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -8226,9 +8550,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleDelete(actualIdx, "vibrasi")
                                       }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
-                                      <Trash2 className="w-5 h-5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </>
                                 )}
@@ -8499,9 +8823,9 @@ export default function ProduksiNPKApp() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handlePrintGatePass(item)}
-                                  className="h-9 w-9 p-0 border-blue-300 text-blue-600 hover:bg-blue-600 hover:text-white"
+                                  className="border-blue-300 text-blue-600 hover:bg-blue-600 hover:text-white"
                                 >
-                                  <Printer className="w-5 h-5" />
+                                  <Printer className="w-4 h-4" />
                                 </Button>
                                 {canEditDelete() && (
                                   <>
@@ -8511,9 +8835,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "gate_pass")
                                       }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
-                                      <Edit className="w-5 h-5" />
+                                      <Edit className="w-4 h-4" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -8521,9 +8845,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleDelete(actualIdx, "gate_pass")
                                       }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
-                                      <Trash2 className="w-5 h-5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </>
                                 )}
@@ -8847,9 +9171,9 @@ export default function ProduksiNPKApp() {
                                       data: item,
                                     })
                                   }
-                                  className="h-9 w-9 p-0 border-blue-300 text-blue-600 hover:bg-blue-600 hover:text-white"
+                                  className="border-blue-300 text-blue-600 hover:bg-blue-600 hover:text-white"
                                 >
-                                  <Eye className="w-5 h-5" />
+                                  <Eye className="w-4 h-4" />
                                 </Button>
                                 {canEditDelete() && (
                                   <>
@@ -8859,9 +9183,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "perta")
                                       }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
-                                      <Edit className="w-5 h-5" />
+                                      <Edit className="w-4 h-4" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -8869,9 +9193,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleDelete(actualIdx, "perta", item)
                                       }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
-                                      <Trash2 className="w-5 h-5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </>
                                 )}
@@ -8887,6 +9211,784 @@ export default function ProduksiNPKApp() {
                   currentPage={currentPage.perta}
                   totalPages={getTotalPages(pertaData.length, itemsPerPage)}
                   onPageChange={(page) => handlePageChange("perta", page)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      if (activeTab === "troublerecord") {
+        return (
+          <Card className="border-gray-200 shadow-md">
+            <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
+              <CardTitle className="text-[#001B44]">Trouble Record</CardTitle>
+              <CardDescription>
+                Pencatatan masalah dan penyelesaiannya
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gray-50 p-6">
+              {/* Form Modal */}
+              <Modal
+                isOpen={showForm}
+                onClose={() => {
+                  setShowForm(false);
+                  setEditingIndex(null);
+                  setFormTroubleRecord({
+                    nomorBerkas: "",
+                    tanggalKejadian: new Date().toISOString().split("T")[0],
+                    kodePeralatan: "",
+                    deskripsiMasalah: "",
+                    dataKronologis: [{ text: "" }],
+                    pembahasan: [{ text: "" }],
+                    tindakanPerbaikan: [{ text: "" }],
+                    catatan: "",
+                    status: "Open",
+                  });
+                }}
+                title={
+                  editingIndex !== null
+                    ? "Edit Trouble Record"
+                    : "Tambah Trouble Record"
+                }
+                size="xl"
+              >
+                <form
+                  onSubmit={handleSubmitTroubleRecord}
+                  className="space-y-4"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="nomorBerkas">Nomor Berkas</Label>
+                      <Input
+                        id="nomorBerkas"
+                        value={formTroubleRecord.nomorBerkas}
+                        readOnly
+                        className="bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="tanggalKejadian">Tanggal Kejadian</Label>
+                      <Input
+                        id="tanggalKejadian"
+                        type="date"
+                        value={formTroubleRecord.tanggalKejadian}
+                        onChange={(e) => {
+                          const newDate = e.target.value;
+                          setFormTroubleRecord({
+                            ...formTroubleRecord,
+                            tanggalKejadian: newDate,
+                          });
+                          // Auto-generate nomor berkas berdasarkan tanggal baru
+                          generateTroubleRecordNumber(newDate);
+                        }}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="kodePeralatan">Kode Peralatan</Label>
+                    <Input
+                      id="kodePeralatan"
+                      value={formTroubleRecord.kodePeralatan}
+                      onChange={(e) =>
+                        setFormTroubleRecord({
+                          ...formTroubleRecord,
+                          kodePeralatan: e.target.value,
+                        })
+                      }
+                      placeholder="Contoh: C2-L-001"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="deskripsiMasalah">Deskripsi Masalah</Label>
+                    <Input
+                      id="deskripsiMasalah"
+                      value={formTroubleRecord.deskripsiMasalah}
+                      onChange={(e) =>
+                        setFormTroubleRecord({
+                          ...formTroubleRecord,
+                          deskripsiMasalah: e.target.value,
+                        })
+                      }
+                      placeholder="Masukkan deskripsi masalah"
+                      required
+                    />
+                  </div>
+
+                  {/* Data Kronologis */}
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="font-semibold text-[#001B44]">
+                        Data Kronologis
+                      </h4>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setFormTroubleRecord({
+                            ...formTroubleRecord,
+                            dataKronologis: [
+                              ...formTroubleRecord.dataKronologis,
+                              { text: "" },
+                            ],
+                          });
+                        }}
+                        className="bg-[#00B4D8] hover:bg-[#0096C7] h-8 w-8 p-0"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    {formTroubleRecord.dataKronologis.map((item, index) => (
+                      <div key={index} className="flex gap-2 mb-3 items-end">
+                        <div className="text-center font-semibold text-[#001B44] pt-2 w-8 flex-shrink-0">
+                          {index + 1}
+                        </div>
+                        <textarea
+                          value={item.text}
+                          onChange={(e) => {
+                            const newItems = [
+                              ...formTroubleRecord.dataKronologis,
+                            ];
+                            newItems[index].text = e.target.value;
+                            setFormTroubleRecord({
+                              ...formTroubleRecord,
+                              dataKronologis: newItems,
+                            });
+                          }}
+                          className="flex-1 min-h-[80px] p-2 border border-gray-300 rounded-md resize-y"
+                          placeholder="Masukkan data kronologis"
+                          required
+                        />
+                        <div className="w-10 flex-shrink-0">
+                          {formTroubleRecord.dataKronologis.length > 1 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const newItems =
+                                  formTroubleRecord.dataKronologis.filter(
+                                    (_, i) => i !== index
+                                  );
+                                setFormTroubleRecord({
+                                  ...formTroubleRecord,
+                                  dataKronologis: newItems,
+                                });
+                              }}
+                              className="h-10 w-10 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Pembahasan */}
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="font-semibold text-[#001B44]">
+                        Pembahasan
+                      </h4>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setFormTroubleRecord({
+                            ...formTroubleRecord,
+                            pembahasan: [
+                              ...formTroubleRecord.pembahasan,
+                              { text: "" },
+                            ],
+                          });
+                        }}
+                        className="bg-[#00B4D8] hover:bg-[#0096C7] h-8 w-8 p-0"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    {formTroubleRecord.pembahasan.map((item, index) => (
+                      <div key={index} className="flex gap-2 mb-3 items-end">
+                        <div className="text-center font-semibold text-[#001B44] pt-2 w-8 flex-shrink-0">
+                          {index + 1}
+                        </div>
+                        <textarea
+                          value={item.text}
+                          onChange={(e) => {
+                            const newItems = [...formTroubleRecord.pembahasan];
+                            newItems[index].text = e.target.value;
+                            setFormTroubleRecord({
+                              ...formTroubleRecord,
+                              pembahasan: newItems,
+                            });
+                          }}
+                          className="flex-1 min-h-[80px] p-2 border border-gray-300 rounded-md resize-y"
+                          placeholder="Masukkan pembahasan"
+                          required
+                        />
+                        <div className="w-10 flex-shrink-0">
+                          {formTroubleRecord.pembahasan.length > 1 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const newItems =
+                                  formTroubleRecord.pembahasan.filter(
+                                    (_, i) => i !== index
+                                  );
+                                setFormTroubleRecord({
+                                  ...formTroubleRecord,
+                                  pembahasan: newItems,
+                                });
+                              }}
+                              className="h-10 w-10 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tindakan Perbaikan */}
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center mb-3">
+                      <h4 className="font-semibold text-[#001B44]">
+                        Tindakan Perbaikan
+                      </h4>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setFormTroubleRecord({
+                            ...formTroubleRecord,
+                            tindakanPerbaikan: [
+                              ...formTroubleRecord.tindakanPerbaikan,
+                              { text: "" },
+                            ],
+                          });
+                        }}
+                        className="bg-[#00B4D8] hover:bg-[#0096C7] h-8 w-8 p-0"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    {formTroubleRecord.tindakanPerbaikan.map((item, index) => (
+                      <div key={index} className="flex gap-2 mb-3 items-end">
+                        <div className="text-center font-semibold text-[#001B44] pt-2 w-8 flex-shrink-0">
+                          {index + 1}
+                        </div>
+                        <textarea
+                          value={item.text}
+                          onChange={(e) => {
+                            const newItems = [
+                              ...formTroubleRecord.tindakanPerbaikan,
+                            ];
+                            newItems[index].text = e.target.value;
+                            setFormTroubleRecord({
+                              ...formTroubleRecord,
+                              tindakanPerbaikan: newItems,
+                            });
+                          }}
+                          className="flex-1 min-h-[80px] p-2 border border-gray-300 rounded-md resize-y"
+                          placeholder="Masukkan tindakan perbaikan"
+                          required
+                        />
+                        <div className="w-10 flex-shrink-0">
+                          {formTroubleRecord.tindakanPerbaikan.length > 1 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const newItems =
+                                  formTroubleRecord.tindakanPerbaikan.filter(
+                                    (_, i) => i !== index
+                                  );
+                                setFormTroubleRecord({
+                                  ...formTroubleRecord,
+                                  tindakanPerbaikan: newItems,
+                                });
+                              }}
+                              className="h-10 w-10 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Catatan */}
+                  <div>
+                    <Label htmlFor="catatan">Catatan</Label>
+                    <textarea
+                      id="catatan"
+                      value={formTroubleRecord.catatan}
+                      onChange={(e) =>
+                        setFormTroubleRecord({
+                          ...formTroubleRecord,
+                          catatan: e.target.value,
+                        })
+                      }
+                      className="w-full min-h-[100px] p-2 border border-gray-300 rounded-md resize-y"
+                      placeholder="Masukkan catatan tambahan"
+                    />
+                  </div>
+
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowForm(false);
+                        setEditingIndex(null);
+                      }}
+                    >
+                      Batal
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                      disabled={loading}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      {loading
+                        ? "Menyimpan..."
+                        : editingIndex !== null
+                        ? "Update Data"
+                        : "Simpan Data"}
+                    </Button>
+                  </div>
+                </form>
+              </Modal>
+
+              {/* View Detail Modal */}
+              <Modal
+                isOpen={viewTroubleRecordModal.show}
+                onClose={() =>
+                  setViewTroubleRecordModal({ show: false, data: null })
+                }
+                title="Detail Trouble Record"
+                size="xl"
+              >
+                {viewTroubleRecordModal.data && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
+                      <div>
+                        <p className="text-sm text-gray-600">Nomor Berkas</p>
+                        <p className="font-semibold text-[#001B44]">
+                          {viewTroubleRecordModal.data.nomorBerkas}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Status</p>
+                        <span
+                          className={`inline-flex px-3 py-1 rounded-full text-sm font-semibold ${
+                            viewTroubleRecordModal.data.status === "Closed"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
+                        >
+                          {viewTroubleRecordModal.data.status}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">
+                          Tanggal Kejadian
+                        </p>
+                        <p className="font-semibold">
+                          {new Date(
+                            viewTroubleRecordModal.data.tanggalKejadian
+                          ).toLocaleDateString("id-ID")}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600">Kode Peralatan</p>
+                        <p className="font-semibold">
+                          {viewTroubleRecordModal.data.kodePeralatan}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-[#001B44] mb-2">
+                        Deskripsi Masalah
+                      </h4>
+                      <p className="p-3 bg-gray-50 rounded">
+                        {viewTroubleRecordModal.data.deskripsiMasalah}
+                      </p>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-[#001B44] mb-2">
+                        Data Kronologis
+                      </h4>
+                      <div className="space-y-2">
+                        {viewTroubleRecordModal.data.dataKronologis.map(
+                          (item, index) => (
+                            <div
+                              key={index}
+                              className="flex gap-3 p-3 bg-gray-50 rounded"
+                            >
+                              <div className="w-6 h-6 bg-[#00B4D8] text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                {index + 1}
+                              </div>
+                              <p className="flex-1">{item.text}</p>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-[#001B44] mb-2">
+                        Pembahasan
+                      </h4>
+                      <div className="space-y-2">
+                        {viewTroubleRecordModal.data.pembahasan.map(
+                          (item, index) => (
+                            <div
+                              key={index}
+                              className="flex gap-3 p-3 bg-gray-50 rounded"
+                            >
+                              <div className="w-6 h-6 bg-[#00B4D8] text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                {index + 1}
+                              </div>
+                              <p className="flex-1">{item.text}</p>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-[#001B44] mb-2">
+                        Tindakan Perbaikan
+                      </h4>
+                      <div className="space-y-2">
+                        {viewTroubleRecordModal.data.tindakanPerbaikan.map(
+                          (item, index) => (
+                            <div
+                              key={index}
+                              className="flex gap-3 p-3 bg-gray-50 rounded"
+                            >
+                              <div className="w-6 h-6 bg-[#00B4D8] text-white rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0">
+                                {index + 1}
+                              </div>
+                              <p className="flex-1">{item.text}</p>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    {viewTroubleRecordModal.data.catatan && (
+                      <div>
+                        <h4 className="font-semibold text-[#001B44] mb-2">
+                          Catatan
+                        </h4>
+                        <p className="p-3 bg-gray-50 rounded whitespace-pre-wrap">
+                          {viewTroubleRecordModal.data.catatan}
+                        </p>
+                      </div>
+                    )}
+
+                    {viewTroubleRecordModal.data.status === "Closed" && (
+                      <div className="border-t pt-4">
+                        <h4 className="font-semibold text-green-700 mb-2">
+                          Informasi Penyelesaian
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4 p-4 bg-green-50 rounded-lg">
+                          <div>
+                            <p className="text-sm text-gray-600">
+                              Tanggal Selesai
+                            </p>
+                            <p className="font-semibold">
+                              {viewTroubleRecordModal.data.tanggalSelesai &&
+                                new Date(
+                                  viewTroubleRecordModal.data.tanggalSelesai
+                                ).toLocaleDateString("id-ID")}
+                            </p>
+                          </div>
+                          <div className="col-span-2">
+                            <p className="text-sm text-gray-600 mb-1">
+                              Catatan Penyelesaian
+                            </p>
+                            <p className="font-semibold">
+                              {viewTroubleRecordModal.data.catatanPenyelesaian}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </Modal>
+
+              {/* Close Trouble Modal */}
+              <Modal
+                isOpen={closeTroubleModal.show}
+                onClose={() => {
+                  setCloseTroubleModal({ show: false, data: null });
+                  setCloseTroubleForm({
+                    tanggalSelesai: new Date().toISOString().split("T")[0],
+                    catatanPenyelesaian: "",
+                  });
+                }}
+                title="Tutup Trouble Record"
+                size="md"
+              >
+                <form onSubmit={handleCloseTroubleRecord} className="space-y-4">
+                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <p className="text-sm text-gray-700">
+                      <strong>Nomor Berkas:</strong>{" "}
+                      {closeTroubleModal.data?.nomorBerkas}
+                    </p>
+                    <p className="text-sm text-gray-700 mt-1">
+                      <strong>Kode Peralatan:</strong>{" "}
+                      {closeTroubleModal.data?.kodePeralatan}
+                    </p>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="tanggalSelesai">Tanggal Selesai</Label>
+                    <Input
+                      id="tanggalSelesai"
+                      type="date"
+                      value={closeTroubleForm.tanggalSelesai}
+                      onChange={(e) =>
+                        setCloseTroubleForm({
+                          ...closeTroubleForm,
+                          tanggalSelesai: e.target.value,
+                        })
+                      }
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="catatanPenyelesaian">
+                      Catatan Penyelesaian
+                    </Label>
+                    <textarea
+                      id="catatanPenyelesaian"
+                      value={closeTroubleForm.catatanPenyelesaian}
+                      onChange={(e) =>
+                        setCloseTroubleForm({
+                          ...closeTroubleForm,
+                          catatanPenyelesaian: e.target.value,
+                        })
+                      }
+                      className="w-full min-h-[100px] p-2 border border-gray-300 rounded-md resize-y"
+                      placeholder="Masukkan catatan penyelesaian"
+                      required
+                    />
+                  </div>
+
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setCloseTroubleModal({ show: false, data: null });
+                        setCloseTroubleForm({
+                          tanggalSelesai: new Date()
+                            .toISOString()
+                            .split("T")[0],
+                          catatanPenyelesaian: "",
+                        });
+                      }}
+                    >
+                      Batal
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Tutup Trouble Record
+                    </Button>
+                  </div>
+                </form>
+              </Modal>
+
+              {/* Data Table */}
+              <div className="mt-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-semibold text-[#001B44]">
+                    Data Trouble Record
+                  </h4>
+                  <Button
+                    onClick={() => {
+                      setShowForm(true);
+                      setEditingIndex(null);
+                      generateTroubleRecordNumber();
+                    }}
+                    className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Tambah Data
+                  </Button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#00B4D8]/20">
+                      <tr>
+                        <th className="text-left py-2 px-3">Nomor Berkas</th>
+                        <th className="text-left py-2 px-3">
+                          Tanggal Kejadian
+                        </th>
+                        <th className="text-left py-2 px-3">Kode Peralatan</th>
+                        <th className="text-left py-2 px-3">
+                          Deskripsi Masalah
+                        </th>
+                        <th className="text-center py-2 px-3">Status</th>
+                        <th className="text-center py-2 px-3">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginateData(
+                        sortByDateDesc(
+                          troubleRecordData.map((item: any) => ({
+                            ...item,
+                            tanggal: item.tanggalKejadian,
+                          }))
+                        ),
+                        currentPage.trouble_record,
+                        itemsPerPage
+                      ).map((record: any, index: number) => (
+                        <tr
+                          key={index}
+                          className="border-b border-gray-200 hover:bg-[#00B4D8]/5"
+                        >
+                          <td className="py-2 px-3 font-medium">
+                            {record.nomorBerkas}
+                          </td>
+                          <td className="py-2 px-3">
+                            {new Date(
+                              record.tanggalKejadian
+                            ).toLocaleDateString("id-ID")}
+                          </td>
+                          <td className="py-2 px-3">{record.kodePeralatan}</td>
+                          <td className="py-2 px-3">
+                            <div className="max-w-xs truncate">
+                              {record.deskripsiMasalah}
+                            </div>
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <span
+                              className={`inline-flex px-2 py-1 rounded-full text-xs font-semibold ${
+                                record.status === "Closed"
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-yellow-100 text-yellow-800"
+                              }`}
+                            >
+                              {record.status}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3">
+                            <div className="flex justify-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  const actualIndex =
+                                    troubleRecordData.findIndex(
+                                      (r: any) => r.id === record.id
+                                    );
+                                  setViewTroubleRecordModal({
+                                    show: true,
+                                    data: troubleRecordData[actualIndex],
+                                  });
+                                }}
+                                className="border-blue-300 text-blue-600 hover:bg-blue-600 hover:text-white"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              {record.status === "Open" && (
+                                <>
+                                  {canEditDelete() && (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          const actualIndex =
+                                            troubleRecordData.findIndex(
+                                              (r: any) => r.id === record.id
+                                            );
+                                          handleEdit(
+                                            actualIndex,
+                                            "trouble_record"
+                                          );
+                                        }}
+                                        className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
+                                      >
+                                        <Edit className="w-4 h-4" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          const actualIndex =
+                                            troubleRecordData.findIndex(
+                                              (r: any) => r.id === record.id
+                                            );
+                                          handleDelete(
+                                            actualIndex,
+                                            "trouble_record",
+                                            record
+                                          );
+                                        }}
+                                        className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      const actualIndex =
+                                        troubleRecordData.findIndex(
+                                          (r: any) => r.id === record.id
+                                        );
+                                      setCloseTroubleModal({
+                                        show: true,
+                                        data: troubleRecordData[actualIndex],
+                                      });
+                                    }}
+                                    className="bg-green-600 hover:bg-green-700 text-white"
+                                  >
+                                    <CheckCircle className="w-4 h-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  currentPage={currentPage.trouble_record}
+                  totalPages={getTotalPages(
+                    troubleRecordData.length,
+                    itemsPerPage
+                  )}
+                  onPageChange={(page) =>
+                    handlePageChange("trouble_record", page)
+                  }
                 />
               </div>
             </CardContent>
@@ -9109,9 +10211,9 @@ export default function ProduksiNPKApp() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => handleViewAkun(item)}
-                                  className="h-9 w-9 p-0 border-blue-300 text-blue-600 hover:bg-blue-600 hover:text-white"
+                                  className="border-blue-300 text-blue-600 hover:bg-blue-600 hover:text-white"
                                 >
-                                  <Eye className="w-5 h-5" />
+                                  <Eye className="w-4 h-4" />
                                 </Button>
                                 {canEditDelete() && (
                                   <>
@@ -9121,9 +10223,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "akun")
                                       }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
-                                      <Edit className="w-5 h-5" />
+                                      <Edit className="w-4 h-4" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -9131,9 +10233,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleDelete(actualIdx, "akun", item)
                                       }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
-                                      <Trash2 className="w-5 h-5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </>
                                 )}
@@ -9304,9 +10406,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEdit(actualIdx, "rkap")
                                       }
-                                      className="h-9 w-9 p-0 border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
+                                      className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
-                                      <Edit className="w-5 h-5" />
+                                      <Edit className="w-4 h-4" />
                                     </Button>
                                     <Button
                                       size="sm"
@@ -9314,9 +10416,9 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleDelete(actualIdx, "rkap", item)
                                       }
-                                      className="h-9 w-9 p-0 border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                      className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
-                                      <Trash2 className="w-5 h-5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </Button>
                                   </>
                                 )}
@@ -9383,6 +10485,7 @@ export default function ProduksiNPKApp() {
         { id: "vibrasi", label: "Vibrasi" },
         { id: "gatepass", label: "Gate Pass" },
         { id: "perta", label: "Perta" },
+        { id: "troublerecord", label: "Trouble Record" },
       ],
     },
     {

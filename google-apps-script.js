@@ -17,6 +17,7 @@
  *    - akun
  *    - rkap
  *    - perta
+ *    - trouble_record
  *    - sessions (untuk multi-login detection)
  *
  * 3. Buka Extensions > Apps Script
@@ -51,7 +52,14 @@ function doGet(e) {
     }
 
     if (action === "read" && sheet) {
-      const data = readData(sheet);
+      // Gunakan fungsi spesifik untuk trouble_record
+      let data;
+      if (sheet === "trouble_record") {
+        const result = getTroubleRecordData();
+        data = result.success ? result.data : [];
+      } else {
+        data = readData(sheet);
+      }
       return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(
         ContentService.MimeType.JSON
       );
@@ -79,13 +87,28 @@ function doPost(e) {
 
     switch (action) {
       case "create":
-        result = createData(sheet, rowData);
+        // Gunakan fungsi spesifik untuk trouble_record
+        if (sheet === "trouble_record") {
+          result = saveTroubleRecordData(rowData);
+        } else {
+          result = createData(sheet, rowData);
+        }
         break;
       case "update":
-        result = updateData(sheet, rowData);
+        // Gunakan fungsi spesifik untuk trouble_record
+        if (sheet === "trouble_record") {
+          result = updateTroubleRecordData(rowData);
+        } else {
+          result = updateData(sheet, rowData);
+        }
         break;
       case "delete":
-        result = deleteData(sheet, rowData);
+        // Gunakan fungsi spesifik untuk trouble_record
+        if (sheet === "trouble_record") {
+          result = deleteTroubleRecordData(rowData);
+        } else {
+          result = deleteData(sheet, rowData);
+        }
         break;
       case "createSession":
         result = createSession(data.username, data.sessionId);
@@ -198,6 +221,26 @@ function readData(sheetName) {
           }
         } else if (typeof cellValue !== "object") {
           cellValue = [{ item: "", deskripsi: "" }];
+        }
+      }
+
+      // Khusus untuk trouble_record: parse arrays JSON
+      if (
+        sheetName === "trouble_record" &&
+        (headers[j] === "dataKronologis" ||
+          headers[j] === "pembahasan" ||
+          headers[j] === "tindakanPerbaikan")
+      ) {
+        if (typeof cellValue === "string" && cellValue.startsWith("[")) {
+          try {
+            cellValue = JSON.parse(cellValue);
+          } catch (e) {
+            cellValue = [{ text: "" }];
+          }
+        } else if (typeof cellValue === "string" && cellValue) {
+          cellValue = [{ text: cellValue }];
+        } else if (!cellValue) {
+          cellValue = [{ text: "" }];
         }
       }
 
@@ -1083,5 +1126,297 @@ function fixChatMessagesSheet() {
     Logger.log("Header added successfully!");
   } else {
     Logger.log("Header already exists");
+  }
+}
+
+// ===== TROUBLE RECORD FUNCTIONS =====
+
+/**
+ * Create or get trouble_record sheet with proper structure
+ */
+function getTroubleRecordSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("trouble_record");
+
+  if (!sheet) {
+    sheet = ss.insertSheet("trouble_record");
+
+    // Set header
+    sheet
+      .getRange("A1:L1")
+      .setValues([
+        [
+          "ID",
+          "Nomor Berkas",
+          "Tanggal Kejadian",
+          "Kode Peralatan",
+          "Deskripsi Masalah",
+          "Data Kronologis",
+          "Pembahasan",
+          "Tindakan Perbaikan",
+          "Catatan",
+          "Status",
+          "Tanggal Selesai",
+          "Catatan Penyelesaian",
+        ],
+      ]);
+
+    // Format header
+    sheet
+      .getRange("A1:L1")
+      .setBackground("#00B4D8")
+      .setFontColor("#FFFFFF")
+      .setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    sheet.autoResizeColumns(1, 12);
+  }
+
+  return sheet;
+}
+
+/**
+ * Get all trouble records from sheet
+ */
+function getTroubleRecordData() {
+  try {
+    const sheet = getTroubleRecordSheet();
+    const data = sheet.getDataRange().getValues();
+
+    if (data.length <= 1) {
+      return { success: true, data: [] };
+    }
+
+    const headers = data[0];
+    const rows = data.slice(1);
+
+    const result = rows
+      .filter((row) => row[0]) // Filter rows yang ada ID-nya
+      .map((row) => {
+        const obj = {};
+        headers.forEach((header, index) => {
+          let value = row[index];
+
+          // Handle tanggal
+          if (
+            (header === "Tanggal Kejadian" || header === "Tanggal Selesai") &&
+            value
+          ) {
+            if (value instanceof Date) {
+              value = Utilities.formatDate(
+                value,
+                Session.getScriptTimeZone(),
+                "yyyy-MM-dd"
+              );
+            }
+          }
+
+          // Parse JSON strings untuk arrays
+          if (
+            (header === "Data Kronologis" ||
+              header === "Pembahasan" ||
+              header === "Tindakan Perbaikan") &&
+            value
+          ) {
+            if (typeof value === "string" && value.startsWith("[")) {
+              try {
+                value = JSON.parse(value);
+              } catch (e) {
+                value = [{ text: value }];
+              }
+            } else if (typeof value === "string") {
+              value = [{ text: value }];
+            }
+          }
+
+          const key =
+            header === "ID"
+              ? "id"
+              : header === "Nomor Berkas"
+              ? "nomorBerkas"
+              : header === "Tanggal Kejadian"
+              ? "tanggalKejadian"
+              : header === "Kode Peralatan"
+              ? "kodePeralatan"
+              : header === "Deskripsi Masalah"
+              ? "deskripsiMasalah"
+              : header === "Data Kronologis"
+              ? "dataKronologis"
+              : header === "Pembahasan"
+              ? "pembahasan"
+              : header === "Tindakan Perbaikan"
+              ? "tindakanPerbaikan"
+              : header === "Catatan"
+              ? "catatan"
+              : header === "Status"
+              ? "status"
+              : header === "Tanggal Selesai"
+              ? "tanggalSelesai"
+              : header === "Catatan Penyelesaian"
+              ? "catatanPenyelesaian"
+              : header;
+
+          obj[key] = value;
+        });
+        return obj;
+      });
+
+    return { success: true, data: result };
+  } catch (error) {
+    Logger.log("Error getting trouble_record data: " + error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * Save new trouble record
+ */
+function saveTroubleRecordData(data) {
+  try {
+    const sheet = getTroubleRecordSheet();
+    const id = Utilities.getUuid();
+    const lastRow = sheet.getLastRow();
+    const newRow = lastRow + 1;
+
+    // Format tanggal
+    let tanggalKejadian = data.tanggalKejadian;
+    if (tanggalKejadian && typeof tanggalKejadian === "string") {
+      tanggalKejadian = new Date(tanggalKejadian);
+    }
+
+    let tanggalSelesai = data.tanggalSelesai || "";
+    if (tanggalSelesai && typeof tanggalSelesai === "string") {
+      tanggalSelesai = new Date(tanggalSelesai);
+    }
+
+    // Set values
+    sheet
+      .getRange(newRow, 1, 1, 12)
+      .setValues([
+        [
+          id,
+          data.nomorBerkas || "",
+          tanggalKejadian,
+          data.kodePeralatan || "",
+          data.deskripsiMasalah || "",
+          data.dataKronologis || "[]",
+          data.pembahasan || "[]",
+          data.tindakanPerbaikan || "[]",
+          data.catatan || "",
+          data.status || "Open",
+          tanggalSelesai,
+          data.catatanPenyelesaian || "",
+        ],
+      ]);
+
+    // Format tanggal columns
+    sheet.getRange(newRow, 3).setNumberFormat("dd/MM/yyyy");
+    if (tanggalSelesai) {
+      sheet.getRange(newRow, 11).setNumberFormat("dd/MM/yyyy");
+    }
+
+    // Auto resize columns
+    sheet.autoResizeColumns(1, 12);
+
+    return { success: true, id: id };
+  } catch (error) {
+    Logger.log("Error saving trouble_record data: " + error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * Update existing trouble record
+ */
+function updateTroubleRecordData(data) {
+  try {
+    const sheet = getTroubleRecordSheet();
+    const allData = sheet.getDataRange().getValues();
+    const headers = allData[0];
+    const idIndex = headers.indexOf("ID");
+
+    let rowIndex = -1;
+    for (let i = 1; i < allData.length; i++) {
+      if (allData[i][idIndex] === data.id) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      return { success: false, error: "Data tidak ditemukan" };
+    }
+
+    // Format tanggal
+    let tanggalKejadian = data.tanggalKejadian;
+    if (tanggalKejadian && typeof tanggalKejadian === "string") {
+      tanggalKejadian = new Date(tanggalKejadian);
+    }
+
+    let tanggalSelesai = data.tanggalSelesai || "";
+    if (tanggalSelesai && typeof tanggalSelesai === "string") {
+      tanggalSelesai = new Date(tanggalSelesai);
+    }
+
+    // Update row
+    sheet
+      .getRange(rowIndex, 1, 1, 12)
+      .setValues([
+        [
+          data.id,
+          data.nomorBerkas || "",
+          tanggalKejadian,
+          data.kodePeralatan || "",
+          data.deskripsiMasalah || "",
+          data.dataKronologis || "[]",
+          data.pembahasan || "[]",
+          data.tindakanPerbaikan || "[]",
+          data.catatan || "",
+          data.status || "Open",
+          tanggalSelesai,
+          data.catatanPenyelesaian || "",
+        ],
+      ]);
+
+    // Format tanggal columns
+    sheet.getRange(rowIndex, 3).setNumberFormat("dd/MM/yyyy");
+    if (tanggalSelesai) {
+      sheet.getRange(rowIndex, 11).setNumberFormat("dd/MM/yyyy");
+    }
+
+    return { success: true };
+  } catch (error) {
+    Logger.log("Error updating trouble_record data: " + error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * Delete trouble record
+ */
+function deleteTroubleRecordData(data) {
+  try {
+    const sheet = getTroubleRecordSheet();
+    const allData = sheet.getDataRange().getValues();
+    const headers = allData[0];
+    const idIndex = headers.indexOf("ID");
+
+    let rowIndex = -1;
+    for (let i = 1; i < allData.length; i++) {
+      if (allData[i][idIndex] === data.id) {
+        rowIndex = i + 1;
+        break;
+      }
+    }
+
+    if (rowIndex === -1) {
+      return { success: false, error: "Data tidak ditemukan" };
+    }
+
+    sheet.deleteRow(rowIndex);
+
+    return { success: true };
+  } catch (error) {
+    Logger.log("Error deleting trouble_record data: " + error.toString());
+    return { success: false, error: error.toString() };
   }
 }
