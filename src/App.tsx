@@ -1278,6 +1278,9 @@ export default function ProduksiNPKApp() {
       localStorage.removeItem("userRole");
       setActiveNav("home");
       setActiveTab("");
+      // Clear login form fields
+      setLoginUsername("");
+      setLoginPassword("");
       setShowLogoutOverlay(false);
     }, 1500);
   };
