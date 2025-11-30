@@ -111,10 +111,20 @@ function doPost(e) {
         }
         break;
       case "createSession":
-        result = createSession(data.username, data.sessionId);
+        result = createSession(
+          data.username,
+          data.sessionId,
+          data.browser,
+          data.ipAddress
+        );
         break;
       case "updateSession":
-        result = updateSession(data.username, data.sessionId);
+        result = updateSession(
+          data.username,
+          data.sessionId,
+          data.browser,
+          data.ipAddress
+        );
         break;
       case "deleteSession":
         result = deleteSession(data.username);
@@ -899,7 +909,7 @@ function checkActiveSession(username) {
 /**
  * Create new session for user
  */
-function createSession(username, sessionId) {
+function createSession(username, sessionId, browser, ipAddress) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName("sessions");
 
@@ -913,10 +923,10 @@ function createSession(username, sessionId) {
 
   // Create new session
   const timestamp = new Date();
-  const browser = "Unknown"; // Will be sent from client
-  const ip = Session.getActiveUser().getEmail() || "Unknown";
+  const browserInfo = browser || "Unknown";
+  const ipInfo = ipAddress || "Unknown";
 
-  sheet.appendRow([username, sessionId, timestamp, browser, ip]);
+  sheet.appendRow([username, sessionId, timestamp, browserInfo, ipInfo]);
 
   return {
     success: true,
@@ -928,7 +938,7 @@ function createSession(username, sessionId) {
 /**
  * Update existing session timestamp (keep-alive)
  */
-function updateSession(username, sessionId) {
+function updateSession(username, sessionId, browser, ipAddress) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const sheet = ss.getSheetByName("sessions");
 
@@ -940,8 +950,10 @@ function updateSession(username, sessionId) {
 
   for (let i = 1; i < data.length; i++) {
     if (data[i][0] === username && data[i][1] === sessionId) {
-      // Update timestamp
+      // Update timestamp, browser, and IP
       sheet.getRange(i + 1, 3).setValue(new Date());
+      if (browser) sheet.getRange(i + 1, 4).setValue(browser);
+      if (ipAddress) sheet.getRange(i + 1, 5).setValue(ipAddress);
       return { success: true, message: "Session updated" };
     }
   }

@@ -489,12 +489,46 @@ async function checkSessionAPI(
   }
 }
 
+// Detect browser name
+function getBrowserName(): string {
+  const userAgent = navigator.userAgent;
+  if (userAgent.indexOf("Firefox") > -1) return "Firefox";
+  if (userAgent.indexOf("Chrome") > -1 && userAgent.indexOf("Edg") === -1)
+    return "Chrome";
+  if (userAgent.indexOf("Safari") > -1 && userAgent.indexOf("Chrome") === -1)
+    return "Safari";
+  if (userAgent.indexOf("Edg") > -1) return "Edge";
+  if (userAgent.indexOf("MSIE") > -1 || userAgent.indexOf("Trident") > -1)
+    return "Internet Explorer";
+  return "Unknown Browser";
+}
+
+// Get IP address (using public API)
+async function getIPAddress(): Promise<string> {
+  try {
+    const response = await fetch("https://api.ipify.org?format=json");
+    const data = await response.json();
+    return data.ip || "Unknown";
+  } catch (error) {
+    console.error("Error getting IP:", error);
+    return "Unknown";
+  }
+}
+
 async function createSessionAPI(
   username: string,
   sessionId: string
 ): Promise<boolean> {
   try {
-    console.log("[SESSION] Creating session:", { username, sessionId });
+    const browser = getBrowserName();
+    const ipAddress = await getIPAddress();
+
+    console.log("[SESSION] Creating session:", {
+      username,
+      sessionId,
+      browser,
+      ipAddress,
+    });
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
@@ -502,6 +536,8 @@ async function createSessionAPI(
         action: "createSession",
         username,
         sessionId,
+        browser,
+        ipAddress,
       }),
     });
 
@@ -525,7 +561,15 @@ async function updateSessionAPI(
   sessionId: string
 ): Promise<boolean> {
   try {
-    console.log("[SESSION] Updating session:", { username, sessionId });
+    const browser = getBrowserName();
+    const ipAddress = await getIPAddress();
+
+    console.log("[SESSION] Updating session:", {
+      username,
+      sessionId,
+      browser,
+      ipAddress,
+    });
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
@@ -533,6 +577,8 @@ async function updateSessionAPI(
         action: "updateSession",
         username,
         sessionId,
+        browser,
+        ipAddress,
       }),
     });
 
