@@ -52,7 +52,6 @@ import {
   MessageCircle,
   Send,
   StickyNote,
-  Menu,
   ChevronLeft,
 } from "lucide-react";
 
