@@ -49,10 +49,14 @@ import {
   Loader2,
   Bell,
   X,
+  XCircle,
   MessageCircle,
   Send,
   StickyNote,
   ChevronLeft,
+  Users,
+  UserPlus,
+  Shield,
 } from "lucide-react";
 
 const WEBHOOK_URL =
@@ -468,6 +472,33 @@ interface TroubleRecord {
   catatanPenyelesaian?: string;
 }
 
+interface User {
+  id?: string;
+  username: string;
+  password: string;
+  role: "admin" | "user" | "supervisor" | "avp" | "manager";
+  namaLengkap: string;
+  status: "active" | "inactive";
+  createdAt?: string;
+  lastLogin?: string;
+}
+
+interface ApprovalRequest {
+  id?: string;
+  requestBy: string;
+  requestByName: string;
+  sheetType: string;
+  action: "edit" | "delete";
+  dataId: string;
+  dataPreview: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  requestDate: string;
+  reviewBy?: string;
+  reviewDate?: string;
+  reviewNotes?: string;
+}
+
 // Google Sheets API URL - Replace with your deployed script URL
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwURvYXyBD0-SrqomO4eNbE16-KtdD1g6e8G0LLIZA0_nb_jkz9FHDp_SPA1r57vkVE/exec";
@@ -804,6 +835,7 @@ export default function ProduksiNPKApp() {
     rkap: 1,
     perta: 1,
     trouble_record: 1,
+    users: 1,
   });
   const itemsPerPage = 15;
 
@@ -832,6 +864,21 @@ export default function ProduksiNPKApp() {
   const [troubleRecordData, setTroubleRecordData] = useState<TroubleRecord[]>(
     []
   );
+  const [usersData, setUsersData] = useState<User[]>([]);
+  const [approvalRequestsData, setApprovalRequestsData] = useState<
+    ApprovalRequest[]
+  >([]);
+
+  // Approval request modal states
+  const [showApprovalRequestModal, setShowApprovalRequestModal] =
+    useState(false);
+  const [approvalRequestForm, setApprovalRequestForm] = useState({
+    action: "edit" as "edit" | "delete",
+    sheetType: "",
+    dataId: "",
+    dataPreview: "",
+    reason: "",
+  });
 
   // Monthly notes state
   const [monthlyNotes, setMonthlyNotes] = useState<{ [key: string]: string }>(
@@ -981,6 +1028,15 @@ export default function ProduksiNPKApp() {
   const [closeTroubleForm, setCloseTroubleForm] = useState({
     tanggalSelesai: new Date().toISOString().split("T")[0],
     catatanPenyelesaian: "",
+  });
+
+  // Form state for User
+  const [formUser, setFormUser] = useState<User>({
+    username: "",
+    password: "",
+    role: "user",
+    namaLengkap: "",
+    status: "active",
   });
 
   const [viewAkunModal, setViewAkunModal] = useState<{
@@ -1183,9 +1239,19 @@ export default function ProduksiNPKApp() {
 
   // Helper to check if user has edit/delete permission
   const canEditDelete = () => {
+    // Admin, Supervisor, AVP, dan User bisa add/edit/delete data
+    // Manager hanya bisa view
     return (
-      userRole === "admin" || userRole === "supervisor" || userRole === "avp"
+      userRole === "admin" ||
+      userRole === "supervisor" ||
+      userRole === "avp" ||
+      userRole === "user"
     );
+  };
+
+  // Permission khusus untuk Akun dan RKAP - hanya Admin dan AVP
+  const canEditAkunRKAP = () => {
+    return userRole === "admin" || userRole === "avp";
   };
 
   // Generate unique session ID for current browser
@@ -1274,66 +1340,169 @@ export default function ProduksiNPKApp() {
   // Handle Login (Google Sheets session check)
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError("");
 
-    // Validate credentials
-    let validCredentials = false;
-    let role: "admin" | "user" | "supervisor" | "avp" | "manager" = "admin";
-    let username = "";
+    try {
+      let role: "admin" | "user" | "supervisor" | "avp" | "manager" = "user";
+      let username = "";
+      let validCredentials = false;
 
-    if (loginUsername === "admin" && loginPassword === "adminreguler") {
-      validCredentials = true;
-      role = "admin";
-      username = "admin";
-    } else if (loginUsername === "user" && loginPassword === "usernpk") {
-      validCredentials = true;
-      role = "user";
-      username = "user";
-    } else if (loginUsername === "supervisor" && loginPassword === "3972103") {
-      validCredentials = true;
-      role = "supervisor";
-      username = "supervisor";
-    } else if (loginUsername === "avp" && loginPassword === "avpnpk") {
-      validCredentials = true;
-      role = "avp";
-      username = "avp";
-    } else if (loginUsername === "manager" && loginPassword === "managernpk") {
-      validCredentials = true;
-      role = "manager";
-      username = "manager";
+      // Default hardcoded accounts (fallback)
+      const defaultAccounts = [
+        { username: "admin", password: "adminreguler", role: "admin" as const },
+        { username: "user", password: "usernpk", role: "user" as const },
+        {
+          username: "supervisor",
+          password: "3972103",
+          role: "supervisor" as const,
+        },
+        { username: "avp", password: "avpnpk", role: "avp" as const },
+        {
+          username: "manager",
+          password: "managernpk",
+          role: "manager" as const,
+        },
+      ];
+
+      // Check default accounts first
+      const defaultAccount = defaultAccounts.find(
+        (acc) =>
+          acc.username === loginUsername && acc.password === loginPassword
+      );
+
+      if (defaultAccount) {
+        validCredentials = true;
+        username = defaultAccount.username;
+        role = defaultAccount.role;
+      } else {
+        // Try to fetch from Google Sheets
+        try {
+          console.log(
+            "[LOGIN] 🔍 Not a default account, checking Google Sheets..."
+          );
+          console.log("[LOGIN] Username entered:", loginUsername);
+          console.log(
+            "[LOGIN] Password entered:",
+            "***" + loginPassword.substring(loginPassword.length - 3)
+          );
+
+          const users = await fetchData("users");
+          console.log("[LOGIN] 📊 Users data fetched:", users);
+          console.log("[LOGIN] 📊 Total users:", users?.length || 0);
+
+          if (!users || users.length === 0) {
+            console.log("[LOGIN] ⚠️ No users found in Google Sheets!");
+          } else {
+            // Log all usernames for debugging
+            console.log(
+              "[LOGIN] Available usernames:",
+              users.map((u: User) => u.username)
+            );
+          }
+
+          // Find user with matching username and password
+          const user = users?.find((u: User) => {
+            // Trim whitespace from both sides to handle hidden spaces
+            const dbUsername = (u.username || "").toString().trim();
+            const dbPassword = (u.password || "").toString().trim();
+            const dbStatus = (u.status || "").toString().trim().toLowerCase();
+            const inputUsername = loginUsername.trim();
+            const inputPassword = loginPassword.trim();
+
+            const usernameMatch = dbUsername === inputUsername;
+            const passwordMatch = dbPassword === inputPassword;
+            const statusActive = dbStatus === "active";
+
+            console.log(
+              `[LOGIN] Checking user: ${u.username} (trimmed: "${dbUsername}")`
+            );
+            console.log(
+              `  - Username match: ${usernameMatch} ("${dbUsername}" === "${inputUsername}")`
+            );
+            console.log(`  - Password match: ${passwordMatch}`);
+            console.log(
+              `  - Status active: ${statusActive} (status: "${dbStatus}")`
+            );
+
+            return usernameMatch && passwordMatch && statusActive;
+          });
+
+          console.log(
+            "[LOGIN] 🔎 User found:",
+            user ? `Yes (${user.username})` : "No"
+          );
+
+          if (user) {
+            validCredentials = true;
+            username = user.username;
+            role = user.role;
+
+            console.log("[LOGIN] ✅ Valid credentials! Role:", role);
+
+            // Update last login timestamp
+            try {
+              await updateData("users", {
+                ...user,
+                lastLogin: new Date().toISOString(),
+              });
+              console.log("[LOGIN] ✅ Last login updated");
+            } catch (updateError) {
+              console.error(
+                "[LOGIN] ⚠️ Failed to update last login:",
+                updateError
+              );
+              // Continue with login even if update fails
+            }
+          }
+        } catch (error) {
+          console.error(
+            "[LOGIN] ❌ Error fetching users from Google Sheets:",
+            error
+          );
+        }
+      }
+
+      console.log(
+        "[LOGIN] Final validation - Valid credentials:",
+        validCredentials
+      );
+
+      if (!validCredentials) {
+        setLoginError("Username atau password salah, atau akun tidak aktif!");
+        return;
+      }
+
+      // Check if account is already in use (cross-browser detection via Google Sheets)
+      const accountInUse = await checkAccountInUse(username);
+      console.log("[LOGIN] Account in use check result:", accountInUse);
+
+      if (accountInUse) {
+        console.log("[LOGIN] ⚠️ Showing warning modal - account in use!");
+        const warningMsg = `Akun "${username}" sedang aktif di perangkat/browser lain. Untuk keamanan, hanya satu sesi yang diperbolehkan per akun. Silakan logout dari perangkat lain atau tunggu 2 menit.`;
+
+        setAccountInUseMessage(warningMsg);
+        setShowAccountInUseWarning(true);
+
+        console.log("[LOGIN] Modal state set to true");
+
+        // Auto close warning after 5 seconds WITHOUT logging in
+        setTimeout(() => {
+          console.log("[LOGIN] Auto-closing warning modal");
+          setShowAccountInUseWarning(false);
+          setLoginUsername("");
+          setLoginPassword("");
+        }, 5000);
+        return; // Block login attempt
+      }
+
+      console.log("[LOGIN] ✅ Account free - proceeding with login");
+
+      // Proceed with login if account is free
+      await proceedWithLogin(username, role);
+    } catch (error) {
+      console.error("[LOGIN] Error during login:", error);
+      setLoginError("Terjadi kesalahan saat login. Silakan coba lagi.");
     }
-
-    if (!validCredentials) {
-      setLoginError("Username atau password salah!");
-      return;
-    }
-
-    // Check if account is already in use (cross-browser detection via Google Sheets)
-    const accountInUse = await checkAccountInUse(username);
-    console.log("[LOGIN] Account in use check result:", accountInUse);
-
-    if (accountInUse) {
-      console.log("[LOGIN] ?? Showing warning modal - account in use!");
-      const warningMsg = `Akun "${username}" sedang aktif di perangkat/browser lain. Untuk keamanan, hanya satu sesi yang diperbolehkan per akun. Silakan logout dari perangkat lain atau tunggu 2 menit.`;
-
-      setAccountInUseMessage(warningMsg);
-      setShowAccountInUseWarning(true);
-
-      console.log("[LOGIN] Modal state set to true");
-
-      // Auto close warning after 5 seconds WITHOUT logging in
-      setTimeout(() => {
-        console.log("[LOGIN] Auto-closing warning modal");
-        setShowAccountInUseWarning(false);
-        setLoginUsername("");
-        setLoginPassword("");
-      }, 5000);
-      return; // Block login attempt
-    }
-
-    console.log("[LOGIN] ? Account free - proceeding with login");
-
-    // Proceed with login if account is free
-    await proceedWithLogin(username, role);
   };
 
   // Proceed with login after checks (Google Sheets session creation)
@@ -1878,6 +2047,8 @@ export default function ProduksiNPKApp() {
           rkap,
           perta,
           troubleRecord,
+          users,
+          approvalRequests,
         ] = await Promise.all([
           fetchData("timesheet_forklift"),
           fetchData("timesheet_loader"),
@@ -1888,6 +2059,8 @@ export default function ProduksiNPKApp() {
           fetchData("rkap"),
           fetchData("perta"),
           fetchData("trouble_record"),
+          fetchData("users"),
+          fetchData("approval_requests"),
         ]);
 
         const loadTime2 = Date.now() - startTime;
@@ -2001,6 +2174,12 @@ export default function ProduksiNPKApp() {
           : [];
 
         setTroubleRecordData(normalizedTroubleRecord);
+
+        // Set users data (only accessible by admin)
+        setUsersData(users || []);
+
+        // Set approval requests data (accessible by admin and avp)
+        setApprovalRequestsData(approvalRequests || []);
       } catch (error) {
         console.error("❌ Error loading data:", error);
         setLoadingData(false);
@@ -2658,6 +2837,212 @@ export default function ProduksiNPKApp() {
     }
   };
 
+  // Handle approval request submission (for User role)
+  const handleRequestApproval = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!approvalRequestForm.reason.trim()) {
+      alert("Alasan harus diisi!");
+      return;
+    }
+
+    setShowLoadingOverlay(true);
+    try {
+      const newRequest: ApprovalRequest = {
+        requestBy: loginUsername,
+        requestByName: loginUsername,
+        sheetType: approvalRequestForm.sheetType,
+        action: approvalRequestForm.action,
+        dataId: approvalRequestForm.dataId,
+        dataPreview: approvalRequestForm.dataPreview,
+        reason: approvalRequestForm.reason,
+        status: "pending",
+        requestDate: new Date().toISOString(),
+      };
+
+      await saveData("approval_requests", newRequest);
+      const refreshed = await fetchData("approval_requests");
+      setApprovalRequestsData(refreshed || []);
+
+      showSuccess(
+        `Request ${
+          approvalRequestForm.action === "edit" ? "edit" : "hapus"
+        } berhasil dikirim ke AVP!`
+      );
+
+      setShowApprovalRequestModal(false);
+      setApprovalRequestForm({
+        action: "edit",
+        sheetType: "",
+        dataId: "",
+        dataPreview: "",
+        reason: "",
+      });
+    } catch (error) {
+      setShowLoadingOverlay(false);
+      alert("Terjadi kesalahan saat mengirim request approval");
+    }
+  };
+
+  // Handle approve/reject by AVP
+  const handleApprovalAction = async (
+    requestId: string,
+    action: "approve" | "reject",
+    notes?: string
+  ) => {
+    setShowLoadingOverlay(true);
+    try {
+      const request = approvalRequestsData.find((r) => r.id === requestId);
+      if (!request) {
+        alert("Request tidak ditemukan!");
+        return;
+      }
+
+      // Update approval request status
+      const updatedRequest: ApprovalRequest = {
+        ...request,
+        status: action === "approve" ? "approved" : "rejected",
+        reviewBy: loginUsername,
+        reviewDate: new Date().toISOString(),
+        reviewNotes: notes || "",
+      };
+
+      await updateData("approval_requests", updatedRequest);
+
+      // If approved and action is delete, perform the deletion
+      if (action === "approve" && request.action === "delete") {
+        await deleteDataFromSheet(request.sheetType, { id: request.dataId });
+        // Refresh the data for the specific sheet
+        await refreshDataBySheetType(request.sheetType);
+      }
+
+      const refreshed = await fetchData("approval_requests");
+      setApprovalRequestsData(refreshed || []);
+
+      showSuccess(`Request ${action === "approve" ? "disetujui" : "ditolak"}!`);
+    } catch (error) {
+      setShowLoadingOverlay(false);
+      alert("Terjadi kesalahan saat memproses approval");
+    }
+  };
+
+  // Helper to refresh data by sheet type
+  const refreshDataBySheetType = async (sheetType: string) => {
+    const refreshed = await fetchData(sheetType);
+    switch (sheetType) {
+      case "produksi_npk":
+        setProduksiNPKData(refreshed || []);
+        break;
+      case "produksi_blending":
+        setProduksiBlendingData(refreshed || []);
+        break;
+      case "produksi_npk_mini":
+        setProduksiNPKMiniData(refreshed || []);
+        break;
+      case "timesheet_forklift":
+        setTimesheetForkliftData(refreshed || []);
+        break;
+      case "timesheet_loader":
+        setTimesheetLoaderData(refreshed || []);
+        break;
+      case "downtime":
+        setDowntimeData(refreshed || []);
+        break;
+      case "work_request":
+        setWorkRequestData(refreshed || []);
+        break;
+      case "bahan_baku":
+        setBahanBakuData(refreshed || []);
+        break;
+      case "vibrasi":
+        setVibrasiData(refreshed || []);
+        break;
+      case "gate_pass":
+        setGatePassData(refreshed || []);
+        break;
+      case "perta":
+        const normalizedPerta = (refreshed || []).map((item: any) => {
+          let parsedItems = item.items;
+          if (typeof parsedItems === "string") {
+            try {
+              parsedItems = JSON.parse(parsedItems);
+            } catch (e) {
+              parsedItems = [{ item: "", deskripsi: "" }];
+            }
+          }
+          if (!Array.isArray(parsedItems)) {
+            parsedItems = [{ item: "", deskripsi: "" }];
+          }
+          return { ...item, items: parsedItems };
+        });
+        setPertaData(normalizedPerta);
+        break;
+      case "trouble_record":
+        setTroubleRecordData(refreshed || []);
+        break;
+    }
+  };
+
+  const handleSubmitUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setShowLoadingOverlay(true);
+    try {
+      if (editingIndex !== null) {
+        // Update existing user
+        const current: any = formUser as any;
+        const oldById = usersData.find(
+          (r) => r.id && current.id && r.id === current.id
+        );
+        let oldItem = oldById;
+        if (!oldItem) {
+          oldItem = usersData[editingIndex];
+        }
+
+        // If password is empty, keep the old password
+        const payload: any = {
+          ...formUser,
+          id: oldItem?.id || current.id,
+          password: formUser.password || oldItem?.password || "",
+        };
+
+        if (!payload.id && current.__original) {
+          payload.__original = current.__original;
+        }
+
+        await updateData("users", payload);
+        const refreshed = await fetchData("users");
+        setUsersData(refreshed || []);
+        showSuccess("User berhasil diupdate!");
+      } else {
+        // Create new user
+        const newUser = {
+          ...formUser,
+          createdAt: new Date().toISOString(),
+        };
+        await saveData("users", newUser);
+        addNotification(
+          "users",
+          `User baru: ${formUser.username} (${formUser.role})`
+        );
+        const refreshed = await fetchData("users");
+        setUsersData(refreshed || []);
+        showSuccess("User berhasil ditambahkan!");
+      }
+
+      setFormUser({
+        username: "",
+        password: "",
+        role: "user",
+        namaLengkap: "",
+        status: "active",
+      });
+      setShowForm(false);
+      setEditingIndex(null);
+    } catch (error) {
+      setShowLoadingOverlay(false);
+      alert("Terjadi kesalahan saat menyimpan data user");
+    }
+  };
+
   const handleSubmitPerta = async (e: React.FormEvent) => {
     e.preventDefault();
     setShowLoadingOverlay(true);
@@ -2892,7 +3277,143 @@ export default function ProduksiNPKApp() {
   };
 
   // Delete handlers
-  const handleDelete = async (index: number, dataType: string, item?: any) => {
+  // Wrapper for edit - check if user needs approval
+  const handleEditClick = (index: number, dataType: string, item?: any) => {
+    // If user role is "user", show approval request modal
+    if (userRole === "user") {
+      const data = getDataByType(dataType);
+      const itemToEdit = item || data[index];
+      const dataId = itemToEdit.id || JSON.stringify(itemToEdit);
+      const dataPreview = generateDataPreview(dataType, itemToEdit);
+
+      setApprovalRequestForm({
+        action: "edit",
+        sheetType: dataType,
+        dataId: dataId,
+        dataPreview: dataPreview,
+        reason: "",
+      });
+      setShowApprovalRequestModal(true);
+    } else {
+      // For other roles (admin, avp, supervisor), directly edit
+      _handleEdit(index, dataType);
+    }
+  };
+
+  // Wrapper for delete - check if user needs approval
+  const handleDeleteClick = async (
+    index: number,
+    dataType: string,
+    item?: any
+  ) => {
+    // If user role is "user", show approval request modal
+    if (userRole === "user") {
+      const data = getDataByType(dataType);
+      const itemToDelete = item || data[index];
+      const dataId = itemToDelete.id || JSON.stringify(itemToDelete);
+      const dataPreview = generateDataPreview(dataType, itemToDelete);
+
+      setApprovalRequestForm({
+        action: "delete",
+        sheetType: dataType,
+        dataId: dataId,
+        dataPreview: dataPreview,
+        reason: "",
+      });
+      setShowApprovalRequestModal(true);
+    } else {
+      // For other roles (admin, avp, supervisor), directly delete
+      await _handleDelete(index, dataType, item);
+    }
+  };
+
+  // Helper to get data array by type
+  const getDataByType = (dataType: string): any[] => {
+    switch (dataType) {
+      case "produksi_npk":
+        return produksiNPKData;
+      case "produksi_blending":
+        return produksiBlendingData;
+      case "produksi_npk_mini":
+        return produksiNPKMiniData;
+      case "timesheet_forklift":
+        return timesheetForkliftData;
+      case "timesheet_loader":
+        return timesheetLoaderData;
+      case "downtime":
+        return downtimeData;
+      case "work_request":
+        return workRequestData;
+      case "bahan_baku":
+        return bahanBakuData;
+      case "vibrasi":
+        return vibrasiData;
+      case "gate_pass":
+        return gatePassData;
+      case "perta":
+        return pertaData;
+      case "trouble_record":
+        return troubleRecordData;
+      default:
+        return [];
+    }
+  };
+
+  // Helper to generate data preview string
+  const generateDataPreview = (dataType: string, item: any): string => {
+    switch (dataType) {
+      case "produksi_npk":
+        return `Tanggal: ${new Date(item.tanggal).toLocaleDateString(
+          "id-ID"
+        )}, Total: ${item.total || 0} ton`;
+      case "produksi_blending":
+        return `Tanggal: ${new Date(item.tanggal).toLocaleDateString(
+          "id-ID"
+        )}, Formula: ${item.formula}, Tonase: ${item.tonase}`;
+      case "produksi_npk_mini":
+        return `Tanggal: ${new Date(item.tanggal).toLocaleDateString(
+          "id-ID"
+        )}, Formulasi: ${item.formulasi}, Tonase: ${item.tonase}`;
+      case "timesheet_forklift":
+        return `Tanggal: ${new Date(item.tanggal).toLocaleDateString(
+          "id-ID"
+        )}, Forklift: ${item.forklift}, Jam Grounded: ${item.jamGrounded || 0}`;
+      case "timesheet_loader":
+        return `Tanggal: ${new Date(item.tanggal).toLocaleDateString(
+          "id-ID"
+        )}, Loader: ${item.loader}, Jam Grounded: ${item.jamGrounded || 0}`;
+      case "downtime":
+        return `Tanggal: ${new Date(item.tanggal).toLocaleDateString(
+          "id-ID"
+        )}, Item: ${item.item}, Durasi: ${item.durasi} jam`;
+      case "work_request":
+        return `Tanggal: ${new Date(item.tanggal).toLocaleDateString(
+          "id-ID"
+        )}, Section: ${item.section}, PIC: ${item.picPemeliharaan}`;
+      case "bahan_baku":
+        return `Tanggal: ${new Date(item.tanggal).toLocaleDateString(
+          "id-ID"
+        )}, Jenis: ${item.jenis}, Stock Akhir: ${item.stockAkhir}`;
+      case "vibrasi":
+        return `Tanggal: ${new Date(item.tanggal).toLocaleDateString(
+          "id-ID"
+        )}, Equipment: ${item.equipment}`;
+      case "gate_pass":
+        return `Tanggal: ${new Date(item.tanggal).toLocaleDateString(
+          "id-ID"
+        )}, Nama: ${item.nama}, Keperluan: ${item.keperluan}`;
+      case "perta":
+        return `Periode: ${new Date(item.tanggalMulai).toLocaleDateString(
+          "id-ID"
+        )} - ${new Date(item.tanggalSelesai).toLocaleDateString("id-ID")}`;
+      case "trouble_record":
+        return `Nomor Berkas: ${item.nomorBerkas}, Area: ${item.area}`;
+      default:
+        return JSON.stringify(item).substring(0, 100);
+    }
+  };
+
+  const _handleDelete = async (index: number, dataType: string, item?: any) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus data ini?")) {
       setShowLoadingOverlay(true);
       try {
@@ -3047,7 +3568,7 @@ export default function ProduksiNPKApp() {
   };
 
   // Edit handlers
-  const handleEdit = (index: number, dataType: string) => {
+  const _handleEdit = (index: number, dataType: string) => {
     setEditingIndex(index);
     setShowForm(true);
 
@@ -3173,6 +3694,14 @@ export default function ProduksiNPKApp() {
             troubleEditData.tanggalKejadian
           ),
           __original: { ...troubleEditData },
+        } as any);
+        break;
+      case "users":
+        const userEditData: any = usersData[index];
+        setFormUser({
+          ...userEditData,
+          password: "", // Don't show password for security
+          __original: { ...userEditData },
         } as any);
         break;
     }
@@ -6038,7 +6567,10 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleEdit(actualIdx, "produksi_npk")
+                                        handleEditClick(
+                                          actualIdx,
+                                          "produksi_npk"
+                                        )
                                       }
                                       className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
@@ -6048,7 +6580,10 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleDelete(actualIdx, "produksi_npk")
+                                        handleDeleteClick(
+                                          actualIdx,
+                                          "produksi_npk"
+                                        )
                                       }
                                       className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
@@ -6392,7 +6927,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleEdit(
+                                        handleEditClick(
                                           actualIdx,
                                           "produksi_blending"
                                         )
@@ -6405,7 +6940,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleDelete(
+                                        handleDeleteClick(
                                           actualIdx,
                                           "produksi_blending"
                                         )
@@ -6704,7 +7239,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleEdit(
+                                        handleEditClick(
                                           actualIdx,
                                           "produksi_npk_mini"
                                         )
@@ -6717,7 +7252,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleDelete(
+                                        handleDeleteClick(
                                           actualIdx,
                                           "produksi_npk_mini"
                                         )
@@ -7110,7 +7645,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleEdit(
+                                        handleEditClick(
                                           actualIdx,
                                           "timesheet_forklift"
                                         )
@@ -7123,7 +7658,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleDelete(
+                                        handleDeleteClick(
                                           actualIdx,
                                           "timesheet_forklift"
                                         )
@@ -7489,7 +8024,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleEdit(
+                                        handleEditClick(
                                           actualIdx,
                                           "timesheet_loader"
                                         )
@@ -7502,7 +8037,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleDelete(
+                                        handleDeleteClick(
                                           actualIdx,
                                           "timesheet_loader"
                                         )
@@ -7784,7 +8319,7 @@ export default function ProduksiNPKApp() {
                                         size="sm"
                                         variant="outline"
                                         onClick={() =>
-                                          handleEdit(actualIdx, "downtime")
+                                          handleEditClick(actualIdx, "downtime")
                                         }
                                         className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                       >
@@ -7794,7 +8329,7 @@ export default function ProduksiNPKApp() {
                                         size="sm"
                                         variant="outline"
                                         onClick={() =>
-                                          handleDelete(
+                                          handleDeleteClick(
                                             actualIdx,
                                             "downtime",
                                             item
@@ -8124,7 +8659,10 @@ export default function ProduksiNPKApp() {
                                         size="sm"
                                         variant="outline"
                                         onClick={() =>
-                                          handleEdit(actualIdx, "work_request")
+                                          handleEditClick(
+                                            actualIdx,
+                                            "work_request"
+                                          )
                                         }
                                         className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                       >
@@ -8134,7 +8672,7 @@ export default function ProduksiNPKApp() {
                                         size="sm"
                                         variant="outline"
                                         onClick={() =>
-                                          handleDelete(
+                                          handleDeleteClick(
                                             actualIdx,
                                             "work_request",
                                             item
@@ -8388,7 +8926,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleEdit(actualIdx, "bahan_baku")
+                                        handleEditClick(actualIdx, "bahan_baku")
                                       }
                                       className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
@@ -8398,7 +8936,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleDelete(
+                                        handleDeleteClick(
                                           actualIdx,
                                           "bahan_baku",
                                           item
@@ -8654,7 +9192,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleEdit(actualIdx, "vibrasi")
+                                        handleEditClick(actualIdx, "vibrasi")
                                       }
                                       className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
@@ -8664,7 +9202,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleDelete(actualIdx, "vibrasi")
+                                        handleDeleteClick(actualIdx, "vibrasi")
                                       }
                                       className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
@@ -8951,7 +9489,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleEdit(actualIdx, "gate_pass")
+                                        handleEditClick(actualIdx, "gate_pass")
                                       }
                                       className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
@@ -8961,7 +9499,10 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleDelete(actualIdx, "gate_pass")
+                                        handleDeleteClick(
+                                          actualIdx,
+                                          "gate_pass"
+                                        )
                                       }
                                       className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
@@ -9303,7 +9844,7 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleEdit(actualIdx, "perta")
+                                        handleEditClick(actualIdx, "perta")
                                       }
                                       className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
@@ -9313,7 +9854,11 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleDelete(actualIdx, "perta", item)
+                                        handleDeleteClick(
+                                          actualIdx,
+                                          "perta",
+                                          item
+                                        )
                                       }
                                       className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
@@ -10050,7 +10595,7 @@ export default function ProduksiNPKApp() {
                                             troubleRecordData.findIndex(
                                               (r: any) => r.id === record.id
                                             );
-                                          handleEdit(
+                                          handleEditClick(
                                             actualIndex,
                                             "trouble_record"
                                           );
@@ -10067,7 +10612,7 @@ export default function ProduksiNPKApp() {
                                             troubleRecordData.findIndex(
                                               (r: any) => r.id === record.id
                                             );
-                                          handleDelete(
+                                          handleDeleteClick(
                                             actualIndex,
                                             "trouble_record",
                                             record
@@ -10275,7 +10820,7 @@ export default function ProduksiNPKApp() {
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-semibold text-[#001B44]">Data Akun</h4>
-                  {canEditDelete() && (
+                  {canEditAkunRKAP() && (
                     <Button
                       onClick={() => {
                         setShowForm(true);
@@ -10341,13 +10886,13 @@ export default function ProduksiNPKApp() {
                                 >
                                   <Eye className="w-4 h-4" />
                                 </Button>
-                                {canEditDelete() && (
+                                {canEditAkunRKAP() && (
                                   <>
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleEdit(actualIdx, "akun")
+                                        handleEditClick(actualIdx, "akun")
                                       }
                                       className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
@@ -10357,7 +10902,11 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleDelete(actualIdx, "akun", item)
+                                        handleDeleteClick(
+                                          actualIdx,
+                                          "akun",
+                                          item
+                                        )
                                       }
                                       className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
@@ -10481,7 +11030,7 @@ export default function ProduksiNPKApp() {
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-semibold text-[#001B44]">Data RKAP</h4>
-                  {canEditDelete() && (
+                  {canEditAkunRKAP() && (
                     <Button
                       onClick={() => {
                         setShowForm(true);
@@ -10526,13 +11075,13 @@ export default function ProduksiNPKApp() {
                             </td>
                             <td className="text-center py-2 px-3">
                               <div className="flex gap-2 justify-center">
-                                {canEditDelete() && (
+                                {canEditAkunRKAP() && (
                                   <>
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleEdit(actualIdx, "rkap")
+                                        handleEditClick(actualIdx, "rkap")
                                       }
                                       className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                     >
@@ -10542,7 +11091,11 @@ export default function ProduksiNPKApp() {
                                       size="sm"
                                       variant="outline"
                                       onClick={() =>
-                                        handleDelete(actualIdx, "rkap", item)
+                                        handleDeleteClick(
+                                          actualIdx,
+                                          "rkap",
+                                          item
+                                        )
                                       }
                                       className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
                                     >
@@ -10568,6 +11121,575 @@ export default function ProduksiNPKApp() {
           </Card>
         );
       }
+
+      if (activeTab === "approval") {
+        return (
+          <Card className="border-gray-200 shadow-md">
+            <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
+              <CardTitle className="text-[#001B44] flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Approval Requests
+              </CardTitle>
+              <CardDescription>
+                Kelola permintaan edit/delete dari User
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gray-50 p-6">
+              <div className="space-y-4">
+                {/* Pending Requests */}
+                <div>
+                  <h4 className="font-semibold text-[#001B44] flex items-center gap-2 mb-4">
+                    <AlertCircle className="w-5 h-5 text-yellow-600" />
+                    Pending Requests (
+                    {
+                      approvalRequestsData.filter((r) => r.status === "pending")
+                        .length
+                    }
+                    )
+                  </h4>
+                  <div className="space-y-3">
+                    {approvalRequestsData
+                      .filter((r) => r.status === "pending")
+                      .map((request) => (
+                        <div
+                          key={request.id}
+                          className="bg-white border border-yellow-200 rounded-lg p-4 shadow-sm"
+                        >
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`px-3 py-1 rounded-full text-xs font-bold ${
+                                    request.action === "edit"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-red-100 text-red-700"
+                                  }`}
+                                >
+                                  {request.action === "edit"
+                                    ? "EDIT"
+                                    : "DELETE"}
+                                </span>
+                                <span className="text-sm font-semibold text-gray-700">
+                                  {request.sheetType
+                                    .replace(/_/g, " ")
+                                    .toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="text-sm text-gray-600">
+                                <p>
+                                  <span className="font-semibold">
+                                    Requested by:
+                                  </span>{" "}
+                                  {request.requestByName} ({request.requestBy})
+                                </p>
+                                <p>
+                                  <span className="font-semibold">Date:</span>{" "}
+                                  {new Date(request.requestDate).toLocaleString(
+                                    "id-ID"
+                                  )}
+                                </p>
+                                <p className="mt-2">
+                                  <span className="font-semibold">Data:</span>{" "}
+                                  {request.dataPreview}
+                                </p>
+                                <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-200">
+                                  <span className="font-semibold">Reason:</span>
+                                  <p className="mt-1 text-gray-800">
+                                    {request.reason}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                                onClick={() => {
+                                  const notes = prompt(
+                                    "Catatan persetujuan (opsional):"
+                                  );
+                                  handleApprovalAction(
+                                    request.id!,
+                                    "approve",
+                                    notes || ""
+                                  );
+                                }}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                onClick={() => {
+                                  const notes = prompt(
+                                    "Alasan penolakan (opsional):"
+                                  );
+                                  handleApprovalAction(
+                                    request.id!,
+                                    "reject",
+                                    notes || ""
+                                  );
+                                }}
+                              >
+                                <XCircle className="w-4 h-4 mr-1" />
+                                Reject
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    {approvalRequestsData.filter((r) => r.status === "pending")
+                      .length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <CheckCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>Tidak ada pending request</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* History */}
+                <div className="mt-8">
+                  <h4 className="font-semibold text-[#001B44] flex items-center gap-2 mb-4">
+                    <FileText className="w-5 h-5 text-gray-600" />
+                    Approval History
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm bg-white rounded-lg overflow-hidden">
+                      <thead className="bg-[#00B4D8]/20">
+                        <tr>
+                          <th className="text-left py-3 px-4">Date</th>
+                          <th className="text-left py-3 px-4">User</th>
+                          <th className="text-left py-3 px-4">Action</th>
+                          <th className="text-left py-3 px-4">Sheet</th>
+                          <th className="text-left py-3 px-4">Status</th>
+                          <th className="text-left py-3 px-4">Reviewed By</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {approvalRequestsData
+                          .filter((r) => r.status !== "pending")
+                          .sort(
+                            (a, b) =>
+                              new Date(
+                                b.reviewDate || b.requestDate
+                              ).getTime() -
+                              new Date(a.reviewDate || a.requestDate).getTime()
+                          )
+                          .slice(0, 20)
+                          .map((request, idx) => (
+                            <tr key={idx} className="border-b hover:bg-gray-50">
+                              <td className="py-3 px-4 text-xs text-gray-600">
+                                {new Date(request.requestDate).toLocaleString(
+                                  "id-ID",
+                                  {
+                                    year: "numeric",
+                                    month: "short",
+                                    day: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  }
+                                )}
+                              </td>
+                              <td className="py-3 px-4">
+                                {request.requestByName}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`px-2 py-1 rounded text-xs font-semibold ${
+                                    request.action === "edit"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-red-100 text-red-700"
+                                  }`}
+                                >
+                                  {request.action.toUpperCase()}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4">
+                                {request.sheetType.replace(/_/g, " ")}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span
+                                  className={`px-2 py-1 rounded text-xs font-semibold ${
+                                    request.status === "approved"
+                                      ? "bg-green-100 text-green-700"
+                                      : "bg-red-100 text-red-700"
+                                  }`}
+                                >
+                                  {request.status.toUpperCase()}
+                                </span>
+                              </td>
+                              <td className="py-3 px-4 text-gray-600">
+                                {request.reviewBy || "-"}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    {approvalRequestsData.filter((r) => r.status !== "pending")
+                      .length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>Belum ada history approval</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
+
+      if (activeTab === "users") {
+        return (
+          <Card className="border-gray-200 shadow-md">
+            <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
+              <CardTitle className="text-[#001B44] flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                User Management
+              </CardTitle>
+              <CardDescription>
+                Kelola user dan role access untuk aplikasi
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="bg-gray-50 p-6">
+              <Modal
+                isOpen={showForm}
+                onClose={() => {
+                  setShowForm(false);
+                  setEditingIndex(null);
+                }}
+                title={editingIndex !== null ? "Edit User" : "Tambah User Baru"}
+                size="lg"
+              >
+                <form onSubmit={handleSubmitUser} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="username">Username</Label>
+                      <Input
+                        id="username"
+                        value={formUser.username}
+                        onChange={(e) =>
+                          setFormUser({ ...formUser, username: e.target.value })
+                        }
+                        placeholder="Username untuk login"
+                        required
+                        disabled={editingIndex !== null}
+                      />
+                      {editingIndex !== null && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Username tidak bisa diubah
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="namaLengkap">Nama Lengkap</Label>
+                      <Input
+                        id="namaLengkap"
+                        value={formUser.namaLengkap}
+                        onChange={(e) =>
+                          setFormUser({
+                            ...formUser,
+                            namaLengkap: e.target.value,
+                          })
+                        }
+                        placeholder="Nama lengkap user"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="password">Password</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        value={formUser.password}
+                        onChange={(e) =>
+                          setFormUser({ ...formUser, password: e.target.value })
+                        }
+                        placeholder={
+                          editingIndex !== null
+                            ? "Kosongkan jika tidak ingin mengubah"
+                            : "Password untuk login"
+                        }
+                        required={editingIndex === null}
+                      />
+                      {editingIndex !== null && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Kosongkan jika tidak ingin mengubah password
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="role">Role</Label>
+                      <Select
+                        value={formUser.role}
+                        onValueChange={(value: any) =>
+                          setFormUser({ ...formUser, role: value })
+                        }
+                      >
+                        <SelectTrigger id="role">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">
+                            <div className="flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-red-600" />
+                              <span>Admin - Full Access</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="avp">
+                            <div className="flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-purple-600" />
+                              <span>AVP - View All & Approve</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="manager">
+                            <div className="flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-blue-600" />
+                              <span>Manager - View All Data</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="supervisor">
+                            <div className="flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-green-600" />
+                              <span>Supervisor - Manage Production</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="user">
+                            <div className="flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-gray-600" />
+                              <span>User - View Only</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="status">Status</Label>
+                      <Select
+                        value={formUser.status}
+                        onValueChange={(value: any) =>
+                          setFormUser({ ...formUser, status: value })
+                        }
+                      >
+                        <SelectTrigger id="status">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">
+                            <span className="text-green-600 font-semibold">
+                              ● Active
+                            </span>
+                          </SelectItem>
+                          <SelectItem value="inactive">
+                            <span className="text-red-600 font-semibold">
+                              ● Inactive
+                            </span>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      type="submit"
+                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                      disabled={loading}
+                    >
+                      {editingIndex !== null ? (
+                        <>
+                          <Edit className="w-4 h-4 mr-2" />
+                          {loading ? "Mengupdate..." : "Update User"}
+                        </>
+                      ) : (
+                        <>
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          {loading ? "Menyimpan..." : "Tambah User"}
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowForm(false);
+                        setEditingIndex(null);
+                      }}
+                    >
+                      Batal
+                    </Button>
+                  </div>
+                </form>
+              </Modal>
+
+              <div className="mt-8">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-semibold text-[#001B44] flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Daftar User
+                  </h4>
+                  {userRole === "admin" && (
+                    <Button
+                      onClick={() => {
+                        setShowForm(true);
+                        setEditingIndex(null);
+                        setFormUser({
+                          username: "",
+                          password: "",
+                          role: "user",
+                          namaLengkap: "",
+                          status: "active",
+                        });
+                      }}
+                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Tambah User
+                    </Button>
+                  )}
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#00B4D8]/20">
+                      <tr>
+                        <th className="text-left py-3 px-4">Username</th>
+                        <th className="text-left py-3 px-4">Nama Lengkap</th>
+                        <th className="text-left py-3 px-4">Role</th>
+                        <th className="text-center py-3 px-4">Status</th>
+                        <th className="text-left py-3 px-4">Last Login</th>
+                        <th className="text-center py-3 px-4">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {paginateData(
+                        usersData,
+                        currentPage.users,
+                        itemsPerPage
+                      ).map((item, idx) => {
+                        const actualIdx = usersData.indexOf(item);
+                        const getRoleBadge = (role: string) => {
+                          const badges = {
+                            admin: "bg-red-100 text-red-700 border-red-300",
+                            avp: "bg-purple-100 text-purple-700 border-purple-300",
+                            manager:
+                              "bg-blue-100 text-blue-700 border-blue-300",
+                            supervisor:
+                              "bg-green-100 text-green-700 border-green-300",
+                            user: "bg-gray-100 text-gray-700 border-gray-300",
+                          };
+                          return (
+                            badges[role as keyof typeof badges] || badges.user
+                          );
+                        };
+                        return (
+                          <tr
+                            key={idx}
+                            className="border-b hover:bg-gray-50 transition-colors"
+                          >
+                            <td className="py-3 px-4 font-medium">
+                              {item.username}
+                            </td>
+                            <td className="py-3 px-4">{item.namaLengkap}</td>
+                            <td className="py-3 px-4">
+                              <span
+                                className={`px-3 py-1 rounded-full text-xs font-semibold border ${getRoleBadge(
+                                  item.role
+                                )}`}
+                              >
+                                {item.role.toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="text-center py-3 px-4">
+                              {item.status === "active" ? (
+                                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                  ● Active
+                                </span>
+                              ) : (
+                                <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                                  ● Inactive
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-4 text-gray-600 text-xs">
+                              {item.lastLogin
+                                ? new Date(item.lastLogin).toLocaleString(
+                                    "id-ID",
+                                    {
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )
+                                : "-"}
+                            </td>
+                            <td className="text-center py-3 px-4">
+                              <div className="flex gap-2 justify-center">
+                                {userRole === "admin" && (
+                                  <>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() =>
+                                        handleEditClick(actualIdx, "users")
+                                      }
+                                      className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
+                                      title="Edit user"
+                                    >
+                                      <Edit className="w-4 h-4" />
+                                    </Button>
+                                    {item.username !== loginUsername && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                          handleDeleteClick(
+                                            actualIdx,
+                                            "users",
+                                            item
+                                          )
+                                        }
+                                        className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
+                                        title="Hapus user"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    )}
+                                  </>
+                                )}
+                                {userRole !== "admin" && (
+                                  <span className="text-gray-400 text-xs">
+                                    Admin Only
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                {usersData.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                    <p>Belum ada data user</p>
+                  </div>
+                )}
+                <Pagination
+                  currentPage={currentPage.users}
+                  totalPages={getTotalPages(usersData.length, itemsPerPage)}
+                  onPageChange={(page) => handlePageChange("users", page)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        );
+      }
     }
 
     return (
@@ -10581,51 +11703,82 @@ export default function ProduksiNPKApp() {
     );
   };
 
-  const navItems = [
-    { id: "home", icon: Home, label: "Home", tabs: [] },
-    {
-      id: "produksi",
-      icon: Factory,
-      label: "Produksi",
-      tabs: [
-        { id: "npk", label: "Produksi Granul" },
-        { id: "blending", label: "Produksi Blending" },
-        { id: "mini", label: "Produksi NPK Mini" },
-      ],
-    },
-    {
-      id: "laporan",
-      icon: FileText,
-      label: "Laporan",
-      tabs: [
-        { id: "forklift", label: "Timesheet Forklift" },
-        { id: "loader", label: "Timesheet Loader" },
-        { id: "downtime", label: "Downtime" },
-      ],
-    },
-    {
-      id: "data",
-      icon: Database,
-      label: "Data",
-      tabs: [
-        { id: "workrequest", label: "Work Request" },
-        { id: "bahanbaku", label: "Bahan Baku" },
-        { id: "vibrasi", label: "Vibrasi" },
-        { id: "gatepass", label: "Gate Pass" },
-        { id: "perta", label: "Perta" },
-        { id: "troublerecord", label: "Trouble Record" },
-      ],
-    },
-    {
-      id: "setting",
-      icon: Settings,
-      label: "Setting",
-      tabs: [
-        { id: "akun", label: "Akun" },
-        { id: "rkap", label: "RKAP" },
-      ],
-    },
-  ];
+  // Dynamic navItems berdasarkan role
+  const getNavItems = () => {
+    const baseItems = [
+      { id: "home", icon: Home, label: "Home", tabs: [] },
+      {
+        id: "produksi",
+        icon: Factory,
+        label: "Produksi",
+        tabs: [
+          { id: "npk", label: "Produksi Granul" },
+          { id: "blending", label: "Produksi Blending" },
+          { id: "mini", label: "Produksi NPK Mini" },
+        ],
+      },
+      {
+        id: "laporan",
+        icon: FileText,
+        label: "Laporan",
+        tabs: [
+          { id: "forklift", label: "Timesheet Forklift" },
+          { id: "loader", label: "Timesheet Loader" },
+          { id: "downtime", label: "Downtime" },
+        ],
+      },
+      {
+        id: "data",
+        icon: Database,
+        label: "Data",
+        tabs: [
+          { id: "workrequest", label: "Work Request" },
+          { id: "bahanbaku", label: "Bahan Baku" },
+          { id: "vibrasi", label: "Vibrasi" },
+          { id: "gatepass", label: "Gate Pass" },
+          { id: "perta", label: "Perta" },
+          { id: "troublerecord", label: "Trouble Record" },
+        ],
+      },
+    ];
+
+    // Setting tabs berdasarkan role
+    const settingTabs = [];
+
+    // Approval: hanya Admin dan AVP
+    if (userRole === "admin" || userRole === "avp") {
+      settingTabs.push({ id: "approval", label: "Approval Requests" });
+    }
+
+    // Akun: hanya Admin dan AVP
+    if (userRole === "admin" || userRole === "avp") {
+      settingTabs.push({ id: "akun", label: "Akun" });
+    }
+
+    // RKAP: hanya Admin dan AVP
+    if (userRole === "admin" || userRole === "avp") {
+      settingTabs.push({ id: "rkap", label: "RKAP" });
+    }
+
+    // User Management: hanya Admin
+    if (userRole === "admin") {
+      settingTabs.push({ id: "users", label: "User Management" });
+    }
+
+    // Hanya tampilkan menu Setting jika ada tabs yang accessible
+    if (settingTabs.length > 0) {
+      baseItems.push({
+        id: "setting",
+        icon: Settings,
+        label: "Setting",
+        tabs: settingTabs,
+      });
+    }
+
+    return baseItems;
+  };
+
+  const navItems = getNavItems();
 
   const handleNavClick = (navId: string) => {
     setActiveNav(navId);
@@ -10880,7 +12033,7 @@ export default function ProduksiNPKApp() {
           <div className="mt-auto border-t border-white/20">
             <div className="p-4">
               <p className="text-xs opacity-75">
-                V 1.23 - 2025 | NPKG-2 Production
+                V 1.27 - 2025 | NPKG-2 Production
               </p>
               <p className="text-xs opacity-75 mt-1">
                 Made with <span className="text-red-500">🤍</span>
@@ -11821,6 +12974,120 @@ export default function ProduksiNPKApp() {
           </Button>
         </div>
       )}
+
+      {/* Approval Request Modal for User Role */}
+      <Modal
+        isOpen={showApprovalRequestModal}
+        onClose={() => setShowApprovalRequestModal(false)}
+        title={`Request ${
+          approvalRequestForm.action === "edit" ? "Edit" : "Hapus"
+        } Data`}
+        size="lg"
+      >
+        <form onSubmit={handleRequestApproval} className="space-y-4">
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+            <div className="flex items-start">
+              <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 mr-2" />
+              <div className="flex-1">
+                <p className="text-sm text-blue-800 font-semibold">
+                  Request Approval ke AVP
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  Sebagai User, Anda harus meminta izin ke AVP untuk{" "}
+                  {approvalRequestForm.action === "edit"
+                    ? "mengedit"
+                    : "menghapus"}{" "}
+                  data ini.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-semibold text-gray-700">
+                Aksi
+              </Label>
+              <p className="text-sm text-gray-600 mt-1">
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-bold ${
+                    approvalRequestForm.action === "edit"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {approvalRequestForm.action === "edit" ? "EDIT" : "DELETE"}
+                </span>
+              </p>
+            </div>
+
+            <div>
+              <Label className="text-sm font-semibold text-gray-700">
+                Sheet Type
+              </Label>
+              <p className="text-sm text-gray-600 mt-1">
+                {approvalRequestForm.sheetType.replace(/_/g, " ").toUpperCase()}
+              </p>
+            </div>
+
+            <div>
+              <Label className="text-sm font-semibold text-gray-700">
+                Data Preview
+              </Label>
+              <div className="mt-1 p-3 bg-gray-50 rounded border border-gray-200 text-sm text-gray-800">
+                {approvalRequestForm.dataPreview}
+              </div>
+            </div>
+
+            <div>
+              <Label
+                htmlFor="reason"
+                className="text-sm font-semibold text-gray-700"
+              >
+                Alasan <span className="text-red-600">*</span>
+              </Label>
+              <textarea
+                id="reason"
+                value={approvalRequestForm.reason}
+                onChange={(e) =>
+                  setApprovalRequestForm({
+                    ...approvalRequestForm,
+                    reason: e.target.value,
+                  })
+                }
+                placeholder={`Jelaskan alasan Anda ingin ${
+                  approvalRequestForm.action === "edit"
+                    ? "mengedit"
+                    : "menghapus"
+                } data ini...`}
+                className="mt-1 w-full min-h-[100px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent resize-y"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Berikan alasan yang jelas agar AVP dapat memahami request Anda
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-2 mt-6">
+            <Button
+              type="submit"
+              className="bg-[#00B4D8] hover:bg-[#0096C7] text-white"
+              disabled={loading || !approvalRequestForm.reason.trim()}
+            >
+              <Send className="w-4 h-4 mr-2" />
+              {loading ? "Mengirim..." : "Kirim Request ke AVP"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowApprovalRequestModal(false)}
+            >
+              Batal
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

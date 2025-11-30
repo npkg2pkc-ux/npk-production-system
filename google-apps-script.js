@@ -18,6 +18,8 @@
  *    - rkap
  *    - perta
  *    - trouble_record
+ *    - users (untuk user management)
+ *    - approval_requests (untuk approval system)
  *    - sessions (untuk multi-login detection)
  *
  * 3. Buka Extensions > Apps Script
@@ -822,6 +824,45 @@ function getHeadersForSheet(sheetName) {
     ],
     rkap: ["id", "bulan", "targetRKAP"],
     perta: ["id", "tanggalMulai", "tanggalSelesai", "items"],
+    trouble_record: [
+      "id",
+      "nomorBerkas",
+      "tanggalKejadian",
+      "kodePeralatan",
+      "deskripsiMasalah",
+      "dataKronologis",
+      "pembahasan",
+      "tindakanPerbaikan",
+      "catatan",
+      "status",
+      "tanggalSelesai",
+      "catatanPenyelesaian",
+    ],
+    users: [
+      "id",
+      "username",
+      "password",
+      "role",
+      "namaLengkap",
+      "status",
+      "createdAt",
+      "lastLogin",
+    ],
+    approval_requests: [
+      "id",
+      "requestBy",
+      "requestByName",
+      "sheetType",
+      "action",
+      "dataId",
+      "dataPreview",
+      "reason",
+      "status",
+      "requestDate",
+      "reviewBy",
+      "reviewDate",
+      "reviewNotes",
+    ],
   };
 
   return headersMap[sheetName] || [];
@@ -843,6 +884,9 @@ function getIdField(sheetName) {
     akun: "noBadge",
     rkap: "bulan",
     perta: "id",
+    trouble_record: "nomorBerkas",
+    users: "username",
+    approval_requests: "id",
   };
 
   return idFieldMap[sheetName] || "tanggal";
