@@ -52,6 +52,8 @@ import {
   MessageCircle,
   Send,
   StickyNote,
+  Menu,
+  ChevronLeft,
 } from "lucide-react";
 
 const WEBHOOK_URL =
@@ -489,30 +491,75 @@ async function checkSessionAPI(
   }
 }
 
-// Detect browser name
+// Detect browser name with better detection
 function getBrowserName(): string {
-  const userAgent = navigator.userAgent;
-  if (userAgent.indexOf("Firefox") > -1) return "Firefox";
-  if (userAgent.indexOf("Chrome") > -1 && userAgent.indexOf("Edg") === -1)
-    return "Chrome";
-  if (userAgent.indexOf("Safari") > -1 && userAgent.indexOf("Chrome") === -1)
+  const ua = navigator.userAgent;
+  const vendor = navigator.vendor;
+
+  // Edge (Chromium-based)
+  if (ua.indexOf("Edg/") > -1 || ua.indexOf("Edge/") > -1) {
+    return "Microsoft Edge";
+  }
+  // Chrome
+  if (ua.indexOf("Chrome") > -1 && vendor.indexOf("Google") > -1) {
+    return "Google Chrome";
+  }
+  // Firefox
+  if (ua.indexOf("Firefox") > -1) {
+    return "Mozilla Firefox";
+  }
+  // Safari
+  if (ua.indexOf("Safari") > -1 && vendor.indexOf("Apple") > -1) {
     return "Safari";
-  if (userAgent.indexOf("Edg") > -1) return "Edge";
-  if (userAgent.indexOf("MSIE") > -1 || userAgent.indexOf("Trident") > -1)
+  }
+  // Internet Explorer
+  if (ua.indexOf("MSIE") > -1 || ua.indexOf("Trident") > -1) {
     return "Internet Explorer";
-  return "Unknown Browser";
+  }
+  // Opera
+  if (ua.indexOf("OPR") > -1 || ua.indexOf("Opera") > -1) {
+    return "Opera";
+  }
+
+  return "Browser: " + ua.substring(0, 50);
 }
 
-// Get IP address (using public API)
+// Get IP address with multiple fallback APIs
 async function getIPAddress(): Promise<string> {
-  try {
-    const response = await fetch("https://api.ipify.org?format=json");
-    const data = await response.json();
-    return data.ip || "Unknown";
-  } catch (error) {
-    console.error("Error getting IP:", error);
-    return "Unknown";
+  const apis = [
+    "https://api.ipify.org?format=json",
+    "https://api.bigdatacloud.net/data/client-ip",
+    "https://ipapi.co/json/",
+    "https://api64.ipify.org?format=json",
+  ];
+
+  for (const api of apis) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+
+      const response = await fetch(api, {
+        signal: controller.signal,
+        mode: "cors",
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        const ip = data.ip || data.ipString || data.IPv4 || null;
+        if (ip) {
+          console.log("IP detected from", api, ":", ip);
+          return ip;
+        }
+      }
+    } catch (error) {
+      console.warn("Failed to get IP from", api, error);
+      continue;
+    }
   }
+
+  // If all APIs fail, return a meaningful fallback
+  return "IP: Not detected";
 }
 
 async function createSessionAPI(
@@ -523,22 +570,22 @@ async function createSessionAPI(
     const browser = getBrowserName();
     const ipAddress = await getIPAddress();
 
-    console.log("[SESSION] Creating session:", {
+    const sessionData = {
+      action: "createSession",
       username,
       sessionId,
       browser,
       ipAddress,
-    });
+    };
+
+    console.log("[SESSION] Creating session with data:", sessionData);
+    console.log("[SESSION] Browser detected:", browser);
+    console.log("[SESSION] IP Address detected:", ipAddress);
+
     const response = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({
-        action: "createSession",
-        username,
-        sessionId,
-        browser,
-        ipAddress,
-      }),
+      body: JSON.stringify(sessionData),
     });
 
     // Check if response is ok
@@ -716,6 +763,7 @@ export default function ProduksiNPKApp() {
   const [showLogoutOverlay, setShowLogoutOverlay] = useState(false);
   const [showLoginOverlay, setShowLoginOverlay] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Chat states
   interface ChatMessage {
@@ -10686,15 +10734,51 @@ export default function ProduksiNPKApp() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <aside className="w-64 bg-[#001B44] text-white flex flex-col fixed left-0 top-0 bottom-0 overflow-y-auto shadow-xl">
+    <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
+      <aside
+        className={`${
+          sidebarCollapsed ? "w-16" : "w-64"
+        } bg-[#001B44] text-white flex flex-col fixed left-0 top-0 bottom-0 overflow-y-auto shadow-xl transition-all duration-300`}
+      >
         <div className="p-6 border-b border-white/10">
-          <div className="text-center">
-            <h1 className="text-xl font-bold text-white leading-tight">
-              NPK Production
-            </h1>
-            <p className="text-xs text-[#00B4D8] mt-0.5">Management System</p>
-          </div>
+          {!sidebarCollapsed && (
+            <div className="relative">
+              <div className="text-center">
+                <h1 className="text-xl font-bold text-white leading-tight">
+                  NPK Production
+                </h1>
+                <p className="text-xs text-[#00B4D8] mt-0.5">
+                  Management System
+                </p>
+              </div>
+
+              {/* Small Toggle Button */}
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="group absolute -right-2 top-0 p-1.5 rounded-lg bg-gradient-to-r from-[#00B4D8] to-[#7FFFD4] hover:shadow-lg hover:shadow-[#00B4D8]/50 transition-all duration-300 hover:scale-110"
+                title="Collapse sidebar"
+              >
+                <ChevronLeft className="w-4 h-4 text-white group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
+          )}
+
+          {sidebarCollapsed && (
+            <div className="relative">
+              <div className="text-center">
+                <Factory className="w-6 h-6 mx-auto text-[#00B4D8] animate-pulse" />
+              </div>
+
+              {/* Small Expand Button */}
+              <button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="group absolute left-1/2 -translate-x-1/2 -bottom-8 p-1.5 rounded-lg bg-gradient-to-r from-[#00B4D8] to-[#7FFFD4] hover:shadow-lg hover:shadow-[#00B4D8]/50 transition-all duration-300 hover:scale-110"
+                title="Expand sidebar"
+              >
+                <ChevronLeft className="w-4 h-4 text-white rotate-180 group-hover:-translate-x-0.5 transition-transform" />
+              </button>
+            </div>
+          )}
         </div>
 
         <nav className="flex-1 py-4">
@@ -10706,17 +10790,23 @@ export default function ProduksiNPKApp() {
                 <div key={item.id}>
                   <button
                     onClick={() => handleNavClick(item.id)}
-                    className={`w-full flex items-center gap-3 px-6 py-3 transition-all ${
+                    className={`w-full flex items-center gap-3 ${
+                      sidebarCollapsed ? "px-3 justify-center" : "px-6"
+                    } py-3 transition-all ${
                       activeNav === item.id
                         ? "bg-white/20 border-l-4 border-white"
                         : "hover:bg-white/10"
                     }`}
+                    title={sidebarCollapsed ? item.label : undefined}
                   >
                     <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.label}</span>
+                    {!sidebarCollapsed && (
+                      <span className="font-medium">{item.label}</span>
+                    )}
                   </button>
 
-                  {activeNav === item.id &&
+                  {!sidebarCollapsed &&
+                    activeNav === item.id &&
                     item.tabs &&
                     item.tabs.length > 0 && (
                       <div className="bg-black/10 py-2">
@@ -10748,17 +10838,23 @@ export default function ProduksiNPKApp() {
               <div className="border-t border-white/20">
                 <button
                   onClick={() => handleNavClick("setting")}
-                  className={`w-full flex items-center gap-3 px-6 py-3 transition-all ${
+                  className={`w-full flex items-center gap-3 ${
+                    sidebarCollapsed ? "px-3 justify-center" : "px-6"
+                  } py-3 transition-all ${
                     activeNav === "setting"
                       ? "bg-white/20 border-l-4 border-white"
                       : "hover:bg-white/10"
                   }`}
+                  title={sidebarCollapsed ? "Setting" : undefined}
                 >
                   <Icon className="w-5 h-5" />
-                  <span className="font-medium">Setting</span>
+                  {!sidebarCollapsed && (
+                    <span className="font-medium">Setting</span>
+                  )}
                 </button>
 
-                {activeNav === "setting" &&
+                {!sidebarCollapsed &&
+                  activeNav === "setting" &&
                   settingItem?.tabs &&
                   settingItem.tabs.length > 0 && (
                     <div className="bg-black/10 py-2">
@@ -10781,16 +10877,18 @@ export default function ProduksiNPKApp() {
             );
           })()}
 
-        <div className="mt-auto border-t border-white/20">
-          <div className="p-4">
-            <p className="text-xs opacity-75">
-              V 1.23 - 2025 | NPKG-2 Production
-            </p>
-            <p className="text-xs opacity-75 mt-1">
-              Made with <span className="text-red-500">🤍</span>
-            </p>
+        {!sidebarCollapsed && (
+          <div className="mt-auto border-t border-white/20">
+            <div className="p-4">
+              <p className="text-xs opacity-75">
+                V 1.23 - 2025 | NPKG-2 Production
+              </p>
+              <p className="text-xs opacity-75 mt-1">
+                Made with <span className="text-red-500">🤍</span>
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </aside>
 
       {/* Header Right - User Menu & Notification - Fixed Position */}
@@ -11038,7 +11136,11 @@ export default function ProduksiNPKApp() {
         )}
       </div>
 
-      <main className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
+      <main
+        className={`flex-1 ${
+          sidebarCollapsed ? "ml-16" : "ml-64"
+        } p-8 overflow-y-auto overflow-x-hidden h-screen transition-all duration-300`}
+      >
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
             <h2 className="text-3xl font-bold text-[#001B44]">

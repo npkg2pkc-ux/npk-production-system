@@ -83,6 +83,15 @@ function doPost(e) {
     const sheet = data.sheet;
     const rowData = data.data;
 
+    // Log session-related actions
+    if (action === "createSession" || action === "updateSession") {
+      console.log("[GAS] Received " + action + " with data:", {
+        username: data.username,
+        browser: data.browser,
+        ipAddress: data.ipAddress,
+      });
+    }
+
     let result;
 
     switch (action) {
@@ -910,6 +919,13 @@ function checkActiveSession(username) {
  * Create new session for user
  */
 function createSession(username, sessionId, browser, ipAddress) {
+  console.log("[GAS] createSession called with:", {
+    username: username,
+    sessionId: sessionId,
+    browser: browser,
+    ipAddress: ipAddress,
+  });
+
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName("sessions");
 
@@ -921,10 +937,15 @@ function createSession(username, sessionId, browser, ipAddress) {
   // Delete any existing session for this user
   deleteSession(username);
 
-  // Create new session
+  // Create new session with received data
   const timestamp = new Date();
-  const browserInfo = browser || "Unknown";
-  const ipInfo = ipAddress || "Unknown";
+  const browserInfo = browser || "Not Detected";
+  const ipInfo = ipAddress || "Not Detected";
+
+  console.log("[GAS] Saving session data:", {
+    browserInfo: browserInfo,
+    ipInfo: ipInfo,
+  });
 
   sheet.appendRow([username, sessionId, timestamp, browserInfo, ipInfo]);
 
