@@ -639,7 +639,7 @@ export default function ProduksiNPKApp() {
   // Login states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<
-    "admin" | "user" | "supervisor" | "avp"
+    "admin" | "user" | "supervisor" | "avp" | "manager"
   >("admin");
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -1023,7 +1023,7 @@ export default function ProduksiNPKApp() {
   useEffect(() => {
     if (isLoggedIn) {
       loadChatMessages();
-      const interval = setInterval(loadChatMessages, 5000); // Poll every 5 seconds
+      const interval = setInterval(loadChatMessages, 10000); // Poll every 10 seconds
       return () => clearInterval(interval);
     }
   }, [isLoggedIn]);
@@ -1184,7 +1184,7 @@ export default function ProduksiNPKApp() {
 
     // Validate credentials
     let validCredentials = false;
-    let role: "admin" | "user" | "supervisor" | "avp" = "admin";
+    let role: "admin" | "user" | "supervisor" | "avp" | "manager" = "admin";
     let username = "";
 
     if (loginUsername === "admin" && loginPassword === "adminreguler") {
@@ -1203,6 +1203,10 @@ export default function ProduksiNPKApp() {
       validCredentials = true;
       role = "avp";
       username = "avp";
+    } else if (loginUsername === "manager" && loginPassword === "managernpk") {
+      validCredentials = true;
+      role = "manager";
+      username = "manager";
     }
 
     if (!validCredentials) {
@@ -1242,7 +1246,7 @@ export default function ProduksiNPKApp() {
   // Proceed with login after checks (Google Sheets session creation)
   const proceedWithLogin = async (
     username: string,
-    role: "admin" | "user" | "supervisor" | "avp"
+    role: "admin" | "user" | "supervisor" | "avp" | "manager"
   ) => {
     // Show login overlay animation
     setShowLoginOverlay(true);
@@ -1250,7 +1254,7 @@ export default function ProduksiNPKApp() {
     // Create session in Google Sheets
     await setAccountSession(username);
 
-    // Wait for animation
+    // Wait for animation (reduced for faster login)
     setTimeout(() => {
       setIsLoggedIn(true);
       setUserRole(role);
@@ -1259,7 +1263,7 @@ export default function ProduksiNPKApp() {
       localStorage.setItem("username", username);
       localStorage.setItem("userRole", role);
       setShowLoginOverlay(false);
-    }, 1500);
+    }, 800);
   };
 
   // Handle Logout (Google Sheets session deletion)
@@ -4485,15 +4489,15 @@ export default function ProduksiNPKApp() {
 </head>
 <body>
   <div class="cut-line">
-    <span class="cut-icon">??</span>
+    <span class="cut-icon">✂️</span>
   </div>
   ${generateGatePassBlock()}
   <div class="cut-line">
-    <span class="cut-icon">??</span>
+    <span class="cut-icon">✂️</span>
   </div>
   ${generateGatePassBlock()}
   <div class="cut-line">
-    <span class="cut-icon">??</span>
+    <span class="cut-icon">✂️</span>
   </div>
   <script>window.onload = function(){ window.print(); };</script>
 </body>
@@ -5817,25 +5821,27 @@ export default function ProduksiNPKApp() {
                       <Printer className="w-4 h-4 mr-2" />
                       Print Laporan
                     </Button>
-                    <Button
-                      onClick={() => {
-                        setShowForm(true);
-                        setEditingIndex(null);
-                        setFormProduksiNPK({
-                          tanggal: new Date().toISOString().split("T")[0],
-                          shiftMalamOnspek: 0,
-                          shiftMalamOffspek: 0,
-                          shiftPagiOnspek: 0,
-                          shiftPagiOffspek: 0,
-                          shiftSoreOnspek: 0,
-                          shiftSoreOffspek: 0,
-                        });
-                      }}
-                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Tambah Data
-                    </Button>
+                    {canEditDelete() && (
+                      <Button
+                        onClick={() => {
+                          setShowForm(true);
+                          setEditingIndex(null);
+                          setFormProduksiNPK({
+                            tanggal: new Date().toISOString().split("T")[0],
+                            shiftMalamOnspek: 0,
+                            shiftMalamOffspek: 0,
+                            shiftPagiOnspek: 0,
+                            shiftPagiOffspek: 0,
+                            shiftSoreOnspek: 0,
+                            shiftSoreOffspek: 0,
+                          });
+                        }}
+                        className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Tambah Data
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -6207,22 +6213,24 @@ export default function ProduksiNPKApp() {
                       <Printer className="w-4 h-4 mr-2" />
                       Print Laporan
                     </Button>
-                    <Button
-                      onClick={() => {
-                        setShowForm(true);
-                        setEditingIndex(null);
-                        setFormProduksiBlending({
-                          tanggal: new Date().toISOString().split("T")[0],
-                          kategori: "Fresh",
-                          formula: "",
-                          tonase: 0,
-                        });
-                      }}
-                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Tambah Data
-                    </Button>
+                    {canEditDelete() && (
+                      <Button
+                        onClick={() => {
+                          setShowForm(true);
+                          setEditingIndex(null);
+                          setFormProduksiBlending({
+                            tanggal: new Date().toISOString().split("T")[0],
+                            kategori: "Fresh",
+                            formula: "",
+                            tonase: 0,
+                          });
+                        }}
+                        className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Tambah Data
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -6525,21 +6533,23 @@ export default function ProduksiNPKApp() {
                       <Printer className="w-4 h-4 mr-2" />
                       Print Laporan
                     </Button>
-                    <Button
-                      onClick={() => {
-                        setShowForm(true);
-                        setEditingIndex(null);
-                        setFormProduksiNPKMini({
-                          tanggal: new Date().toISOString().split("T")[0],
-                          formulasi: "",
-                          tonase: 0,
-                        });
-                      }}
-                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Tambah Data
-                    </Button>
+                    {canEditDelete() && (
+                      <Button
+                        onClick={() => {
+                          setShowForm(true);
+                          setEditingIndex(null);
+                          setFormProduksiNPKMini({
+                            tanggal: new Date().toISOString().split("T")[0],
+                            formulasi: "",
+                            tonase: 0,
+                          });
+                        }}
+                        className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Tambah Data
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="overflow-x-auto border border-gray-200 rounded-lg">
@@ -6915,23 +6925,25 @@ export default function ProduksiNPKApp() {
                       <Printer className="w-4 h-4 mr-2" />
                       Print Laporan
                     </Button>
-                    <Button
-                      onClick={() => {
-                        setShowForm(true);
-                        setEditingIndex(null);
-                        setFormTimesheetForklift({
-                          tanggal: new Date().toISOString().split("T")[0],
-                          forklift: "F19",
-                          deskripsiTemuan: "",
-                          jamOff: "",
-                          jamStart: "",
-                        });
-                      }}
-                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Tambah Data
-                    </Button>
+                    {canEditDelete() && (
+                      <Button
+                        onClick={() => {
+                          setShowForm(true);
+                          setEditingIndex(null);
+                          setFormTimesheetForklift({
+                            tanggal: new Date().toISOString().split("T")[0],
+                            forklift: "F19",
+                            deskripsiTemuan: "",
+                            jamOff: "",
+                            jamStart: "",
+                          });
+                        }}
+                        className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Tambah Data
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -7293,23 +7305,25 @@ export default function ProduksiNPKApp() {
                       <Printer className="w-4 h-4 mr-2" />
                       Print Laporan
                     </Button>
-                    <Button
-                      onClick={() => {
-                        setShowForm(true);
-                        setEditingIndex(null);
-                        setFormTimesheetLoader({
-                          tanggal: new Date().toISOString().split("T")[0],
-                          shift: "Malam",
-                          deskripsiTemuan: "",
-                          jamOff: "",
-                          jamStart: "",
-                        });
-                      }}
-                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Tambah Data
-                    </Button>
+                    {canEditDelete() && (
+                      <Button
+                        onClick={() => {
+                          setShowForm(true);
+                          setEditingIndex(null);
+                          setFormTimesheetLoader({
+                            tanggal: new Date().toISOString().split("T")[0],
+                            shift: "Malam",
+                            deskripsiTemuan: "",
+                            jamOff: "",
+                            jamStart: "",
+                          });
+                        }}
+                        className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Tambah Data
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -7911,25 +7925,27 @@ export default function ProduksiNPKApp() {
                       }}
                       className="flex-1 max-w-md"
                     />
-                    <Button
-                      onClick={() => {
-                        setShowForm(true);
-                        setEditingIndex(null);
-                        setFormWorkRequest({
-                          tanggal: new Date().toISOString().split("T")[0],
-                          nomorWR: "",
-                          item: "",
-                          area: "",
-                          eksekutor: "",
-                          include: "",
-                          deskripsiPekerjaan: "",
-                        });
-                      }}
-                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Tambah Data
-                    </Button>
+                    {canEditDelete() && (
+                      <Button
+                        onClick={() => {
+                          setShowForm(true);
+                          setEditingIndex(null);
+                          setFormWorkRequest({
+                            tanggal: new Date().toISOString().split("T")[0],
+                            nomorWR: "",
+                            item: "",
+                            area: "",
+                            eksekutor: "",
+                            include: "",
+                            deskripsiPekerjaan: "",
+                          });
+                        }}
+                        className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Tambah Data
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -8216,22 +8232,24 @@ export default function ProduksiNPKApp() {
                   <h4 className="font-semibold text-[#001B44]">
                     Data Bahan Baku
                   </h4>
-                  <Button
-                    onClick={() => {
-                      setShowForm(true);
-                      setEditingIndex(null);
-                      setFormBahanBaku({
-                        tanggal: new Date().toISOString().split("T")[0],
-                        jenisBahanBaku: "Urea",
-                        tonase: 0,
-                        keterangan: "",
-                      });
-                    }}
-                    className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Data
-                  </Button>
+                  {canEditDelete() && (
+                    <Button
+                      onClick={() => {
+                        setShowForm(true);
+                        setEditingIndex(null);
+                        setFormBahanBaku({
+                          tanggal: new Date().toISOString().split("T")[0],
+                          jenisBahanBaku: "Urea",
+                          tonase: 0,
+                          keterangan: "",
+                        });
+                      }}
+                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Data
+                    </Button>
+                  )}
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -8474,24 +8492,26 @@ export default function ProduksiNPKApp() {
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-semibold text-[#001B44]">Data Vibrasi</h4>
-                  <Button
-                    onClick={() => {
-                      setShowForm(true);
-                      setEditingIndex(null);
-                      setFormVibrasi({
-                        tanggal: new Date().toISOString().split("T")[0],
-                        equipment: "",
-                        position: "Motor",
-                        point: "A",
-                        nilai: 0,
-                        keterangan: "",
-                      });
-                    }}
-                    className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Data
-                  </Button>
+                  {canEditDelete() && (
+                    <Button
+                      onClick={() => {
+                        setShowForm(true);
+                        setEditingIndex(null);
+                        setFormVibrasi({
+                          tanggal: new Date().toISOString().split("T")[0],
+                          equipment: "",
+                          position: "Motor",
+                          point: "A",
+                          nilai: 0,
+                          keterangan: "",
+                        });
+                      }}
+                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Data
+                    </Button>
+                  )}
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -8752,27 +8772,29 @@ export default function ProduksiNPKApp() {
                   <h4 className="font-semibold text-[#001B44]">
                     Data Gate Pass
                   </h4>
-                  <Button
-                    onClick={() => {
-                      setShowForm(true);
-                      setEditingIndex(null);
-                      generateGatePassNumber();
-                      setFormGatePass({
-                        ...formGatePass,
-                        tanggal: new Date().toISOString().split("T")[0],
-                        noPol: "",
-                        pemilikBarang: "",
-                        namaPembawa: "",
-                        namaBarang: "",
-                        alasanMengeluarkan: "",
-                        approver: "",
-                      });
-                    }}
-                    className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Data
-                  </Button>
+                  {canEditDelete() && (
+                    <Button
+                      onClick={() => {
+                        setShowForm(true);
+                        setEditingIndex(null);
+                        generateGatePassNumber();
+                        setFormGatePass({
+                          ...formGatePass,
+                          tanggal: new Date().toISOString().split("T")[0],
+                          noPol: "",
+                          pemilikBarang: "",
+                          namaPembawa: "",
+                          namaBarang: "",
+                          alasanMengeluarkan: "",
+                          approver: "",
+                        });
+                      }}
+                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Data
+                    </Button>
+                  )}
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -9051,7 +9073,7 @@ export default function ProduksiNPKApp() {
                     <div>
                       <h4 className="font-semibold text-[#001B44] mb-3 flex items-center gap-2">
                         <span className="w-8 h-8 bg-[#00B4D8] text-white rounded flex items-center justify-center">
-                          ??
+                          🔧
                         </span>
                         Item yang Diganti / Upgrade
                       </h4>
@@ -9083,21 +9105,25 @@ export default function ProduksiNPKApp() {
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-semibold text-[#001B44]">Data Perta</h4>
-                  <Button
-                    onClick={() => {
-                      setShowForm(true);
-                      setEditingIndex(null);
-                      setFormPerta({
-                        tanggalMulai: new Date().toISOString().split("T")[0],
-                        tanggalSelesai: new Date().toISOString().split("T")[0],
-                        items: [{ item: "", deskripsi: "" }],
-                      });
-                    }}
-                    className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Data
-                  </Button>
+                  {canEditDelete() && (
+                    <Button
+                      onClick={() => {
+                        setShowForm(true);
+                        setEditingIndex(null);
+                        setFormPerta({
+                          tanggalMulai: new Date().toISOString().split("T")[0],
+                          tanggalSelesai: new Date()
+                            .toISOString()
+                            .split("T")[0],
+                          items: [{ item: "", deskripsi: "" }],
+                        });
+                      }}
+                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Data
+                    </Button>
+                  )}
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -9830,17 +9856,19 @@ export default function ProduksiNPKApp() {
                   <h4 className="font-semibold text-[#001B44]">
                     Data Trouble Record
                   </h4>
-                  <Button
-                    onClick={() => {
-                      setShowForm(true);
-                      setEditingIndex(null);
-                      generateTroubleRecordNumber();
-                    }}
-                    className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Data
-                  </Button>
+                  {canEditDelete() && (
+                    <Button
+                      onClick={() => {
+                        setShowForm(true);
+                        setEditingIndex(null);
+                        generateTroubleRecordNumber();
+                      }}
+                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Data
+                    </Button>
+                  )}
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -10154,25 +10182,27 @@ export default function ProduksiNPKApp() {
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-semibold text-[#001B44]">Data Akun</h4>
-                  <Button
-                    onClick={() => {
-                      setShowForm(true);
-                      setEditingIndex(null);
-                      setFormAkun({
-                        noBadge: "",
-                        nama: "",
-                        jabatan: "",
-                        passwordESS: "",
-                        passwordPismart: "",
-                        passwordDOF: "",
-                        tanggalUpdate: new Date().toISOString().split("T")[0],
-                      });
-                    }}
-                    className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Data
-                  </Button>
+                  {canEditDelete() && (
+                    <Button
+                      onClick={() => {
+                        setShowForm(true);
+                        setEditingIndex(null);
+                        setFormAkun({
+                          noBadge: "",
+                          nama: "",
+                          jabatan: "",
+                          passwordESS: "",
+                          passwordPismart: "",
+                          passwordDOF: "",
+                          tanggalUpdate: new Date().toISOString().split("T")[0],
+                        });
+                      }}
+                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Data
+                    </Button>
+                  )}
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -10358,20 +10388,22 @@ export default function ProduksiNPKApp() {
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-semibold text-[#001B44]">Data RKAP</h4>
-                  <Button
-                    onClick={() => {
-                      setShowForm(true);
-                      setEditingIndex(null);
-                      setFormRKAP({
-                        bulan: "Januari",
-                        targetRKAP: 0,
-                      });
-                    }}
-                    className="bg-[#00B4D8] hover:bg-[#0096C7]"
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Data
-                  </Button>
+                  {canEditDelete() && (
+                    <Button
+                      onClick={() => {
+                        setShowForm(true);
+                        setEditingIndex(null);
+                        setFormRKAP({
+                          bulan: "Januari",
+                          targetRKAP: 0,
+                        });
+                      }}
+                      className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Data
+                    </Button>
+                  )}
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -10584,6 +10616,8 @@ export default function ProduksiNPKApp() {
                         ? "S"
                         : loginUsername === "avp"
                         ? "V"
+                        : loginUsername === "manager"
+                        ? "M"
                         : "U"}
                     </span>
                   </div>
@@ -10704,7 +10738,7 @@ export default function ProduksiNPKApp() {
         <div className="mt-auto border-t border-white/20">
           <div className="p-4">
             <p className="text-xs opacity-75">
-              V 1.20 - 2025 | NPKG-2 Production
+              V 1.23 - 2025 | NPKG-2 Production
             </p>
             <p className="text-xs opacity-75 mt-1">
               Made with <span className="text-red-500">🤍</span>
@@ -10728,6 +10762,8 @@ export default function ProduksiNPKApp() {
               ? "S"
               : userRole === "avp"
               ? "V"
+              : userRole === "manager"
+              ? "M"
               : "U"}
           </Button>
 
@@ -10744,6 +10780,8 @@ export default function ProduksiNPKApp() {
                         ? "S"
                         : userRole === "avp"
                         ? "V"
+                        : userRole === "manager"
+                        ? "M"
                         : "U"}
                     </span>
                   </div>
@@ -10755,6 +10793,8 @@ export default function ProduksiNPKApp() {
                         ? "Supervisor"
                         : userRole === "avp"
                         ? "AVP"
+                        : userRole === "manager"
+                        ? "Manager"
                         : "User"}
                     </p>
                     <p className="text-xs opacity-90">
@@ -10764,6 +10804,8 @@ export default function ProduksiNPKApp() {
                         ? "Supervisor"
                         : userRole === "avp"
                         ? "Assistant Vice President"
+                        : userRole === "manager"
+                        ? "Manager"
                         : "User"}
                     </p>
                   </div>
@@ -11018,7 +11060,7 @@ export default function ProduksiNPKApp() {
           <div className="bg-white rounded-lg shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto border-4 border-[#00B4D8]">
             <div className="bg-[#00B4D8] p-6 rounded-t-lg">
               <div className="flex justify-between items-center">
-                <h3 className="text-xl font-bold text-white">?? Detail Akun</h3>
+                <h3 className="text-xl font-bold text-white">👤 Detail Akun</h3>
                 <button
                   onClick={() => setViewAkunModal({ show: false, data: null })}
                   className="text-white hover:text-gray-200 text-2xl font-bold transition-colors p-2 rounded-full hover:bg-white/20"
