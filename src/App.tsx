@@ -706,6 +706,14 @@ export default function ProduksiNPKApp() {
   const [loadingData, setLoadingData] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editingItem, setEditingItem] = useState<any>(null); // Store the actual item being edited
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [deleteConfirmData, setDeleteConfirmData] = useState<{
+    index: number;
+    dataType: string;
+    item: any;
+    preview: string;
+  } | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printDateRange, setPrintDateRange] = useState({
     startDate: new Date().toISOString().split("T")[0],
@@ -2305,12 +2313,25 @@ export default function ProduksiNPKApp() {
     e.preventDefault();
     setShowLoadingOverlay(true);
     try {
-      if (editingIndex !== null) {
-        const updatedData = [...timesheetForkliftData];
-        updatedData[editingIndex] = formTimesheetForklift;
-        setTimesheetForkliftData(updatedData);
-        await updateData("timesheet_forklift", formTimesheetForklift);
-        showSuccess("Data berhasil diupdate!");
+      if (editingIndex !== null && editingItem) {
+        // Find the correct index in the original array by comparing with editingItem
+        const actualIndex = timesheetForkliftData.findIndex(
+          (item) =>
+            item.tanggal === editingItem.tanggal &&
+            item.forklift === editingItem.forklift &&
+            item.jamOff === editingItem.jamOff &&
+            item.jamStart === editingItem.jamStart
+        );
+
+        if (actualIndex !== -1) {
+          const updatedData = [...timesheetForkliftData];
+          updatedData[actualIndex] = formTimesheetForklift;
+          setTimesheetForkliftData(updatedData);
+          await updateData("timesheet_forklift", formTimesheetForklift);
+          showSuccess("Data berhasil diupdate!");
+        } else {
+          throw new Error("Data tidak ditemukan");
+        }
       } else {
         await saveData("timesheet_forklift", formTimesheetForklift);
         setTimesheetForkliftData([
@@ -2336,6 +2357,7 @@ export default function ProduksiNPKApp() {
       });
       setShowForm(false);
       setEditingIndex(null);
+      setEditingItem(null);
     } catch (error) {
       setShowLoadingOverlay(false);
       alert("Terjadi kesalahan saat menyimpan data");
@@ -3296,7 +3318,7 @@ export default function ProduksiNPKApp() {
       setShowApprovalRequestModal(true);
     } else {
       // For other roles (admin, avp, supervisor), directly edit
-      _handleEdit(index, dataType);
+      _handleEdit(index, dataType, item);
     }
   };
 
@@ -3322,8 +3344,31 @@ export default function ProduksiNPKApp() {
       });
       setShowApprovalRequestModal(true);
     } else {
-      // For other roles (admin, avp, supervisor), directly delete
-      await _handleDelete(index, dataType, item);
+      // For other roles (admin, avp, supervisor), show confirmation modal first
+      const data = getDataByType(dataType);
+      const itemToDelete = item || data[index];
+      const dataPreview = generateDataPreview(dataType, itemToDelete);
+
+      setDeleteConfirmData({
+        index,
+        dataType,
+        item: itemToDelete,
+        preview: dataPreview,
+      });
+      setShowDeleteConfirmModal(true);
+    }
+  };
+
+  // Execute delete after confirmation
+  const handleConfirmDelete = async () => {
+    if (deleteConfirmData) {
+      setShowDeleteConfirmModal(false);
+      await _handleDelete(
+        deleteConfirmData.index,
+        deleteConfirmData.dataType,
+        deleteConfirmData.item
+      );
+      setDeleteConfirmData(null);
     }
   };
 
@@ -3597,9 +3642,16 @@ export default function ProduksiNPKApp() {
       case "timesheet_forklift":
         // Use item directly to avoid index mismatch after sorting
         const forkliftEditData = item || timesheetForkliftData[index];
+        console.log("[EDIT] Forklift data to edit:", forkliftEditData);
+        console.log("[EDIT] Original tanggal:", forkliftEditData.tanggal);
+        const normalizedForkliftDate = normalizeDateForInput(
+          forkliftEditData.tanggal
+        );
+        console.log("[EDIT] Normalized tanggal:", normalizedForkliftDate);
+        setEditingItem(forkliftEditData); // Save the original item
         setFormTimesheetForklift({
           ...forkliftEditData,
-          tanggal: normalizeDateForInput(forkliftEditData.tanggal),
+          tanggal: normalizedForkliftDate,
         });
         break;
       case "timesheet_loader":
@@ -7560,6 +7612,7 @@ export default function ProduksiNPKApp() {
                         onClick={() => {
                           setShowForm(true);
                           setEditingIndex(null);
+                          setEditingItem(null);
                           setFormTimesheetForklift({
                             tanggal: new Date().toISOString().split("T")[0],
                             forklift: "F19",
@@ -7597,9 +7650,7 @@ export default function ProduksiNPKApp() {
                         currentPage.timesheet_forklift,
                         itemsPerPage
                       ).map((item, idx) => {
-                        const actualIdx = sortByDateDesc(
-                          timesheetForkliftData
-                        ).indexOf(item);
+                        // No need for actualIdx, just use item directly
                         return (
                           <tr key={idx} className="border-b hover:bg-gray-50">
                             <td className="py-2 px-3">
@@ -7648,7 +7699,7 @@ export default function ProduksiNPKApp() {
                                       variant="outline"
                                       onClick={() =>
                                         handleEditClick(
-                                          actualIdx,
+                                          idx,
                                           "timesheet_forklift",
                                           item
                                         )
@@ -7662,7 +7713,7 @@ export default function ProduksiNPKApp() {
                                       variant="outline"
                                       onClick={() =>
                                         handleDeleteClick(
-                                          actualIdx,
+                                          idx,
                                           "timesheet_forklift",
                                           item
                                         )
@@ -7979,8 +8030,7 @@ export default function ProduksiNPKApp() {
                         currentPage.timesheet_loader,
                         itemsPerPage
                       ).map((item, idx) => {
-                        const actualIdx =
-                          sortByDateDesc(timesheetLoaderData).indexOf(item);
+                        // No need for actualIdx, just use item directly
                         return (
                           <tr key={idx} className="border-b hover:bg-gray-50">
                             <td className="py-2 px-3">
@@ -8029,7 +8079,7 @@ export default function ProduksiNPKApp() {
                                       variant="outline"
                                       onClick={() =>
                                         handleEditClick(
-                                          actualIdx,
+                                          idx,
                                           "timesheet_loader",
                                           item
                                         )
@@ -8043,7 +8093,7 @@ export default function ProduksiNPKApp() {
                                       variant="outline"
                                       onClick={() =>
                                         handleDeleteClick(
-                                          actualIdx,
+                                          idx,
                                           "timesheet_loader",
                                           item
                                         )
@@ -12980,6 +13030,73 @@ export default function ProduksiNPKApp() {
           </Button>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteConfirmModal}
+        onClose={() => {
+          setShowDeleteConfirmModal(false);
+          setDeleteConfirmData(null);
+        }}
+        title="Konfirmasi Hapus Data"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="bg-red-50 border-l-4 border-red-500 p-4">
+            <div className="flex items-start">
+              <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-red-800 font-semibold">Perhatian!</p>
+                <p className="text-xs text-red-700 mt-1">
+                  Data yang dihapus tidak dapat dikembalikan. Pastikan Anda
+                  yakin sebelum melanjutkan.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {deleteConfirmData && (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">
+                  Tipe Data
+                </Label>
+                <p className="text-sm text-gray-600 mt-1">
+                  {deleteConfirmData.dataType.replace(/_/g, " ").toUpperCase()}
+                </p>
+              </div>
+
+              <div>
+                <Label className="text-sm font-semibold text-gray-700">
+                  Data yang akan dihapus
+                </Label>
+                <div className="mt-1 p-3 bg-gray-50 rounded border border-gray-200 text-sm text-gray-800">
+                  {deleteConfirmData.preview}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2 mt-6">
+            <Button
+              onClick={handleConfirmDelete}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Ya, Hapus Data
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteConfirmModal(false);
+                setDeleteConfirmData(null);
+              }}
+            >
+              Batal
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Approval Request Modal for User Role */}
       <Modal
