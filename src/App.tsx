@@ -3568,7 +3568,7 @@ export default function ProduksiNPKApp() {
   };
 
   // Edit handlers
-  const _handleEdit = (index: number, dataType: string) => {
+  const _handleEdit = (index: number, dataType: string, item?: any) => {
     setEditingIndex(index);
     setShowForm(true);
 
@@ -3595,17 +3595,19 @@ export default function ProduksiNPKApp() {
         });
         break;
       case "timesheet_forklift":
-        const forkliftData = timesheetForkliftData[index];
+        // Use item directly to avoid index mismatch after sorting
+        const forkliftEditData = item || timesheetForkliftData[index];
         setFormTimesheetForklift({
-          ...forkliftData,
-          tanggal: normalizeDateForInput(forkliftData.tanggal),
+          ...forkliftEditData,
+          tanggal: normalizeDateForInput(forkliftEditData.tanggal),
         });
         break;
       case "timesheet_loader":
-        const loaderData = timesheetLoaderData[index];
+        // Use item directly to avoid index mismatch after sorting
+        const loaderEditData = item || timesheetLoaderData[index];
         setFormTimesheetLoader({
-          ...loaderData,
-          tanggal: normalizeDateForInput(loaderData.tanggal),
+          ...loaderEditData,
+          tanggal: normalizeDateForInput(loaderEditData.tanggal),
         });
         break;
       case "downtime":
@@ -7647,7 +7649,8 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEditClick(
                                           actualIdx,
-                                          "timesheet_forklift"
+                                          "timesheet_forklift",
+                                          item
                                         )
                                       }
                                       className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
@@ -7660,7 +7663,8 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleDeleteClick(
                                           actualIdx,
-                                          "timesheet_forklift"
+                                          "timesheet_forklift",
+                                          item
                                         )
                                       }
                                       className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
@@ -8026,7 +8030,8 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleEditClick(
                                           actualIdx,
-                                          "timesheet_loader"
+                                          "timesheet_loader",
+                                          item
                                         )
                                       }
                                       className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
@@ -8039,7 +8044,8 @@ export default function ProduksiNPKApp() {
                                       onClick={() =>
                                         handleDeleteClick(
                                           actualIdx,
-                                          "timesheet_loader"
+                                          "timesheet_loader",
+                                          item
                                         )
                                       }
                                       className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
