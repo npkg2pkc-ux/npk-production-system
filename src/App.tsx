@@ -2201,12 +2201,34 @@ export default function ProduksiNPKApp() {
     e.preventDefault();
     setShowLoadingOverlay(true);
     try {
-      if (editingIndex !== null) {
-        const updatedData = [...produksiNPKData];
-        updatedData[editingIndex] = formProduksiNPK;
-        setProduksiNPKData(updatedData);
-        await updateData("produksi_npk", formProduksiNPK);
-        showSuccess("Data berhasil diupdate!");
+      if (editingIndex !== null && editingItem) {
+        // Find the correct index in the original array by comparing with editingItem
+        const actualIndex = produksiNPKData.findIndex(
+          (item) =>
+            item.tanggal === editingItem.tanggal &&
+            item.shiftMalamOnspek === editingItem.shiftMalamOnspek &&
+            item.shiftMalamOffspek === editingItem.shiftMalamOffspek &&
+            item.shiftPagiOnspek === editingItem.shiftPagiOnspek &&
+            item.shiftPagiOffspek === editingItem.shiftPagiOffspek
+        );
+
+        if (actualIndex !== -1) {
+          const updatedData = [...produksiNPKData];
+          updatedData[actualIndex] = formProduksiNPK;
+          setProduksiNPKData(updatedData);
+
+          // Send data with __original field to help Google Sheets find the correct row
+          const dataToUpdate = {
+            ...formProduksiNPK,
+            __original: editingItem,
+          };
+
+          console.log("[UPDATE] Sending to Google Sheets:", dataToUpdate);
+          await updateData("produksi_npk", dataToUpdate);
+          showSuccess("Data berhasil diupdate!");
+        } else {
+          throw new Error("Data tidak ditemukan");
+        }
       } else {
         await saveData("produksi_npk", formProduksiNPK);
         setProduksiNPKData([...produksiNPKData, formProduksiNPK]);
@@ -2229,6 +2251,7 @@ export default function ProduksiNPKApp() {
       });
       setShowForm(false);
       setEditingIndex(null);
+      setEditingItem(null);
     } catch (error) {
       setShowLoadingOverlay(false);
       alert("Terjadi kesalahan saat menyimpan data");
@@ -2239,12 +2262,29 @@ export default function ProduksiNPKApp() {
     e.preventDefault();
     setShowLoadingOverlay(true);
     try {
-      if (editingIndex !== null) {
-        const updatedData = [...produksiBlendingData];
-        updatedData[editingIndex] = formProduksiBlending;
-        setProduksiBlendingData(updatedData);
-        await updateData("produksi_blending", formProduksiBlending);
-        showSuccess("Data berhasil diupdate!");
+      if (editingIndex !== null && editingItem) {
+        const actualIndex = produksiBlendingData.findIndex(
+          (item) =>
+            item.tanggal === editingItem.tanggal &&
+            item.formula === editingItem.formula &&
+            item.kategori === editingItem.kategori
+        );
+
+        if (actualIndex !== -1) {
+          const updatedData = [...produksiBlendingData];
+          updatedData[actualIndex] = formProduksiBlending;
+          setProduksiBlendingData(updatedData);
+
+          const dataToUpdate = {
+            ...formProduksiBlending,
+            __original: editingItem,
+          };
+
+          await updateData("produksi_blending", dataToUpdate);
+          showSuccess("Data berhasil diupdate!");
+        } else {
+          throw new Error("Data tidak ditemukan");
+        }
       } else {
         await saveData("produksi_blending", formProduksiBlending);
         setProduksiBlendingData([
@@ -2269,6 +2309,7 @@ export default function ProduksiNPKApp() {
       });
       setShowForm(false);
       setEditingIndex(null);
+      setEditingItem(null);
     } catch (error) {
       setShowLoadingOverlay(false);
       alert("Terjadi kesalahan saat menyimpan data");
@@ -2279,12 +2320,28 @@ export default function ProduksiNPKApp() {
     e.preventDefault();
     setShowLoadingOverlay(true);
     try {
-      if (editingIndex !== null) {
-        const updatedData = [...produksiNPKMiniData];
-        updatedData[editingIndex] = formProduksiNPKMini;
-        setProduksiNPKMiniData(updatedData);
-        await updateData("produksi_npk_mini", formProduksiNPKMini);
-        showSuccess("Data berhasil diupdate!");
+      if (editingIndex !== null && editingItem) {
+        const actualIndex = produksiNPKMiniData.findIndex(
+          (item) =>
+            item.tanggal === editingItem.tanggal &&
+            item.formulasi === editingItem.formulasi
+        );
+
+        if (actualIndex !== -1) {
+          const updatedData = [...produksiNPKMiniData];
+          updatedData[actualIndex] = formProduksiNPKMini;
+          setProduksiNPKMiniData(updatedData);
+
+          const dataToUpdate = {
+            ...formProduksiNPKMini,
+            __original: editingItem,
+          };
+
+          await updateData("produksi_npk_mini", dataToUpdate);
+          showSuccess("Data berhasil diupdate!");
+        } else {
+          throw new Error("Data tidak ditemukan");
+        }
       } else {
         await saveData("produksi_npk_mini", formProduksiNPKMini);
         setProduksiNPKMiniData([...produksiNPKMiniData, formProduksiNPKMini]);
@@ -2303,6 +2360,7 @@ export default function ProduksiNPKApp() {
       });
       setShowForm(false);
       setEditingIndex(null);
+      setEditingItem(null);
     } catch (error) {
       setShowLoadingOverlay(false);
       alert("Terjadi kesalahan saat menyimpan data");
@@ -2368,12 +2426,30 @@ export default function ProduksiNPKApp() {
     e.preventDefault();
     setShowLoadingOverlay(true);
     try {
-      if (editingIndex !== null) {
-        const updatedData = [...timesheetLoaderData];
-        updatedData[editingIndex] = formTimesheetLoader;
-        setTimesheetLoaderData(updatedData);
-        await updateData("timesheet_loader", formTimesheetLoader);
-        showSuccess("Data berhasil diupdate!");
+      if (editingIndex !== null && editingItem) {
+        const actualIndex = timesheetLoaderData.findIndex(
+          (item) =>
+            item.tanggal === editingItem.tanggal &&
+            item.shift === editingItem.shift &&
+            item.jamOff === editingItem.jamOff &&
+            item.jamStart === editingItem.jamStart
+        );
+
+        if (actualIndex !== -1) {
+          const updatedData = [...timesheetLoaderData];
+          updatedData[actualIndex] = formTimesheetLoader;
+          setTimesheetLoaderData(updatedData);
+
+          const dataToUpdate = {
+            ...formTimesheetLoader,
+            __original: editingItem,
+          };
+
+          await updateData("timesheet_loader", dataToUpdate);
+          showSuccess("Data berhasil diupdate!");
+        } else {
+          throw new Error("Data tidak ditemukan");
+        }
       } else {
         await saveData("timesheet_loader", formTimesheetLoader);
         setTimesheetLoaderData([...timesheetLoaderData, formTimesheetLoader]);
@@ -2394,6 +2470,7 @@ export default function ProduksiNPKApp() {
       });
       setShowForm(false);
       setEditingIndex(null);
+      setEditingItem(null);
     } catch (error) {
       setShowLoadingOverlay(false);
       alert("Terjadi kesalahan saat menyimpan data");
@@ -2404,65 +2481,75 @@ export default function ProduksiNPKApp() {
     e.preventDefault();
     setShowLoadingOverlay(true);
     try {
-      if (editingIndex !== null) {
-        // editingIndex mengacu ke index pada array yang sudah di-sort
-        const sortedDowntime = sortByDateDesc(downtimeData);
-        const oldItem = sortedDowntime[editingIndex];
+      if (editingIndex !== null && editingItem) {
+        // Find the correct index in the original array by comparing with editingItem
+        const actualIndex = downtimeData.findIndex(
+          (item) =>
+            item.tanggal === editingItem.tanggal &&
+            item.item === editingItem.item &&
+            item.jamOff === editingItem.jamOff &&
+            item.jamStart === editingItem.jamStart
+        );
 
-        // Pastikan id tetap ikut saat update
-        const payloadToUpdate = {
-          ...formDowntime,
-          id: oldItem.id ?? formDowntime.id,
-        };
+        if (actualIndex !== -1) {
+          // Pastikan id tetap ikut saat update
+          const payloadToUpdate = {
+            ...formDowntime,
+            id: editingItem.id ?? formDowntime.id,
+            __original: editingItem,
+          };
 
-        await updateData("downtime", payloadToUpdate);
+          await updateData("downtime", payloadToUpdate);
 
-        // Setelah update, ambil ulang seluruh data downtime dari Google Sheets
-        const refreshed = await fetchData("downtime");
-        const normalizedDowntime = (refreshed || []).map((item: any) => {
-          const formatTime = (value: any) => {
-            if (value == null || value === "") return "";
+          // Setelah update, ambil ulang seluruh data downtime dari Google Sheets
+          const refreshed = await fetchData("downtime");
+          const normalizedDowntime = (refreshed || []).map((item: any) => {
+            const formatTime = (value: any) => {
+              if (value == null || value === "") return "";
 
-            if (typeof value === "string") {
-              const cleaned = value.startsWith("'")
-                ? value.substring(1)
-                : value;
-              const m = cleaned.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
-              if (m) {
-                const h = String(Number(m[1])).padStart(2, "0");
-                const mm = m[2];
-                return `${h}:${mm}`;
+              if (typeof value === "string") {
+                const cleaned = value.startsWith("'")
+                  ? value.substring(1)
+                  : value;
+                const m = cleaned.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+                if (m) {
+                  const h = String(Number(m[1])).padStart(2, "0");
+                  const mm = m[2];
+                  return `${h}:${mm}`;
+                }
+                return cleaned;
               }
-              return cleaned;
-            }
 
-            if (value instanceof Date) {
-              const hours = String(value.getHours()).padStart(2, "0");
-              const minutes = String(value.getMinutes()).padStart(2, "0");
-              return `${hours}:${minutes}`;
-            }
+              if (value instanceof Date) {
+                const hours = String(value.getHours()).padStart(2, "0");
+                const minutes = String(value.getMinutes()).padStart(2, "0");
+                return `${hours}:${minutes}`;
+              }
 
-            if (typeof value === "number") {
-              const excelEpoch = new Date(1899, 11, 30);
-              const ms = value * 24 * 60 * 60 * 1000;
-              const d = new Date(excelEpoch.getTime() + ms);
-              const hours = String(d.getHours()).padStart(2, "0");
-              const minutes = String(d.getMinutes()).padStart(2, "0");
-              return `${hours}:${minutes}`;
-            }
+              if (typeof value === "number") {
+                const excelEpoch = new Date(1899, 11, 30);
+                const ms = value * 24 * 60 * 60 * 1000;
+                const d = new Date(excelEpoch.getTime() + ms);
+                const hours = String(d.getHours()).padStart(2, "0");
+                const minutes = String(d.getMinutes()).padStart(2, "0");
+                return `${hours}:${minutes}`;
+              }
 
-            return String(value);
-          };
+              return String(value);
+            };
 
-          return {
-            ...item,
-            jamOff: formatTime(item.jamOff),
-            jamStart: formatTime(item.jamStart),
-          };
-        });
+            return {
+              ...item,
+              jamOff: formatTime(item.jamOff),
+              jamStart: formatTime(item.jamStart),
+            };
+          });
 
-        setDowntimeData(normalizedDowntime);
-        showSuccess("Data berhasil diupdate!");
+          setDowntimeData(normalizedDowntime);
+          showSuccess("Data berhasil diupdate!");
+        } else {
+          throw new Error("Data tidak ditemukan");
+        }
       } else {
         await saveData("downtime", formDowntime);
         setDowntimeData([...downtimeData, formDowntime]);
@@ -2483,6 +2570,7 @@ export default function ProduksiNPKApp() {
       });
       setShowForm(false);
       setEditingIndex(null);
+      setEditingItem(null);
     } catch (error) {
       setShowLoadingOverlay(false);
       alert("Terjadi kesalahan saat menyimpan data");
@@ -2493,45 +2581,50 @@ export default function ProduksiNPKApp() {
     e.preventDefault();
     setShowLoadingOverlay(true);
     try {
-      if (editingIndex !== null) {
-        // editingIndex mengacu ke index pada array yang sudah di-sort
-        const sortedWR = sortByDateDesc(workRequestData);
-        const oldItem = sortedWR[editingIndex];
+      if (editingIndex !== null && editingItem) {
+        // Find the correct index in the original array by comparing with editingItem
+        const actualIndex = workRequestData.findIndex(
+          (item) =>
+            item.tanggal === editingItem.tanggal &&
+            item.nomorWR === editingItem.nomorWR &&
+            item.area === editingItem.area
+        );
 
-        // Pastikan id tetap ikut saat update
-        const currentWR: any = formWorkRequest as any;
-        const payloadToUpdate: any = {
-          ...formWorkRequest,
-          id: oldItem.id ?? currentWR.id,
-        };
-        if (!payloadToUpdate.id && currentWR.__original) {
-          payloadToUpdate.__original = currentWR.__original;
+        if (actualIndex !== -1) {
+          // Pastikan id tetap ikut saat update
+          const payloadToUpdate: any = {
+            ...formWorkRequest,
+            id: editingItem.id ?? formWorkRequest.id,
+            __original: editingItem,
+          };
+
+          await updateData("work_request", payloadToUpdate);
+
+          // Setelah update, ambil ulang seluruh data work_request dari Google Sheets
+          const refreshed = await fetchData("work_request");
+          const normalizedWR = (refreshed || []).map((item: any) => {
+            let tanggal = item.tanggal;
+
+            if (tanggal instanceof Date) {
+              const year = tanggal.getFullYear();
+              const month = String(tanggal.getMonth() + 1).padStart(2, "0");
+              const day = String(tanggal.getDate()).padStart(2, "0");
+              tanggal = `${year}-${month}-${day}`;
+            } else if (
+              typeof tanggal === "string" &&
+              !tanggal.match(/^\d{4}-\d{2}-\d{2}$/)
+            ) {
+              tanggal = normalizeDateForInput(tanggal);
+            }
+
+            return { ...item, tanggal };
+          });
+
+          setWorkRequestData(normalizedWR);
+          showSuccess("Data berhasil diupdate!");
+        } else {
+          throw new Error("Data tidak ditemukan");
         }
-
-        await updateData("work_request", payloadToUpdate);
-
-        // Setelah update, ambil ulang seluruh data work_request dari Google Sheets
-        const refreshed = await fetchData("work_request");
-        const normalizedWR = (refreshed || []).map((item: any) => {
-          let tanggal = item.tanggal;
-
-          if (tanggal instanceof Date) {
-            const year = tanggal.getFullYear();
-            const month = String(tanggal.getMonth() + 1).padStart(2, "0");
-            const day = String(tanggal.getDate()).padStart(2, "0");
-            tanggal = `${year}-${month}-${day}`;
-          } else if (
-            typeof tanggal === "string" &&
-            !tanggal.match(/^\d{4}-\d{2}-\d{2}$/)
-          ) {
-            tanggal = normalizeDateForInput(tanggal);
-          }
-
-          return { ...item, tanggal };
-        });
-
-        setWorkRequestData(normalizedWR);
-        showSuccess("Data berhasil diupdate!");
       } else {
         await saveData("work_request", formWorkRequest);
         const refreshed = await fetchData("work_request");
@@ -2568,6 +2661,7 @@ export default function ProduksiNPKApp() {
       });
       setShowForm(false);
       setEditingIndex(null);
+      setEditingItem(null);
     } catch (error) {
       setShowLoadingOverlay(false);
       alert("Terjadi kesalahan saat menyimpan data");
@@ -2627,6 +2721,7 @@ export default function ProduksiNPKApp() {
       });
       setShowForm(false);
       setEditingIndex(null);
+      setEditingItem(null);
     } catch (error) {
       setShowLoadingOverlay(false);
       alert("Terjadi kesalahan saat menyimpan data");
@@ -2672,6 +2767,7 @@ export default function ProduksiNPKApp() {
       });
       setShowForm(false);
       setEditingIndex(null);
+      setEditingItem(null);
     } catch (error) {
       setShowLoadingOverlay(false);
       alert("Terjadi kesalahan saat menyimpan data");
@@ -2716,6 +2812,7 @@ export default function ProduksiNPKApp() {
       });
       setShowForm(false);
       setEditingIndex(null);
+      setEditingItem(null);
     } catch (error) {
       setShowLoadingOverlay(false);
       alert("Terjadi kesalahan saat menyimpan data");
@@ -2809,6 +2906,7 @@ export default function ProduksiNPKApp() {
       });
       setShowForm(false);
       setEditingIndex(null);
+      setEditingItem(null);
     } catch (error) {
       setShowLoadingOverlay(false);
       alert("Terjadi kesalahan saat menyimpan data");
@@ -2853,6 +2951,7 @@ export default function ProduksiNPKApp() {
       });
       setShowForm(false);
       setEditingIndex(null);
+      setEditingItem(null);
     } catch (error) {
       setShowLoadingOverlay(false);
       alert("Terjadi kesalahan saat menyimpan data");
@@ -3619,21 +3718,24 @@ export default function ProduksiNPKApp() {
 
     switch (dataType) {
       case "produksi_npk":
-        const npkData = produksiNPKData[index];
+        const npkData = item || produksiNPKData[index];
+        setEditingItem(npkData); // Save the original item
         setFormProduksiNPK({
           ...npkData,
           tanggal: normalizeDateForInput(npkData.tanggal),
         });
         break;
       case "produksi_blending":
-        const blendingData = produksiBlendingData[index];
+        const blendingData = item || produksiBlendingData[index];
+        setEditingItem(blendingData);
         setFormProduksiBlending({
           ...blendingData,
           tanggal: normalizeDateForInput(blendingData.tanggal),
         });
         break;
       case "produksi_npk_mini":
-        const miniData = produksiNPKMiniData[index];
+        const miniData = item || produksiNPKMiniData[index];
+        setEditingItem(miniData);
         setFormProduksiNPKMini({
           ...miniData,
           tanggal: normalizeDateForInput(miniData.tanggal),
@@ -3657,28 +3759,25 @@ export default function ProduksiNPKApp() {
       case "timesheet_loader":
         // Use item directly to avoid index mismatch after sorting
         const loaderEditData = item || timesheetLoaderData[index];
+        setEditingItem(loaderEditData);
         setFormTimesheetLoader({
           ...loaderEditData,
           tanggal: normalizeDateForInput(loaderEditData.tanggal),
         });
         break;
       case "downtime":
-        // Untuk downtime, table menampilkan data yang sudah di-sort desc.
-        // index yang dikirim dari table adalah index di array ter-sort,
-        // jadi kita ambil dari hasil sortByDateDesc agar baris yang diedit tepat.
-        const sortedDowntime = sortByDateDesc(downtimeData);
-        const downtimeEditData = sortedDowntime[index];
+        // Use item directly to avoid index mismatch after sorting
+        const downtimeEditData = item || downtimeData[index];
+        setEditingItem(downtimeEditData); // Save the original item
         setFormDowntime({
           ...downtimeEditData,
           tanggal: normalizeDateForInput(downtimeEditData.tanggal),
         });
         break;
       case "work_request":
-        // Untuk work_request, table menampilkan data yang sudah di-sort desc.
-        // index yang dikirim dari table adalah index di array ter-sort,
-        // jadi kita ambil dari hasil sortByDateDesc agar baris yang diedit tepat.
-        const sortedWR = sortByDateDesc(workRequestData);
-        const wrData = sortedWR[index];
+        // Use item directly to avoid index mismatch after sorting
+        const wrData = item || workRequestData[index];
+        setEditingItem(wrData); // Save the original item
         setFormWorkRequest({
           ...wrData,
           tanggal:
@@ -6502,6 +6601,7 @@ export default function ProduksiNPKApp() {
                         onClick={() => {
                           setShowForm(true);
                           setEditingIndex(null);
+                          setEditingItem(null);
                           setFormProduksiNPK({
                             tanggal: new Date().toISOString().split("T")[0],
                             shiftMalamOnspek: 0,
@@ -6565,12 +6665,6 @@ export default function ProduksiNPKApp() {
                         currentPage.produksi_npk,
                         itemsPerPage
                       ).map((item, idx) => {
-                        const actualIdx = produksiNPKData.findIndex(
-                          (d) =>
-                            d.tanggal === item.tanggal &&
-                            d.shiftMalamOnspek === item.shiftMalamOnspek &&
-                            d.shiftPagiOnspek === item.shiftPagiOnspek
-                        );
                         return (
                           <tr
                             key={idx}
@@ -6622,8 +6716,9 @@ export default function ProduksiNPKApp() {
                                       variant="outline"
                                       onClick={() =>
                                         handleEditClick(
-                                          actualIdx,
-                                          "produksi_npk"
+                                          idx,
+                                          "produksi_npk",
+                                          item
                                         )
                                       }
                                       className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
@@ -6635,8 +6730,9 @@ export default function ProduksiNPKApp() {
                                       variant="outline"
                                       onClick={() =>
                                         handleDeleteClick(
-                                          actualIdx,
-                                          "produksi_npk"
+                                          idx,
+                                          "produksi_npk",
+                                          item
                                         )
                                       }
                                       className="border-red-300 text-red-600 hover:bg-red-600 hover:text-white"
@@ -8293,6 +8389,7 @@ export default function ProduksiNPKApp() {
                       onClick={() => {
                         setShowForm(true);
                         setEditingIndex(null);
+                        setEditingItem(null);
                         setFormDowntime({
                           tanggal: new Date().toISOString().split("T")[0],
                           item: "",
@@ -8342,8 +8439,6 @@ export default function ProduksiNPKApp() {
                           currentPage.downtime,
                           itemsPerPage
                         ).map((item, idx) => {
-                          const actualIdx =
-                            sortByDateDesc(downtimeData).indexOf(item);
                           return (
                             <tr key={idx} className="border-b hover:bg-gray-50">
                               <td className="py-2 px-3">
@@ -8375,7 +8470,7 @@ export default function ProduksiNPKApp() {
                                         size="sm"
                                         variant="outline"
                                         onClick={() =>
-                                          handleEditClick(actualIdx, "downtime")
+                                          handleEditClick(idx, "downtime", item)
                                         }
                                         className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
                                       >
@@ -8386,7 +8481,7 @@ export default function ProduksiNPKApp() {
                                         variant="outline"
                                         onClick={() =>
                                           handleDeleteClick(
-                                            actualIdx,
+                                            idx,
                                             "downtime",
                                             item
                                           )
@@ -8614,6 +8709,7 @@ export default function ProduksiNPKApp() {
                         onClick={() => {
                           setShowForm(true);
                           setEditingIndex(null);
+                          setEditingItem(null);
                           setFormWorkRequest({
                             tanggal: new Date().toISOString().split("T")[0],
                             nomorWR: "",
@@ -8685,8 +8781,6 @@ export default function ProduksiNPKApp() {
                           currentPage.work_request,
                           itemsPerPage
                         ).map((item, idx) => {
-                          const actualIdx =
-                            sortByDateDesc(workRequestData).indexOf(item);
                           return (
                             <tr key={idx} className="border-b hover:bg-gray-50">
                               <td className="py-2 px-3">
@@ -8716,8 +8810,9 @@ export default function ProduksiNPKApp() {
                                         variant="outline"
                                         onClick={() =>
                                           handleEditClick(
-                                            actualIdx,
-                                            "work_request"
+                                            idx,
+                                            "work_request",
+                                            item
                                           )
                                         }
                                         className="border-yellow-300 text-yellow-600 hover:bg-yellow-600 hover:text-white"
@@ -8729,7 +8824,7 @@ export default function ProduksiNPKApp() {
                                         variant="outline"
                                         onClick={() =>
                                           handleDeleteClick(
-                                            actualIdx,
+                                            idx,
                                             "work_request",
                                             item
                                           )
