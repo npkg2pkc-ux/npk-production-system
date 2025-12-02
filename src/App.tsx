@@ -198,6 +198,8 @@ const LoginPage = ({
                   }}
                   placeholder="Masukkan password"
                   className="mt-2 h-12 border-gray-300 focus:border-[#00B4D8] focus:ring-[#00B4D8]"
+                  autoComplete="current-password"
+                  data-form-type="other"
                   required
                 />
               </div>
@@ -10888,6 +10890,8 @@ export default function ProduksiNPKApp() {
                           })
                         }
                         placeholder="Password ESS"
+                        autoComplete="new-password"
+                        data-form-type="other"
                         required
                       />
                     </div>
@@ -10904,6 +10908,8 @@ export default function ProduksiNPKApp() {
                           })
                         }
                         placeholder="Password Pismart"
+                        autoComplete="new-password"
+                        data-form-type="other"
                         required
                       />
                     </div>
@@ -10920,6 +10926,8 @@ export default function ProduksiNPKApp() {
                           })
                         }
                         placeholder="Password DOF"
+                        autoComplete="new-password"
+                        data-form-type="other"
                         required
                       />
                     </div>
@@ -11565,6 +11573,8 @@ export default function ProduksiNPKApp() {
                             ? "Kosongkan jika tidak ingin mengubah"
                             : "Password untuk login"
                         }
+                        autoComplete="new-password"
+                        data-form-type="other"
                         required={editingIndex === null}
                       />
                       {editingIndex !== null && (
@@ -12480,6 +12490,8 @@ export default function ProduksiNPKApp() {
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="Password"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-md focus:ring-2 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition-all"
+                autoComplete="current-password"
+                data-form-type="other"
                 autoFocus
               />
               <div className="flex gap-3 mt-6">
