@@ -432,6 +432,7 @@ interface Akun {
 interface RKAP {
   id?: string;
   bulan: string;
+  tahun?: number;
   targetRKAP: number;
 }
 
@@ -1016,6 +1017,7 @@ export default function ProduksiNPKApp() {
 
   const [formRKAP, setFormRKAP] = useState<RKAP>({
     bulan: "Januari",
+    tahun: new Date().getFullYear(),
     targetRKAP: 0,
   });
 
@@ -4755,14 +4757,19 @@ export default function ProduksiNPKApp() {
     ];
     const currentMonthName = monthNames[currentMonth];
     const monthlyRKAP = Number(
-      rkapData.find((r) => r.bulan === currentMonthName)?.targetRKAP || 0
+      rkapData.find(
+        (r: any) =>
+          r.bulan === currentMonthName &&
+          (Number((r as any).tahun) || currentYear) === currentYear
+      )?.targetRKAP || 0
     );
 
     // Total RKAP for year
-    const yearlyRKAP = rkapData.reduce(
-      (sum, item) => sum + (Number(item.targetRKAP) || 0),
-      0
-    );
+    const yearlyRKAP = rkapData
+      .filter(
+        (r: any) => (Number((r as any).tahun) || currentYear) === currentYear
+      )
+      .reduce((sum, item) => sum + (Number(item.targetRKAP) || 0), 0);
 
     // Calculate percentages
     const monthlyPercentage =
@@ -4784,7 +4791,11 @@ export default function ProduksiNPKApp() {
         0
       );
       const rkap = Number(
-        rkapData.find((r) => r.bulan === month)?.targetRKAP || 0
+        rkapData.find(
+          (r: any) =>
+            r.bulan === month &&
+            (Number((r as any).tahun) || currentYear) === currentYear
+        )?.targetRKAP || 0
       );
       const percentage = rkap > 0 ? (production / rkap) * 100 : 0;
 
@@ -11199,6 +11210,25 @@ export default function ProduksiNPKApp() {
                       </Select>
                     </div>
                     <div>
+                      <Label htmlFor="tahunRKAP">Tahun</Label>
+                      <Input
+                        id="tahunRKAP"
+                        type="number"
+                        min="2000"
+                        step="1"
+                        value={formRKAP.tahun || new Date().getFullYear()}
+                        onChange={(e) =>
+                          setFormRKAP({
+                            ...formRKAP,
+                            tahun:
+                              parseInt(e.target.value || "0", 10) ||
+                              new Date().getFullYear(),
+                          })
+                        }
+                        required
+                      />
+                    </div>
+                    <div>
                       <Label htmlFor="targetRKAP">Target RKAP (Ton)</Label>
                       <Input
                         id="targetRKAP"
@@ -11252,6 +11282,7 @@ export default function ProduksiNPKApp() {
                         setEditingIndex(null);
                         setFormRKAP({
                           bulan: "Januari",
+                          tahun: new Date().getFullYear(),
                           targetRKAP: 0,
                         });
                       }}
@@ -11267,6 +11298,7 @@ export default function ProduksiNPKApp() {
                     <thead className="bg-[#00B4D8]/20">
                       <tr>
                         <th className="text-left py-2 px-3">Bulan</th>
+                        <th className="text-left py-2 px-3">Tahun</th>
                         <th className="text-right py-2 px-3">
                           Target RKAP (Ton)
                         </th>
@@ -11285,6 +11317,7 @@ export default function ProduksiNPKApp() {
                             <td className="py-2 px-3 font-semibold">
                               {item.bulan}
                             </td>
+                            <td className="py-2 px-3">{item.tahun ?? "-"}</td>
                             <td className="text-right py-2 px-3">
                               {Number(item.targetRKAP || 0).toFixed(2)}
                             </td>

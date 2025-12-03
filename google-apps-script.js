@@ -290,7 +290,17 @@ function createData(sheetName, rowData) {
   }
 
   // Ambil header dari baris pertama
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  let headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+
+  // Pastikan header memuat semua field pada rowData (auto-extend kolom baru jika perlu)
+  const keys = Object.keys(rowData || {});
+  const missing = keys.filter((k) => headers.indexOf(k) === -1);
+  if (missing.length > 0) {
+    sheet
+      .getRange(1, headers.length + 1, 1, missing.length)
+      .setValues([missing]);
+    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  }
 
   // Generate ID unik berdasarkan timestamp dan random
   const uniqueId =
@@ -370,7 +380,16 @@ function updateData(sheetName, rowData) {
     return { error: "Sheet not found" };
   }
 
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  let headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  // Pastikan header memuat semua field pada rowData (auto-extend kolom baru jika perlu)
+  const keys = Object.keys(rowData || {});
+  const missing = keys.filter((k) => headers.indexOf(k) === -1);
+  if (missing.length > 0) {
+    sheet
+      .getRange(1, headers.length + 1, 1, missing.length)
+      .setValues([missing]);
+    headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  }
   const dataRange = sheet.getDataRange();
   const values = dataRange.getValues();
 
@@ -822,7 +841,7 @@ function getHeadersForSheet(sheetName) {
       "passwordDOF",
       "tanggalUpdate",
     ],
-    rkap: ["id", "bulan", "targetRKAP"],
+    rkap: ["id", "tahun", "bulan", "targetRKAP"],
     perta: ["id", "tanggalMulai", "tanggalSelesai", "items"],
     trouble_record: [
       "id",
