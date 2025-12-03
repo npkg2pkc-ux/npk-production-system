@@ -479,7 +479,7 @@ interface User {
   id?: string;
   username: string;
   password: string;
-  role: "admin" | "user" | "supervisor" | "avp" | "manager";
+  role: "admin" | "user" | "supervisor" | "avp" | "manager" | "eksternal";
   namaLengkap: string;
   status: "active" | "inactive";
   createdAt?: string;
@@ -773,7 +773,7 @@ export default function ProduksiNPKApp() {
   // Login states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<
-    "admin" | "user" | "supervisor" | "avp" | "manager"
+    "admin" | "user" | "supervisor" | "avp" | "manager" | "eksternal"
   >("admin");
   const [loginUsername, setLoginUsername] = useState("");
   const [displayName, setDisplayName] = useState<string>("");
@@ -1086,7 +1086,8 @@ export default function ProduksiNPKApp() {
       | "user"
       | "supervisor"
       | "avp"
-      | "manager";
+      | "manager"
+      | "eksternal";
     if (savedLoginStatus === "true") {
       setIsLoggedIn(true);
       setUserRole(savedUserRole || "admin");
@@ -1380,10 +1381,56 @@ export default function ProduksiNPKApp() {
     setLoginError("");
 
     try {
-      let role: "admin" | "user" | "supervisor" | "avp" | "manager" = "user";
+      let role:
+        | "admin"
+        | "user"
+        | "supervisor"
+        | "avp"
+        | "manager"
+        | "eksternal" = "user";
       let username = "";
       let validCredentials = false;
       let resolvedDisplayName = "";
+
+      // Preferred: server-side login via Apps Script
+      try {
+        const browser = getBrowserName();
+        const ipAddress = await getIPAddress();
+        const response = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          redirect: "follow",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({
+            action: "login",
+            username: loginUsername,
+            password: loginPassword,
+            browser,
+            ipAddress,
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.success) {
+            validCredentials = true;
+            username = data.user?.username || loginUsername;
+            role = (data.user?.role || "user") as typeof role;
+            resolvedDisplayName =
+              (data.user?.namaLengkap || data.user?.username || "")
+                .toString()
+                .trim() || username;
+            if (data.sessionId) {
+              // Align local session id with server-created one
+              currentSessionId.current = data.sessionId;
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(
+          "[LOGIN] Server-side login failed, will try fallback.",
+          err
+        );
+      }
 
       // Default hardcoded accounts (fallback)
       const defaultAccounts = [
@@ -1400,115 +1447,119 @@ export default function ProduksiNPKApp() {
           password: "managernpk",
           role: "manager" as const,
         },
+        { username: "guest", password: "guestnpk", role: "eksternal" as const },
       ];
 
-      // Check default accounts first
-      const defaultAccount = defaultAccounts.find(
-        (acc) =>
-          acc.username === loginUsername && acc.password === loginPassword
-      );
+      // If server-side login didn't succeed, try fallback options
+      if (!validCredentials) {
+        // Check default accounts
+        const defaultAccount = defaultAccounts.find(
+          (acc) =>
+            acc.username === loginUsername && acc.password === loginPassword
+        );
 
-      if (defaultAccount) {
-        validCredentials = true;
-        username = defaultAccount.username;
-        role = defaultAccount.role;
-        // Map friendly names for default accounts
-        const roleNameMap: Record<typeof role, string> = {
-          admin: "Administrator",
-          user: "User",
-          supervisor: "Supervisor",
-          avp: "AVP",
-          manager: "Manager",
-        };
-        resolvedDisplayName = roleNameMap[role];
-      } else {
-        // Try to fetch from Google Sheets
-        try {
-          console.log(
-            "[LOGIN] 🔍 Not a default account, checking Google Sheets..."
-          );
-          console.log("[LOGIN] Username entered:", loginUsername);
-          console.log(
-            "[LOGIN] Password entered:",
-            "***" + loginPassword.substring(loginPassword.length - 3)
-          );
-
-          const users = await fetchData("users");
-          console.log("[LOGIN] 📊 Users data fetched:", users);
-          console.log("[LOGIN] 📊 Total users:", users?.length || 0);
-
-          if (!users || users.length === 0) {
-            console.log("[LOGIN] ⚠️ No users found in Google Sheets!");
-          } else {
-            // Log all usernames for debugging
+        if (defaultAccount) {
+          validCredentials = true;
+          username = defaultAccount.username;
+          role = defaultAccount.role;
+          const roleNameMap: Record<typeof role, string> = {
+            admin: "Administrator",
+            user: "User",
+            supervisor: "Supervisor",
+            avp: "AVP",
+            manager: "Manager",
+            eksternal: "Eksternal - View Only",
+          };
+          resolvedDisplayName = roleNameMap[role];
+        } else {
+          // Try to fetch from Google Sheets
+          try {
             console.log(
-              "[LOGIN] Available usernames:",
-              users.map((u: User) => u.username)
+              "[LOGIN] 🔍 Not a default account, checking Google Sheets..."
             );
-          }
-
-          // Find user with matching username and password
-          const user = users?.find((u: User) => {
-            // Trim whitespace from both sides to handle hidden spaces
-            const dbUsername = (u.username || "").toString().trim();
-            const dbPassword = (u.password || "").toString().trim();
-            const dbStatus = (u.status || "").toString().trim().toLowerCase();
-            const inputUsername = loginUsername.trim();
-            const inputPassword = loginPassword.trim();
-
-            const usernameMatch = dbUsername === inputUsername;
-            const passwordMatch = dbPassword === inputPassword;
-            const statusActive = dbStatus === "active";
-
+            console.log("[LOGIN] Username entered:", loginUsername);
             console.log(
-              `[LOGIN] Checking user: ${u.username} (trimmed: "${dbUsername}")`
-            );
-            console.log(
-              `  - Username match: ${usernameMatch} ("${dbUsername}" === "${inputUsername}")`
-            );
-            console.log(`  - Password match: ${passwordMatch}`);
-            console.log(
-              `  - Status active: ${statusActive} (status: "${dbStatus}")`
+              "[LOGIN] Password entered:",
+              "***" + loginPassword.substring(loginPassword.length - 3)
             );
 
-            return usernameMatch && passwordMatch && statusActive;
-          });
+            const users = await fetchData("users");
+            console.log("[LOGIN] 📊 Users data fetched:", users);
+            console.log("[LOGIN] 📊 Total users:", users?.length || 0);
 
-          console.log(
-            "[LOGIN] 🔎 User found:",
-            user ? `Yes (${user.username})` : "No"
-          );
-
-          if (user) {
-            validCredentials = true;
-            username = user.username;
-            role = user.role;
-            resolvedDisplayName = (user.namaLengkap || user.username || "")
-              .toString()
-              .trim();
-
-            console.log("[LOGIN] ✅ Valid credentials! Role:", role);
-
-            // Update last login timestamp
-            try {
-              await updateData("users", {
-                ...user,
-                lastLogin: new Date().toISOString(),
-              });
-              console.log("[LOGIN] ✅ Last login updated");
-            } catch (updateError) {
-              console.error(
-                "[LOGIN] ⚠️ Failed to update last login:",
-                updateError
+            if (!users || users.length === 0) {
+              console.log("[LOGIN] ⚠️ No users found in Google Sheets!");
+            } else {
+              // Log all usernames for debugging
+              console.log(
+                "[LOGIN] Available usernames:",
+                users.map((u: User) => u.username)
               );
-              // Continue with login even if update fails
             }
+
+            // Find user with matching username and password
+            const user = users?.find((u: User) => {
+              // Trim whitespace from both sides to handle hidden spaces
+              const dbUsername = (u.username || "").toString().trim();
+              const dbPassword = (u.password || "").toString().trim();
+              const dbStatus = (u.status || "").toString().trim().toLowerCase();
+              const inputUsername = loginUsername.trim();
+              const inputPassword = loginPassword.trim();
+
+              const usernameMatch = dbUsername === inputUsername;
+              const passwordMatch = dbPassword === inputPassword;
+              const statusActive = dbStatus === "active";
+
+              console.log(
+                `[LOGIN] Checking user: ${u.username} (trimmed: "${dbUsername}")`
+              );
+              console.log(
+                `  - Username match: ${usernameMatch} ("${dbUsername}" === "${inputUsername}")`
+              );
+              console.log(`  - Password match: ${passwordMatch}`);
+              console.log(
+                `  - Status active: ${statusActive} (status: "${dbStatus}")`
+              );
+
+              return usernameMatch && passwordMatch && statusActive;
+            });
+
+            console.log(
+              "[LOGIN] 🔎 User found:",
+              user ? `Yes (${user.username})` : "No"
+            );
+
+            if (user) {
+              validCredentials = true;
+              username = user.username;
+              role = user.role;
+              resolvedDisplayName = (user.namaLengkap || user.username || "")
+                .toString()
+                .trim();
+
+              console.log("[LOGIN] ✅ Valid credentials! Role:", role);
+
+              // Update last login timestamp
+              try {
+                await updateData("users", {
+                  ...user,
+                  lastLogin: new Date().toISOString(),
+                });
+                console.log("[LOGIN] ✅ Last login updated");
+              } catch (updateError) {
+                console.error(
+                  "[LOGIN] ⚠️ Failed to update last login:",
+                  updateError
+                );
+                // Continue with login even if update fails
+              }
+            }
+          } catch (error) {
+            console.error(
+              "[LOGIN] ❌ Error fetching users from Google Sheets:",
+              error
+            );
           }
-        } catch (error) {
-          console.error(
-            "[LOGIN] ❌ Error fetching users from Google Sheets:",
-            error
-          );
         }
       }
 
@@ -1558,7 +1609,7 @@ export default function ProduksiNPKApp() {
   // Proceed with login after checks (Google Sheets session creation)
   const proceedWithLogin = async (
     username: string,
-    role: "admin" | "user" | "supervisor" | "avp" | "manager",
+    role: "admin" | "user" | "supervisor" | "avp" | "manager" | "eksternal",
     nameToDisplay: string
   ) => {
     // Show login overlay animation
@@ -11714,6 +11765,12 @@ export default function ProduksiNPKApp() {
                               <span>User - View Only</span>
                             </div>
                           </SelectItem>
+                          <SelectItem value="eksternal">
+                            <div className="flex items-center gap-2">
+                              <Shield className="w-4 h-4 text-gray-400" />
+                              <span>Eksternal - View Only</span>
+                            </div>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -11829,6 +11886,8 @@ export default function ProduksiNPKApp() {
                             supervisor:
                               "bg-green-100 text-green-700 border-green-300",
                             user: "bg-gray-100 text-gray-700 border-gray-300",
+                            eksternal:
+                              "bg-gray-100 text-gray-500 border-gray-300",
                           };
                           return (
                             badges[role as keyof typeof badges] || badges.user
@@ -12283,7 +12342,7 @@ export default function ProduksiNPKApp() {
           <div className="mt-auto border-t border-white/20">
             <div className="p-4">
               <p className="text-xs opacity-75">
-                V 1.28 - 2025 | NPKG-2 Production
+                V 1.29 - 2025 | NPKG-2 Production
               </p>
               <p className="text-xs opacity-75 mt-1">
                 Made with <span className="text-red-500">🤍</span>

@@ -43,6 +43,31 @@ async function testReadAllSheets() {
 }
 
 // ========================================
+// TEST LOGIN (POST)
+// ========================================
+async function testLogin(username, password) {
+  try {
+    const payload = {
+      action: "login",
+      username,
+      password,
+      browser: "Automated-Test",
+      ipAddress: "0.0.0.0",
+    };
+    const response = await fetch(WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    console.log("✅ Login response:", data);
+    return data;
+  } catch (error) {
+    console.error("❌ Error login:", error);
+  }
+}
+
+// ========================================
 // TEST 2: CREATE DATA (POST)
 // ========================================
 
@@ -291,6 +316,7 @@ if (typeof module !== "undefined" && module.exports) {
   module.exports = {
     testReadData,
     testReadAllSheets,
+    testLogin,
     testCreateProduksiNPK,
     testCreateProduksiBlending,
     testCreateTimesheetForklift,

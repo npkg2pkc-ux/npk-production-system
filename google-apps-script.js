@@ -143,6 +143,14 @@ function doPost(e) {
       case "addChatMessage":
         result = addChatMessage(rowData);
         break;
+      case "login":
+        result = loginUser(
+          data.username,
+          data.password,
+          data.browser,
+          data.ipAddress
+        );
+        break;
       default:
         result = { error: "Invalid action" };
     }
@@ -154,6 +162,143 @@ function doPost(e) {
     return ContentService.createTextOutput(
       JSON.stringify({ error: error.toString() })
     ).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// ==================== AUTH / USERS FUNCTIONS ====================
+
+/**
+ * Ensure users sheet exists with proper headers
+ */
+function ensureUsersSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName("users");
+  if (!sheet) {
+    sheet = ss.insertSheet("users");
+    sheet.appendRow([
+      "id",
+      "username",
+      "password",
+      "role",
+      "namaLengkap",
+      "status",
+      "createdAt",
+      "lastLogin",
+    ]);
+    const headerRange = sheet.getRange(1, 1, 1, 8);
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#9CAF88");
+    headerRange.setFontColor("#FFFFFF");
+  }
+  return sheet;
+}
+
+/**
+ * Find user by username. Returns object with headers mapping or null
+ */
+function getUserByUsername(username) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName("users");
+  if (!sheet) return null;
+
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return null;
+
+  const headers = data[0];
+  const usernameIdx = headers.indexOf("username");
+  if (usernameIdx === -1) return null;
+
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const dbUsername = String(row[usernameIdx] || "").trim();
+    if (dbUsername === String(username || "").trim()) {
+      const obj = {};
+      headers.forEach((h, idx) => (obj[h] = row[idx]));
+      return obj; // includes id, username, password, role, namaLengkap, status, createdAt, lastLogin
+    }
+  }
+  return null;
+}
+
+/**
+ * Login user: validate credentials against users sheet
+ * Optionally create session and update lastLogin
+ */
+function loginUser(username, password, browser, ipAddress) {
+  try {
+    ensureUsersSheet();
+
+    // Basic validation
+    if (!username || !password) {
+      return { success: false, message: "Username atau password kosong" };
+    }
+
+    const user = getUserByUsername(username);
+    if (!user) {
+      return { success: false, message: "User tidak ditemukan" };
+    }
+
+    const status = String(user.status || "").toLowerCase();
+    if (status !== "active") {
+      return { success: false, message: "Akun tidak aktif" };
+    }
+
+    const dbPassword = String(user.password || "").trim();
+    const inputPassword = String(password || "").trim();
+    if (dbPassword !== inputPassword) {
+      return { success: false, message: "Password salah" };
+    }
+
+    // Update lastLogin
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName("users");
+      const data = sheet.getDataRange().getValues();
+      const headers = data[0];
+      const idIdx = headers.indexOf("id");
+      const lastLoginIdx = headers.indexOf("lastLogin");
+      const usernameIdx = headers.indexOf("username");
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][usernameIdx]).trim() === String(username).trim()) {
+          if (idIdx === -1 || !data[i][idIdx]) {
+            // Assign id for legacy row
+            const newId =
+              new Date().getTime() +
+              "_" +
+              Math.random().toString(36).substr(2, 9);
+            sheet.getRange(i + 1, headers.indexOf("id") + 1).setValue(newId);
+            user.id = newId;
+          }
+          if (lastLoginIdx !== -1) {
+            sheet.getRange(i + 1, lastLoginIdx + 1).setValue(new Date());
+          }
+          break;
+        }
+      }
+    } catch (e) {
+      // Non-fatal
+      Logger.log("Failed to update lastLogin: " + e);
+    }
+
+    // Create server-side session ID and save via sessions sheet
+    const sessionId = Utilities.getUuid();
+    try {
+      createSession(username, sessionId, browser || "", ipAddress || "");
+    } catch (e) {
+      Logger.log("Failed to create session: " + e);
+    }
+
+    // Build safe user payload (no password)
+    const safeUser = {
+      username: user.username,
+      role: user.role || "user",
+      namaLengkap: user.namaLengkap || user.username,
+      status: user.status || "active",
+    };
+
+    return { success: true, user: safeUser, sessionId: sessionId };
+  } catch (error) {
+    return { success: false, message: error.toString() };
   }
 }
 
