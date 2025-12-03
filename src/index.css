@@ -41,7 +41,8 @@ body {
 
 #root {
   position: relative;
-  min-height: 100vh;
+  /* compensate body zoom (0.85) so content fills viewport */
+  min-height: calc(100vh / 0.85);
   height: 100%;
   width: 100%;
   background-color: #f3f4f6;
