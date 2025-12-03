@@ -12242,11 +12242,6 @@ export default function ProduksiNPKApp() {
               .slice(0, 1)
               .toUpperCase()}
           </Button>
-          <span className="ml-2 absolute left-full top-1/2 -translate-y-1/2 whitespace-nowrap hidden md:inline text-[#001B44] font-semibold">
-            {displayName ||
-              localStorage.getItem("displayName") ||
-              localStorage.getItem("username")}
-          </span>
 
           {/* User Dropdown Menu */}
           {showUserMenu && (
