@@ -1,3 +1,7 @@
+:root {
+  /* Global zoom factor: 0.8 = 80%, 0.85 = 85%, etc */
+  --app-zoom: 0.8;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -29,22 +33,22 @@ body {
   height: 100%;
   min-height: 100vh;
   overflow-x: hidden;
-  overflow-y: auto;
+  overflow-y: hidden; /* prevent viewport scrollbar on login */
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
     "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  zoom: 85%;
   background-color: #f3f4f6;
 }
 
 #root {
   position: relative;
-  /* compensate body zoom (0.85) so content fills viewport */
-  min-height: calc(100vh / 0.85);
+  /* compensate body zoom so content fills full viewport */
+  min-height: calc(100vh / var(--app-zoom));
   height: 100%;
   width: 100%;
+  overflow-y: auto; /* app content can still scroll when needed */
   background-color: #f3f4f6;
 }
 

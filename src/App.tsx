@@ -775,6 +775,7 @@ export default function ProduksiNPKApp() {
     "admin" | "user" | "supervisor" | "avp" | "manager"
   >("admin");
   const [loginUsername, setLoginUsername] = useState("");
+  const [displayName, setDisplayName] = useState<string>("");
   const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [showAccountInUseWarning, setShowAccountInUseWarning] = useState(false);
@@ -1066,10 +1067,18 @@ export default function ProduksiNPKApp() {
       | "admin"
       | "user"
       | "supervisor"
-      | "avp";
+      | "avp"
+      | "manager";
     if (savedLoginStatus === "true") {
       setIsLoggedIn(true);
       setUserRole(savedUserRole || "admin");
+      const savedDisplayName = localStorage.getItem("displayName");
+      if (savedDisplayName) {
+        setDisplayName(savedDisplayName);
+      } else {
+        const savedUsername = localStorage.getItem("username") || "";
+        setDisplayName(savedUsername);
+      }
     }
 
     // Load notifications from localStorage
@@ -1356,6 +1365,7 @@ export default function ProduksiNPKApp() {
       let role: "admin" | "user" | "supervisor" | "avp" | "manager" = "user";
       let username = "";
       let validCredentials = false;
+      let resolvedDisplayName = "";
 
       // Default hardcoded accounts (fallback)
       const defaultAccounts = [
@@ -1384,6 +1394,15 @@ export default function ProduksiNPKApp() {
         validCredentials = true;
         username = defaultAccount.username;
         role = defaultAccount.role;
+        // Map friendly names for default accounts
+        const roleNameMap: Record<typeof role, string> = {
+          admin: "Administrator",
+          user: "User",
+          supervisor: "Supervisor",
+          avp: "AVP",
+          manager: "Manager",
+        };
+        resolvedDisplayName = roleNameMap[role];
       } else {
         // Try to fetch from Google Sheets
         try {
@@ -1446,6 +1465,9 @@ export default function ProduksiNPKApp() {
             validCredentials = true;
             username = user.username;
             role = user.role;
+            resolvedDisplayName = (user.namaLengkap || user.username || "")
+              .toString()
+              .trim();
 
             console.log("[LOGIN] ✅ Valid credentials! Role:", role);
 
@@ -1508,7 +1530,7 @@ export default function ProduksiNPKApp() {
       console.log("[LOGIN] ✅ Account free - proceeding with login");
 
       // Proceed with login if account is free
-      await proceedWithLogin(username, role);
+      await proceedWithLogin(username, role, resolvedDisplayName || username);
     } catch (error) {
       console.error("[LOGIN] Error during login:", error);
       setLoginError("Terjadi kesalahan saat login. Silakan coba lagi.");
@@ -1518,7 +1540,8 @@ export default function ProduksiNPKApp() {
   // Proceed with login after checks (Google Sheets session creation)
   const proceedWithLogin = async (
     username: string,
-    role: "admin" | "user" | "supervisor" | "avp" | "manager"
+    role: "admin" | "user" | "supervisor" | "avp" | "manager",
+    nameToDisplay: string
   ) => {
     // Show login overlay animation
     setShowLoginOverlay(true);
@@ -1530,10 +1553,12 @@ export default function ProduksiNPKApp() {
     setTimeout(() => {
       setIsLoggedIn(true);
       setUserRole(role);
+      setDisplayName(nameToDisplay);
       setLoginError("");
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("username", username);
       localStorage.setItem("userRole", role);
+      localStorage.setItem("displayName", nameToDisplay);
       setShowLoginOverlay(false);
     }, 800);
   };
@@ -12213,16 +12238,15 @@ export default function ProduksiNPKApp() {
             size="sm"
             className="relative bg-[#00B4D8] hover:bg-[#003366] text-white w-10 h-10 rounded-full p-0 font-bold text-base shadow-md"
           >
-            {userRole === "admin"
-              ? "A"
-              : userRole === "supervisor"
-              ? "S"
-              : userRole === "avp"
-              ? "V"
-              : userRole === "manager"
-              ? "M"
-              : "U"}
+            {(displayName || localStorage.getItem("username") || "U")
+              .slice(0, 1)
+              .toUpperCase()}
           </Button>
+          <span className="ml-2 absolute left-full top-1/2 -translate-y-1/2 whitespace-nowrap hidden md:inline text-[#001B44] font-semibold">
+            {displayName ||
+              localStorage.getItem("displayName") ||
+              localStorage.getItem("username")}
+          </span>
 
           {/* User Dropdown Menu */}
           {showUserMenu && (
@@ -12231,40 +12255,18 @@ export default function ProduksiNPKApp() {
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
                     <span className="text-xl font-bold">
-                      {userRole === "admin"
-                        ? "A"
-                        : userRole === "supervisor"
-                        ? "S"
-                        : userRole === "avp"
-                        ? "V"
-                        : userRole === "manager"
-                        ? "M"
-                        : "U"}
+                      {(displayName || localStorage.getItem("username") || "U")
+                        .slice(0, 1)
+                        .toUpperCase()}
                     </span>
                   </div>
                   <div>
                     <p className="font-semibold">
-                      {userRole === "admin"
-                        ? "Admin"
-                        : userRole === "supervisor"
-                        ? "Supervisor"
-                        : userRole === "avp"
-                        ? "AVP"
-                        : userRole === "manager"
-                        ? "Manager"
-                        : "User"}
+                      {displayName ||
+                        localStorage.getItem("displayName") ||
+                        localStorage.getItem("username")}
                     </p>
-                    <p className="text-xs opacity-90">
-                      {userRole === "admin"
-                        ? "Administrator"
-                        : userRole === "supervisor"
-                        ? "Supervisor"
-                        : userRole === "avp"
-                        ? "Assistant Vice President"
-                        : userRole === "manager"
-                        ? "Manager"
-                        : "User"}
-                    </p>
+                    <p className="text-xs opacity-90 capitalize">{userRole}</p>
                   </div>
                 </div>
               </div>
