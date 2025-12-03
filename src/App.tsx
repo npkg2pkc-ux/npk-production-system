@@ -12452,7 +12452,7 @@ export default function ProduksiNPKApp() {
       <main
         className={`flex-1 ${
           sidebarCollapsed ? "ml-16" : "ml-64"
-        } p-8 overflow-y-auto overflow-x-hidden h-screen transition-all duration-300`}
+        } px-8 pt-8 pb-4 overflow-y-auto overflow-x-hidden h-screen transition-all duration-300`}
       >
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
