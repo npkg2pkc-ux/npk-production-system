@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Card,
   CardContent,
@@ -876,6 +876,22 @@ export default function ProduksiNPKApp() {
     []
   );
   const [usersData, setUsersData] = useState<User[]>([]);
+  // Dashboard year filter
+  const [dashboardYear, setDashboardYear] = useState<number>(
+    new Date().getFullYear()
+  );
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    try {
+      produksiNPKData.forEach((item) => {
+        const d = new Date(item.tanggal);
+        if (!isNaN(d.getTime())) years.add(d.getFullYear());
+      });
+    } catch {}
+    const arr = Array.from(years);
+    if (arr.length === 0) return [new Date().getFullYear()];
+    return arr.sort((a, b) => b - a);
+  }, [produksiNPKData]);
   const [approvalRequestsData, setApprovalRequestsData] = useState<
     ApprovalRequest[]
   >([]);
@@ -4701,7 +4717,7 @@ export default function ProduksiNPKApp() {
   // Calculate dashboard metrics
   const calculateDashboardMetrics = () => {
     const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
+    const currentYear = dashboardYear;
 
     // Total production this month
     const monthlyProduction = produksiNPKData
@@ -5316,6 +5332,21 @@ export default function ProduksiNPKApp() {
   const renderDashboard = () => {
     return (
       <div className="space-y-6">
+        {/* Year Filter */}
+        <div className="flex items-center justify-end gap-3">
+          <label className="text-sm text-gray-600">Tahun</label>
+          <select
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00B4D8]"
+            value={dashboardYear}
+            onChange={(e) => setDashboardYear(Number(e.target.value))}
+          >
+            {availableYears.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-[#00B4D8] to-[#5FE9C5] text-white shadow-lg border-none">
             <CardHeader className="pb-3">
@@ -5360,7 +5391,7 @@ export default function ProduksiNPKApp() {
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Factory className="w-4 h-4" />
-                Produksi Tahun Ini
+                Produksi Tahun Ini ({dashboardYear})
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -5381,7 +5412,7 @@ export default function ProduksiNPKApp() {
                 ) : (
                   <AlertCircle className="w-4 h-4" />
                 )}
-                Pencapaian Tahunan
+                Pencapaian Tahunan ({dashboardYear})
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -5404,7 +5435,7 @@ export default function ProduksiNPKApp() {
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
               <CardTitle className="text-[#001B44]">
-                Grafik Produksi vs RKAP Tahunan
+                Grafik Produksi vs RKAP Tahunan ({dashboardYear})
               </CardTitle>
               <CardDescription>
                 Perbandingan produksi dengan target RKAP per bulan
@@ -5444,7 +5475,7 @@ export default function ProduksiNPKApp() {
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
               <CardTitle className="text-[#001B44]">
-                Persentase Pencapaian Bulanan
+                Persentase Pencapaian Bulanan ({dashboardYear})
               </CardTitle>
               <CardDescription>
                 Tracking pencapaian terhadap RKAP setiap bulan
