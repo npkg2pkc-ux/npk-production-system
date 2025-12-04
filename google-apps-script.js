@@ -1026,6 +1026,8 @@ function getHeadersForSheet(sheetName) {
       "reviewBy",
       "reviewDate",
       "reviewNotes",
+      "oldData",
+      "newData",
     ],
   };
 
