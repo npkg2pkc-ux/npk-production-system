@@ -314,6 +314,7 @@ function loginUser(username, password, browser, ipAddress) {
       role: user.role || "user",
       namaLengkap: user.namaLengkap || user.username,
       status: user.status || "active",
+      plant: user.plant || "ALL",
     };
 
     return { success: true, user: safeUser, sessionId: sessionId };

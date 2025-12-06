@@ -1173,12 +1173,21 @@ export default function ProduksiNPKApp() {
       | "avp"
       | "manager"
       | "eksternal";
-    const savedUserPlant = normalizePlant(localStorage.getItem("userPlant"));
+    const rawPlant = localStorage.getItem("userPlant");
+    const savedUserPlant = normalizePlant(rawPlant);
+
+    console.log(
+      "🔍 useEffect localStorage - raw:",
+      rawPlant,
+      "normalized:",
+      savedUserPlant
+    );
 
     if (savedLoginStatus === "true") {
       setIsLoggedIn(true);
       setUserRole(savedUserRole || "admin");
       setUserPlant(savedUserPlant || "ALL");
+      console.log("🔍 Setting userPlant to:", savedUserPlant || "ALL");
       const savedDisplayName = localStorage.getItem("displayName");
       if (savedDisplayName) {
         setDisplayName(savedDisplayName);
@@ -1503,6 +1512,7 @@ export default function ProduksiNPKApp() {
 
         if (response.ok) {
           const data = await response.json();
+          console.log("[LOGIN] 📥 Server response:", data);
           if (data && data.success) {
             validCredentials = true;
             username = data.user?.username || loginUsername;
@@ -1513,7 +1523,14 @@ export default function ProduksiNPKApp() {
                 .trim() || username;
 
             // Store plant information from server response
+            console.log(
+              "[LOGIN] 🏭 Raw plant from server:",
+              data.user?.plant,
+              "Type:",
+              typeof data.user?.plant
+            );
             const userPlantValue = normalizePlant(data.user?.plant);
+            console.log("[LOGIN] 🏭 Normalized plant:", userPlantValue);
             localStorage.setItem("userPlant", userPlantValue);
             setUserPlant(userPlantValue);
 
@@ -7372,10 +7389,26 @@ export default function ProduksiNPKApp() {
       }
       return dataArray;
     }
+    // Filter berdasarkan userPlant untuk user dengan plant spesifik
+    if (userPlant === "NPK1") {
+      return dataArray.filter((d) => d._plant === "NPK1");
+    }
+    if (userPlant === "NPK2") {
+      return dataArray.filter((d) => d._plant === "NPK2" || !d._plant);
+    }
     return dataArray;
   };
 
   const getDisplayedNpkData = () => {
+    console.log(
+      "🔍 getDisplayedNpkData - userPlant:",
+      userPlant,
+      "activeTab:",
+      activeTab,
+      "total data:",
+      produksiNPKData.length
+    );
+
     if (userPlant === "ALL") {
       let filtered;
       if (activeTab === "npk_npk1") {
@@ -7400,6 +7433,24 @@ export default function ProduksiNPKApp() {
       );
       return produksiNPKData;
     }
+    // Filter berdasarkan userPlant untuk user dengan plant spesifik
+    if (userPlant === "NPK1") {
+      const filtered = produksiNPKData.filter((d) => d._plant === "NPK1");
+      console.log(
+        `🔍 NPK filter (userPlant=NPK1): ${filtered.length}/${produksiNPKData.length} items`
+      );
+      return filtered;
+    }
+    if (userPlant === "NPK2") {
+      const filtered = produksiNPKData.filter(
+        (d) => d._plant === "NPK2" || !d._plant
+      );
+      console.log(
+        `🔍 NPK filter (userPlant=NPK2): ${filtered.length}/${produksiNPKData.length} items`
+      );
+      return filtered;
+    }
+    console.log(`🔍 NPK filter (no match): ${produksiNPKData.length} items`);
     return produksiNPKData;
   };
 
@@ -7416,6 +7467,15 @@ export default function ProduksiNPKApp() {
       // Default: show all when no specific tab
       return produksiBlendingData;
     }
+    // Filter berdasarkan userPlant untuk user dengan plant spesifik
+    if (userPlant === "NPK1") {
+      return produksiBlendingData.filter((d) => d._plant === "NPK1");
+    }
+    if (userPlant === "NPK2") {
+      return produksiBlendingData.filter(
+        (d) => d._plant === "NPK2" || !d._plant
+      );
+    }
     return produksiBlendingData;
   };
 
@@ -7425,7 +7485,14 @@ export default function ProduksiNPKApp() {
         (d) => d._plant === "NPK2" || !d._plant
       );
     }
-    return produksiNPKMiniData;
+    // NPK Mini hanya untuk NPK2
+    if (userPlant === "NPK2") {
+      return produksiNPKMiniData.filter(
+        (d) => d._plant === "NPK2" || !d._plant
+      );
+    }
+    // NPK1 tidak punya NPK Mini, return empty
+    return [];
   };
 
   // Render content based on active navigation
@@ -13591,6 +13658,13 @@ export default function ProduksiNPKApp() {
     // Build produksi tabs based on plant
     let produksiTabs: { id: string; label: string }[] = [];
 
+    console.log(
+      "🔍 getNavItems - userPlant:",
+      userPlant,
+      "type:",
+      typeof userPlant
+    );
+
     // NPK1: Granul NPK1 + Retail
     if (userPlant === "NPK1") {
       produksiTabs = [
@@ -13982,7 +14056,7 @@ export default function ProduksiNPKApp() {
           <div className="mt-auto border-t border-white/20">
             <div className="p-4">
               <p className="text-xs opacity-75">
-                V 1.31 - 2025 | NPKG-2 Production
+                V 1.32 - 2025 | NPKG-2 Production
               </p>
               <p className="text-xs opacity-75 mt-1">
                 Made with <span className="text-red-500">🤍</span>
