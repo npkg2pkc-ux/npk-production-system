@@ -828,6 +828,19 @@ export default function ProduksiNPKApp() {
     return "ALL"; // default to ALL for admin/unknown
   };
 
+  // Helper function untuk format timestamp dengan timezone Jakarta
+  const formatTimestamp = (dateStr: string | Date) => {
+    return new Date(dateStr).toLocaleString("id-ID", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
+
   // Login states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<
@@ -12898,7 +12911,16 @@ export default function ProduksiNPKApp() {
                                 <p>
                                   <span className="font-semibold">Date:</span>{" "}
                                   {new Date(request.requestDate).toLocaleString(
-                                    "id-ID"
+                                    "id-ID",
+                                    {
+                                      timeZone: "Asia/Jakarta",
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                    }
                                   )}
                                 </p>
                                 <p className="mt-2">
@@ -12998,11 +13020,13 @@ export default function ProduksiNPKApp() {
                                 {new Date(request.requestDate).toLocaleString(
                                   "id-ID",
                                   {
+                                    timeZone: "Asia/Jakarta",
                                     year: "numeric",
                                     month: "short",
                                     day: "numeric",
                                     hour: "2-digit",
                                     minute: "2-digit",
+                                    hour12: false,
                                   }
                                 )}
                               </td>
@@ -13108,7 +13132,16 @@ export default function ProduksiNPKApp() {
                             <p className="text-sm text-gray-600">
                               <span className="font-semibold">Diajukan:</span>{" "}
                               {new Date(request.requestDate).toLocaleString(
-                                "id-ID"
+                                "id-ID",
+                                {
+                                  timeZone: "Asia/Jakarta",
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                }
                               )}
                             </p>
                             <p className="text-sm text-gray-600">
@@ -13227,7 +13260,16 @@ export default function ProduksiNPKApp() {
                               {request.reviewBy} pada{" "}
                               {request.reviewDate
                                 ? new Date(request.reviewDate).toLocaleString(
-                                    "id-ID"
+                                    "id-ID",
+                                    {
+                                      timeZone: "Asia/Jakarta",
+                                      year: "numeric",
+                                      month: "short",
+                                      day: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      hour12: false,
+                                    }
                                   )
                                 : "-"}
                             </p>
@@ -13586,16 +13628,19 @@ export default function ProduksiNPKApp() {
                             </td>
                             <td className="py-3 px-4 text-gray-600 text-xs">
                               {item.lastLogin
-                                ? new Date(item.lastLogin).toLocaleString(
-                                    "id-ID",
-                                    {
+                                ? (() => {
+                                    const date = new Date(item.lastLogin);
+                                    // Format: 6 Des 2025, 07:00
+                                    return date.toLocaleString("id-ID", {
+                                      timeZone: "Asia/Jakarta",
                                       year: "numeric",
                                       month: "short",
                                       day: "numeric",
                                       hour: "2-digit",
                                       minute: "2-digit",
-                                    }
-                                  )
+                                      hour12: false,
+                                    });
+                                  })()
                                 : "-"}
                             </td>
                             <td className="text-center py-3 px-4">
@@ -14307,11 +14352,13 @@ export default function ProduksiNPKApp() {
                                   {new Date(notif.timestamp).toLocaleString(
                                     "id-ID",
                                     {
+                                      timeZone: "Asia/Jakarta",
                                       day: "2-digit",
                                       month: "short",
                                       year: "numeric",
                                       hour: "2-digit",
                                       minute: "2-digit",
+                                      hour12: false,
                                     }
                                   )}
                                 </p>
