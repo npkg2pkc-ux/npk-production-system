@@ -1,9 +1,11 @@
 /**
- * Google Apps Script untuk NPK Production Management System
+ * Google Apps Script untuk NPK Production Management System (Multi-Plant)
  *
  * CARA SETUP:
  * 1. Buka Google Sheets baru
  * 2. Buat sheet dengan nama berikut:
+ *
+ *    NPK 2 (Original Sheets):
  *    - produksi_npk
  *    - produksi_blending
  *    - produksi_npk_mini
@@ -18,7 +20,24 @@
  *    - rkap
  *    - perta
  *    - trouble_record
- *    - users (untuk user management)
+ *
+ *    NPK 1 (New Sheets with _NPK1 suffix):
+ *    - produksi_npk_NPK1
+ *    - produksi_retail_NPK1 (replaces blending)
+ *    - timesheet_forklift_NPK1
+ *    - timesheet_loader_NPK1
+ *    - downtime_NPK1
+ *    - work_request_NPK1
+ *    - bahan_baku_NPK1
+ *    - vibrasi_NPK1
+ *    - gate_pass_NPK1
+ *    - akun_NPK1
+ *    - rkap_NPK1
+ *    - perta_NPK1
+ *    - trouble_record_NPK1
+ *
+ *    Shared Sheets (No suffix):
+ *    - users (untuk user management) - add 'plant' column (NPK1/NPK2/ALL)
  *    - approval_requests (untuk approval system)
  *    - sessions (untuk multi-login detection)
  *
@@ -182,10 +201,11 @@ function ensureUsersSheet() {
       "role",
       "namaLengkap",
       "status",
+      "plant",
       "createdAt",
       "lastLogin",
     ]);
-    const headerRange = sheet.getRange(1, 1, 1, 8);
+    const headerRange = sheet.getRange(1, 1, 1, 9);
     headerRange.setFontWeight("bold");
     headerRange.setBackground("#9CAF88");
     headerRange.setFontColor("#FFFFFF");
@@ -437,8 +457,17 @@ function createData(sheetName, rowData) {
   // Ambil header dari baris pertama
   let headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 
-  // Pastikan header memuat semua field pada rowData (auto-extend kolom baru jika perlu)
-  const keys = Object.keys(rowData || {});
+  // Filter internal properties yang tidak perlu disimpan ke sheet
+  const internalProps = ["_plant", "__original"];
+  const cleanedData = {};
+  Object.keys(rowData || {}).forEach((key) => {
+    if (!internalProps.includes(key)) {
+      cleanedData[key] = rowData[key];
+    }
+  });
+
+  // Pastikan header memuat semua field pada cleanedData (auto-extend kolom baru jika perlu)
+  const keys = Object.keys(cleanedData);
   const missing = keys.filter((k) => headers.indexOf(k) === -1);
   if (missing.length > 0) {
     sheet
@@ -450,15 +479,15 @@ function createData(sheetName, rowData) {
   // Generate ID unik berdasarkan timestamp dan random
   const uniqueId =
     new Date().getTime() + "_" + Math.random().toString(36).substr(2, 9);
-  rowData.id = uniqueId;
+  cleanedData.id = uniqueId;
 
   // Buat array values sesuai urutan header
   // PENTING: Gunakan hasOwnProperty untuk menangani nilai 0 dan false
   const values = headers.map((header) => {
-    if (rowData.hasOwnProperty(header)) {
+    if (cleanedData.hasOwnProperty(header)) {
       const value =
-        rowData[header] !== undefined && rowData[header] !== null
-          ? rowData[header]
+        cleanedData[header] !== undefined && cleanedData[header] !== null
+          ? cleanedData[header]
           : "";
 
       // Format khusus untuk jamGrounded dan jamOperasi di timesheet
@@ -522,12 +551,26 @@ function updateData(sheetName, rowData) {
   const sheet = ss.getSheetByName(sheetName);
 
   if (!sheet) {
-    return { error: "Sheet not found" };
+    Logger.log("[UPDATE ERROR] Sheet not found: " + sheetName);
+    return { error: "Sheet not found: " + sheetName };
   }
 
+  Logger.log(
+    "[UPDATE] Sheet: " + sheetName + ", ID: " + (rowData.id || "no-id")
+  );
+
+  // Filter internal properties yang tidak perlu disimpan ke sheet
+  const internalProps = ["_plant", "__original"];
+  const cleanedData = {};
+  Object.keys(rowData || {}).forEach((key) => {
+    if (!internalProps.includes(key)) {
+      cleanedData[key] = rowData[key];
+    }
+  });
+
   let headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  // Pastikan header memuat semua field pada rowData (auto-extend kolom baru jika perlu)
-  const keys = Object.keys(rowData || {});
+  // Pastikan header memuat semua field pada cleanedData (auto-extend kolom baru jika perlu)
+  const keys = Object.keys(cleanedData);
   const missing = keys.filter((k) => headers.indexOf(k) === -1);
   if (missing.length > 0) {
     sheet
@@ -543,10 +586,12 @@ function updateData(sheetName, rowData) {
   const idColIndex = headers.indexOf("id");
 
   // Jika ada ID, gunakan ID untuk pencarian (lebih akurat)
-  if (idColIndex !== -1 && rowData.id) {
+  if (idColIndex !== -1 && cleanedData.id) {
+    Logger.log("[UPDATE] Searching by ID: " + cleanedData.id);
     for (let i = 1; i < values.length; i++) {
-      if (String(values[i][idColIndex]) === String(rowData.id)) {
+      if (String(values[i][idColIndex]) === String(cleanedData.id)) {
         rowIndex = i;
+        Logger.log("[UPDATE] Found by ID at row: " + (i + 1));
         break;
       }
     }
@@ -554,10 +599,15 @@ function updateData(sheetName, rowData) {
 
   // Fallback: jika tidak ada ID atau tidak ditemukan, cari dengan multi-field matching
   if (rowIndex === -1) {
+    Logger.log("[UPDATE] ID not found, trying multi-field matching");
+
+    // Gunakan __original dari rowData asli untuk matching jika ada
+    const originalData = rowData.__original || cleanedData;
     Logger.log(
-      "ID not found in updateData, trying multi-field matching for: " +
-        JSON.stringify(rowData)
+      "[UPDATE] Using original data for matching: " +
+        JSON.stringify(originalData)
     );
+
     for (let i = 1; i < values.length; i++) {
       let isMatch = true;
       let matchedFields = [];
@@ -566,13 +616,8 @@ function updateData(sheetName, rowData) {
       for (let j = 0; j < headers.length; j++) {
         const header = headers[j];
         const cellValue = values[i][j];
-        // Jika id tidak ada dan __original tersedia, gunakan nilai original untuk pencarian
-        let compareValue = rowData[header];
-        if ((!rowData.id || rowData.id === "") && rowData.__original) {
-          if (rowData.__original.hasOwnProperty(header)) {
-            compareValue = rowData.__original[header];
-          }
-        }
+        // Gunakan originalData untuk pencarian
+        let compareValue = originalData[header];
 
         // Skip field id, downtime (hasil kalkulasi), dan field kosong
         if (
@@ -664,21 +709,24 @@ function updateData(sheetName, rowData) {
   }
 
   // Jika baris belum punya id dan kita berhasil menemukan row lewat __original, assign id baru
-  if (idColIndex !== -1 && (!rowData.id || rowData.id === "")) {
-    rowData.id =
+  if (idColIndex !== -1 && (!cleanedData.id || cleanedData.id === "")) {
+    cleanedData.id =
       new Date().getTime() + "_" + Math.random().toString(36).substr(2, 9);
     Logger.log(
-      "Assigned new legacy id: " + rowData.id + " at row " + (rowIndex + 1)
+      "[UPDATE] Assigned new legacy id: " +
+        cleanedData.id +
+        " at row " +
+        (rowIndex + 1)
     );
   }
 
   // Update row - gunakan hasOwnProperty untuk check, bukan just ||
   const updateValues = headers.map((header) => {
-    // Jika rowData memiliki property ini (bahkan jika nilainya 0 atau false), gunakan nilai baru
-    if (rowData.hasOwnProperty(header)) {
+    // Jika cleanedData memiliki property ini (bahkan jika nilainya 0 atau false), gunakan nilai baru
+    if (cleanedData.hasOwnProperty(header)) {
       const value =
-        rowData[header] !== undefined && rowData[header] !== null
-          ? rowData[header]
+        cleanedData[header] !== undefined && cleanedData[header] !== null
+          ? cleanedData[header]
           : "";
 
       // Format khusus untuk jamGrounded dan jamOperasi di timesheet
@@ -709,10 +757,7 @@ function updateData(sheetName, rowData) {
   });
 
   Logger.log(
-    "Updating row " +
-      (rowIndex + 1) +
-      " with values: " +
-      JSON.stringify(updateValues)
+    "[UPDATE] Updating row " + (rowIndex + 1) + " in sheet: " + sheetName
   );
   sheet
     .getRange(rowIndex + 1, 1, 1, updateValues.length)
@@ -731,11 +776,14 @@ function updateData(sheetName, rowData) {
     }
   }
 
+  Logger.log(
+    "[UPDATE SUCCESS] Row " + (rowIndex + 1) + " updated in " + sheetName
+  );
   return {
     success: true,
     message: "Data berhasil diupdate",
     rowUpdated: rowIndex + 1,
-    updatedData: rowData,
+    updatedData: cleanedData,
   };
 }
 
@@ -745,8 +793,22 @@ function deleteData(sheetName, rowData) {
   const sheet = ss.getSheetByName(sheetName);
 
   if (!sheet) {
-    return { error: "Sheet not found" };
+    Logger.log("[DELETE ERROR] Sheet not found: " + sheetName);
+    return { error: "Sheet not found: " + sheetName };
   }
+
+  Logger.log(
+    "[DELETE] Sheet: " + sheetName + ", ID: " + (rowData.id || "no-id")
+  );
+
+  // Filter internal properties
+  const internalProps = ["_plant", "__original"];
+  const cleanedData = {};
+  Object.keys(rowData || {}).forEach((key) => {
+    if (!internalProps.includes(key)) {
+      cleanedData[key] = rowData[key];
+    }
+  });
 
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const dataRange = sheet.getDataRange();
@@ -757,12 +819,12 @@ function deleteData(sheetName, rowData) {
   const idColIndex = headers.indexOf("id");
 
   // Jika ada ID, gunakan ID untuk pencarian (lebih akurat)
-  if (idColIndex !== -1 && rowData.id) {
-    Logger.log("Searching for ID: " + rowData.id);
+  if (idColIndex !== -1 && cleanedData.id) {
+    Logger.log("[DELETE] Searching for ID: " + cleanedData.id);
     for (let i = 1; i < values.length; i++) {
-      if (String(values[i][idColIndex]) === String(rowData.id)) {
+      if (String(values[i][idColIndex]) === String(cleanedData.id)) {
         rowIndex = i;
-        Logger.log("Found row by ID at: " + (i + 1));
+        Logger.log("[DELETE] Found row by ID at: " + (i + 1));
         break;
       }
     }
@@ -770,9 +832,12 @@ function deleteData(sheetName, rowData) {
 
   // Fallback: jika tidak ada ID atau tidak ditemukan, cari dengan multi-field matching
   if (rowIndex === -1) {
+    Logger.log("[DELETE] ID not found, trying multi-field matching");
+
+    // Gunakan __original dari rowData asli untuk matching jika ada
+    const originalData = rowData.__original || cleanedData;
     Logger.log(
-      "ID not found, trying multi-field matching for: " +
-        JSON.stringify(rowData)
+      "[DELETE] Using data for matching: " + JSON.stringify(originalData)
     );
 
     for (let i = 1; i < values.length; i++) {
@@ -783,13 +848,8 @@ function deleteData(sheetName, rowData) {
       for (let j = 0; j < headers.length; j++) {
         const header = headers[j];
         const cellValue = values[i][j];
-        // Jika id tidak ada dan __original tersedia, gunakan nilai original untuk pencarian
-        let compareValue = rowData[header];
-        if ((!rowData.id || rowData.id === "") && rowData.__original) {
-          if (rowData.__original.hasOwnProperty(header)) {
-            compareValue = rowData.__original[header];
-          }
-        }
+        // Gunakan originalData untuk pencarian
+        let compareValue = originalData[header];
 
         // Skip field id, downtime (hasil kalkulasi), dan field kosong
         if (
@@ -865,14 +925,19 @@ function deleteData(sheetName, rowData) {
   }
 
   // Delete row
-  Logger.log("Deleting row " + (rowIndex + 1) + " from sheet: " + sheetName);
+  Logger.log(
+    "[DELETE] Deleting row " + (rowIndex + 1) + " from sheet: " + sheetName
+  );
   sheet.deleteRow(rowIndex + 1);
+  Logger.log(
+    "[DELETE SUCCESS] Row " + (rowIndex + 1) + " deleted from " + sheetName
+  );
 
   return {
     success: true,
     message: "Data berhasil dihapus",
     rowDeleted: rowIndex + 1,
-    deletedData: rowData,
+    deletedData: cleanedData,
   };
 }
 

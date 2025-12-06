@@ -326,6 +326,7 @@ interface ProduksiNPK {
   totalOnspek?: number;
   totalOffspek?: number;
   total?: number;
+  _plant?: string;
 }
 
 interface ProduksiBlending {
@@ -334,6 +335,7 @@ interface ProduksiBlending {
   kategori: string;
   formula: string;
   tonase: number;
+  _plant?: string;
 }
 
 interface ProduksiNPKMini {
@@ -341,6 +343,7 @@ interface ProduksiNPKMini {
   tanggal: string;
   formulasi: string;
   tonase: number;
+  _plant?: string;
 }
 
 interface TimesheetForklift {
@@ -353,6 +356,7 @@ interface TimesheetForklift {
   jamGrounded?: number;
   jamOperasi?: number;
   keterangan?: string;
+  _plant?: string;
 }
 
 interface TimesheetLoader {
@@ -365,6 +369,7 @@ interface TimesheetLoader {
   jamGrounded?: number;
   jamOperasi?: number;
   keterangan?: string;
+  _plant?: string;
 }
 
 interface Downtime {
@@ -375,6 +380,7 @@ interface Downtime {
   jamOff: string;
   jamStart: string;
   downtime?: number;
+  _plant?: string;
 }
 
 interface WorkRequest {
@@ -386,6 +392,7 @@ interface WorkRequest {
   eksekutor: string;
   include: string;
   deskripsiPekerjaan: string;
+  _plant?: string;
 }
 
 interface BahanBaku {
@@ -394,6 +401,7 @@ interface BahanBaku {
   jenisBahanBaku: string;
   tonase: number;
   keterangan: string;
+  _plant?: string;
 }
 
 interface Vibrasi {
@@ -404,6 +412,7 @@ interface Vibrasi {
   point: string;
   nilai: number;
   keterangan: string;
+  _plant?: string;
 }
 
 interface GatePass {
@@ -416,6 +425,7 @@ interface GatePass {
   alasanMengeluarkan: string;
   tanggal: string;
   approver: string;
+  _plant?: string;
 }
 
 interface Akun {
@@ -434,6 +444,7 @@ interface RKAP {
   bulan: string;
   tahun?: number;
   targetRKAP: number;
+  plant: "NPK1" | "NPK2";
 }
 
 interface PertaItem {
@@ -446,6 +457,7 @@ interface Perta {
   tanggalMulai: string;
   tanggalSelesai: string;
   items: PertaItem[];
+  _plant?: string;
 }
 
 interface KronologisItem {
@@ -473,6 +485,7 @@ interface TroubleRecord {
   status: "Open" | "Closed";
   tanggalSelesai?: string;
   catatanPenyelesaian?: string;
+  _plant?: string;
 }
 
 interface User {
@@ -482,6 +495,7 @@ interface User {
   role: "admin" | "user" | "supervisor" | "avp" | "manager" | "eksternal";
   namaLengkap: string;
   status: "active" | "inactive";
+  plant: "NPK1" | "NPK2" | "ALL";
   createdAt?: string;
   lastLogin?: string;
 }
@@ -507,6 +521,32 @@ interface ApprovalRequest {
 // Google Sheets API URL - Replace with your deployed script URL
 const API_URL =
   "https://script.google.com/macros/s/AKfycbwURvYXyBD0-SrqomO4eNbE16-KtdD1g6e8G0LLIZA0_nb_jkz9FHDp_SPA1r57vkVE/exec";
+
+// Helper function for dynamic sheet naming based on plant
+function getSheetName(
+  baseSheet: string,
+  plant: "NPK1" | "NPK2" | "ALL"
+): string {
+  // Sheets that are shared across plants (no suffix)
+  const sharedSheets = ["users", "sessions", "approval_requests"];
+
+  if (sharedSheets.includes(baseSheet)) {
+    return baseSheet;
+  }
+
+  // NPK1 specific sheets have _NPK1 suffix
+  if (plant === "NPK1") {
+    // Special case: blending -> retail for NPK1
+    if (baseSheet === "produksi_blending") {
+      return "produksi_retail_NPK1";
+    }
+    return `${baseSheet}_NPK1`;
+  }
+
+  // NPK2 uses original sheet names (no suffix)
+  // ALL will be handled in data fetching logic
+  return baseSheet;
+}
 
 // Session API helpers
 async function checkSessionAPI(
@@ -734,6 +774,9 @@ export default function ProduksiNPKApp() {
     useState("");
   const [printBlendingSectionHeadBadge, setPrintBlendingSectionHeadBadge] =
     useState("");
+  const [printBlendingKategori, setPrintBlendingKategori] = useState<
+    "all" | "Oversack" | "Fresh"
+  >("all");
   const [printMiniDateRange, setPrintMiniDateRange] = useState({
     startDate: new Date().toISOString().split("T")[0],
     endDate: new Date().toISOString().split("T")[0],
@@ -772,11 +815,24 @@ export default function ProduksiNPKApp() {
   >("monthly");
   const [showAllFreqItems, setShowAllFreqItems] = useState(false);
 
+  // Helper: normalize plant string
+  const normalizePlant = (plant?: string | null) => {
+    const p = (plant || "").trim().toUpperCase();
+    if (p === "NPK1" || p === "NPK 1") return "NPK1";
+    if (p === "NPK2" || p === "NPK 2") return "NPK2";
+    if (p === "ALL") return "ALL";
+
+    // Check if admin role - default to ALL
+    console.log("⚠️ Unknown plant value:", plant, "- checking role");
+    return "ALL"; // default to ALL for admin/unknown
+  };
+
   // Login states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<
     "admin" | "user" | "supervisor" | "avp" | "manager" | "eksternal"
   >("admin");
+  const [userPlant, setUserPlant] = useState<"NPK1" | "NPK2" | "ALL">("ALL");
   const [loginUsername, setLoginUsername] = useState("");
   const [displayName, setDisplayName] = useState<string>("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -883,6 +939,9 @@ export default function ProduksiNPKApp() {
   const [dashboardYear, setDashboardYear] = useState<number>(
     new Date().getFullYear()
   );
+  const [dashboardPlantFilter, setDashboardPlantFilter] = useState<
+    "NPK1" | "NPK2" | "ALL"
+  >("ALL");
   const availableYears = useMemo(() => {
     const years = new Set<number>();
     try {
@@ -953,6 +1012,28 @@ export default function ProduksiNPKApp() {
       jamStart: "",
     });
 
+  // Forklift options depend on plant
+  const forkliftOptions = useMemo(
+    () =>
+      userPlant === "NPK1"
+        ? ["F15", "F16", "F17", "F18"]
+        : ["F19", "F20", "F21", "F22", "F23"],
+    [userPlant]
+  );
+
+  // Ensure selected forklift stays within current plant options
+  useEffect(() => {
+    if (!forkliftOptions.includes(printForkliftUnit)) {
+      setPrintForkliftUnit(forkliftOptions[0]);
+    }
+    if (!forkliftOptions.includes(formTimesheetForklift.forklift)) {
+      setFormTimesheetForklift((prev) => ({
+        ...prev,
+        forklift: forkliftOptions[0],
+      }));
+    }
+  }, [forkliftOptions, printForkliftUnit, formTimesheetForklift.forklift]);
+
   const [formTimesheetLoader, setFormTimesheetLoader] =
     useState<TimesheetLoader>({
       tanggal: new Date().toISOString().split("T")[0],
@@ -1021,6 +1102,7 @@ export default function ProduksiNPKApp() {
     bulan: "Januari",
     tahun: new Date().getFullYear(),
     targetRKAP: 0,
+    plant: "NPK2",
   });
 
   const [formPerta, setFormPerta] = useState<Perta>({
@@ -1068,6 +1150,7 @@ export default function ProduksiNPKApp() {
     role: "user",
     namaLengkap: "",
     status: "active",
+    plant: "NPK2",
   });
 
   const [viewAkunModal, setViewAkunModal] = useState<{
@@ -1090,9 +1173,12 @@ export default function ProduksiNPKApp() {
       | "avp"
       | "manager"
       | "eksternal";
+    const savedUserPlant = normalizePlant(localStorage.getItem("userPlant"));
+
     if (savedLoginStatus === "true") {
       setIsLoggedIn(true);
       setUserRole(savedUserRole || "admin");
+      setUserPlant(savedUserPlant || "ALL");
       const savedDisplayName = localStorage.getItem("displayName");
       if (savedDisplayName) {
         setDisplayName(savedDisplayName);
@@ -1382,6 +1468,10 @@ export default function ProduksiNPKApp() {
     e.preventDefault();
     setLoginError("");
 
+    // Reset any stale plant data before fresh login
+    localStorage.removeItem("userPlant");
+    setUserPlant("ALL");
+
     try {
       let role:
         | "admin"
@@ -1421,6 +1511,12 @@ export default function ProduksiNPKApp() {
               (data.user?.namaLengkap || data.user?.username || "")
                 .toString()
                 .trim() || username;
+
+            // Store plant information from server response
+            const userPlantValue = normalizePlant(data.user?.plant);
+            localStorage.setItem("userPlant", userPlantValue);
+            setUserPlant(userPlantValue);
+
             if (data.sessionId) {
               // Align local session id with server-created one
               currentSessionId.current = data.sessionId;
@@ -1539,7 +1635,23 @@ export default function ProduksiNPKApp() {
                 .toString()
                 .trim();
 
-              console.log("[LOGIN] ✅ Valid credentials! Role:", role);
+              // Store plant information
+              console.log(
+                "[LOGIN] 🏭 Raw plant from DB:",
+                user.plant,
+                "Type:",
+                typeof user.plant
+              );
+              const userPlantValue = normalizePlant(user.plant);
+              localStorage.setItem("userPlant", userPlantValue);
+              setUserPlant(userPlantValue);
+
+              console.log(
+                "[LOGIN] ✅ Valid credentials! Role:",
+                role,
+                "Plant normalized:",
+                userPlantValue
+              );
 
               // Update last login timestamp
               try {
@@ -1630,6 +1742,7 @@ export default function ProduksiNPKApp() {
       localStorage.setItem("username", username);
       localStorage.setItem("userRole", role);
       localStorage.setItem("displayName", nameToDisplay);
+      // userPlant already stored in handleLogin, no need to set again here
       setShowLoginOverlay(false);
     }, 800);
   };
@@ -1645,9 +1758,11 @@ export default function ProduksiNPKApp() {
       }
       setIsLoggedIn(false);
       setUserRole("admin");
+      setUserPlant("ALL");
       localStorage.removeItem("isLoggedIn");
       localStorage.removeItem("username");
       localStorage.removeItem("userRole");
+      localStorage.removeItem("userPlant");
       setActiveNav("home");
       setActiveTab("");
       // Clear login form fields
@@ -1667,6 +1782,20 @@ export default function ProduksiNPKApp() {
       setSuccessMessage("");
     }, 2000);
   };
+
+  // Set initial tab based on userPlant when logged in
+  useEffect(() => {
+    if (isLoggedIn && activeTab === "") {
+      if (userPlant === "NPK1") {
+        setActiveTab("npk_npk1");
+      } else if (userPlant === "NPK2") {
+        setActiveTab("npk");
+      } else if (userPlant === "ALL") {
+        setActiveTab("npk"); // Start with NPK2 granul for admin
+      }
+      console.log("🎯 Initial tab set based on plant:", userPlant);
+    }
+  }, [isLoggedIn, userPlant, activeTab]);
 
   // Calculate totals for Produksi NPK
   useEffect(() => {
@@ -1987,7 +2116,13 @@ export default function ProduksiNPKApp() {
         data: data,
       };
 
-      console.log("Updating data:", payload);
+      console.log("🔄 [UPDATE] Sending to:", WEBHOOK_URL);
+      console.log("🔄 [UPDATE] Sheet:", sheetName);
+      console.log("🔄 [UPDATE] Data:", JSON.stringify(data, null, 2));
+      console.log(
+        "🔄 [UPDATE] Full payload:",
+        JSON.stringify(payload, null, 2)
+      );
 
       const response = await fetch(WEBHOOK_URL, {
         method: "POST",
@@ -1998,14 +2133,28 @@ export default function ProduksiNPKApp() {
         body: JSON.stringify(payload),
       });
 
-      console.log("Response status:", response.status);
+      console.log("📥 [UPDATE] Response status:", response.status);
+      console.log("📥 [UPDATE] Response headers:", response.headers);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error("❌ [UPDATE] Error response:", errorText);
+        throw new Error(
+          `HTTP error! status: ${response.status}, body: ${errorText}`
+        );
       }
 
       const result = await response.json();
-      console.log("Result:", result);
+      console.log(
+        "✅ [UPDATE] Success result:",
+        JSON.stringify(result, null, 2)
+      );
+
+      if (result.error) {
+        console.error("❌ [UPDATE] Apps Script returned error:", result.error);
+        throw new Error(result.error);
+      }
+
       return result;
     } catch (error) {
       console.error("Error updating data:", error);
@@ -2056,6 +2205,107 @@ export default function ProduksiNPKApp() {
     }
   };
 
+  // Wrapper functions for plant-aware data operations
+  const saveDataForPlant = async (baseSheet: string, data: any) => {
+    // Detect plant from data._plant if available, otherwise use userPlant
+    let targetPlant = userPlant;
+    if (data._plant) {
+      targetPlant = data._plant;
+    }
+
+    const sheetName = getSheetName(baseSheet, targetPlant);
+    console.log(
+      `💾 Save: baseSheet=${baseSheet}, targetPlant=${targetPlant}, sheetName=${sheetName}`
+    );
+    return await saveData(sheetName, data);
+  };
+
+  const updateDataForPlant = async (baseSheet: string, data: any) => {
+    // Detect plant from data._plant if available, otherwise use userPlant
+    let targetPlant = userPlant;
+    if (data._plant) {
+      targetPlant = data._plant;
+    }
+
+    const sheetName = getSheetName(baseSheet, targetPlant);
+    console.log(
+      `📝 Update: baseSheet=${baseSheet}, targetPlant=${targetPlant}, sheetName=${sheetName}`
+    );
+    return await updateData(sheetName, data);
+  };
+
+  const deleteDataFromSheetForPlant = async (baseSheet: string, data: any) => {
+    // Detect plant from data._plant if available, otherwise use userPlant
+    let targetPlant = userPlant;
+    if (data._plant) {
+      targetPlant = data._plant;
+    }
+
+    const sheetName = getSheetName(baseSheet, targetPlant);
+    console.log(
+      `🗑️ Delete: baseSheet=${baseSheet}, targetPlant=${targetPlant}, sheetName=${sheetName}`
+    );
+    return await deleteDataFromSheet(sheetName, data);
+  };
+
+  // Wrapper function to fetch data with plant-specific sheet name
+  const fetchDataForPlant = async (
+    baseSheet: string,
+    plant?: "NPK1" | "NPK2" | "ALL"
+  ) => {
+    const plantToUse = plant || userPlant;
+
+    // For "ALL" plant (dashboard view), fetch both NPK1 and NPK2 data
+    if (plantToUse === "ALL") {
+      const sharedSheets = ["users", "sessions", "approval_requests"];
+      if (sharedSheets.includes(baseSheet)) {
+        return await fetchData(baseSheet);
+      }
+
+      // Fetch from both plants and merge
+      try {
+        console.log(`🔄 Fetching merged data for ${baseSheet} (plant: ALL)`);
+        const [npk2Data, npk1Data] = await Promise.all([
+          fetchData(baseSheet), // NPK2 (original)
+          fetchData(getSheetName(baseSheet, "NPK1")), // NPK1 (with suffix)
+        ]);
+
+        console.log(
+          `✅ Fetched ${baseSheet}: NPK2=${npk2Data?.length || 0}, NPK1=${
+            npk1Data?.length || 0
+          }`
+        );
+
+        // Merge both arrays, add plant identifier to each item
+        const npk2WithPlant = (npk2Data || []).map((item: any) => ({
+          ...item,
+          _plant: "NPK2",
+        }));
+        const npk1WithPlant = (npk1Data || []).map((item: any) => ({
+          ...item,
+          _plant: "NPK1",
+        }));
+
+        const merged = [...npk2WithPlant, ...npk1WithPlant];
+        console.log(`🔗 Merged ${baseSheet}: Total=${merged.length} items`);
+        return merged;
+      } catch (error) {
+        console.error(`Error fetching merged data for ${baseSheet}:`, error);
+        return [];
+      }
+    }
+
+    // For specific plant, use dynamic sheet name
+    const sheetName = getSheetName(baseSheet, plantToUse);
+    const data = await fetchData(sheetName);
+
+    // Add plant identifier to each item for consistency
+    return (data || []).map((item: any) => ({
+      ...item,
+      _plant: plantToUse,
+    }));
+  };
+
   // Load all data on mount (after login)
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -2063,17 +2313,28 @@ export default function ProduksiNPKApp() {
     const loadAllData = async () => {
       setLoadingData(true);
       console.log("🔄 Mulai loading data prioritas tinggi...");
+      console.log("👤 User Plant:", userPlant);
       const startTime = Date.now();
 
       try {
         // Load data prioritas tinggi dulu (untuk dashboard)
-        const [npk, blending, mini, downtime, akun] = await Promise.all([
-          fetchData("produksi_npk"),
-          fetchData("produksi_blending"),
-          fetchData("produksi_npk_mini"),
-          fetchData("downtime"),
-          fetchData("akun"),
-        ]);
+        // Note: produksi_npk_mini will be skipped for NPK1 users
+        const dataPromises: Promise<any>[] = [
+          fetchDataForPlant("produksi_npk"),
+          fetchDataForPlant("produksi_blending"), // Will be retail for NPK1
+          fetchDataForPlant("downtime"),
+          fetchDataForPlant("akun"),
+        ];
+
+        console.log("📦 Loading data for plant:", userPlant);
+
+        // Only load NPK Mini for NPK2 and ALL
+        if (userPlant !== "NPK1") {
+          dataPromises.push(fetchDataForPlant("produksi_npk_mini"));
+        }
+
+        const results = await Promise.all(dataPromises);
+        const [npk, blending, downtime, akun, mini] = results;
 
         const loadTime1 = Date.now() - startTime;
         console.log(`✅ Data prioritas tinggi loaded in ${loadTime1}ms`);
@@ -2133,6 +2394,9 @@ export default function ProduksiNPKApp() {
         setDowntimeData(normalizedDowntime);
 
         // Set data prioritas tinggi
+        console.log("📊 NPK Data loaded:", npk?.length || 0, "items");
+        console.log("📊 Blending Data loaded:", blending?.length || 0, "items");
+        console.log("📊 First NPK item plant:", npk?.[0]?._plant);
         setProduksiNPKData(npk || []);
         setProduksiBlendingData(blending || []);
         setProduksiNPKMiniData(mini || []);
@@ -2156,17 +2420,17 @@ export default function ProduksiNPKApp() {
           users,
           approvalRequests,
         ] = await Promise.all([
-          fetchData("timesheet_forklift"),
-          fetchData("timesheet_loader"),
-          fetchData("work_request"),
-          fetchData("bahan_baku"),
-          fetchData("vibrasi"),
-          fetchData("gate_pass"),
-          fetchData("rkap"),
-          fetchData("perta"),
-          fetchData("trouble_record"),
-          fetchData("users"),
-          fetchData("approval_requests"),
+          fetchDataForPlant("timesheet_forklift"),
+          fetchDataForPlant("timesheet_loader"),
+          fetchDataForPlant("work_request"),
+          fetchDataForPlant("bahan_baku"),
+          fetchDataForPlant("vibrasi"),
+          fetchDataForPlant("gate_pass"),
+          fetchDataForPlant("rkap"),
+          fetchDataForPlant("perta"),
+          fetchDataForPlant("trouble_record"),
+          fetchData("users"), // Users is shared
+          fetchData("approval_requests"), // Approval requests is shared
         ]);
 
         const loadTime2 = Date.now() - startTime;
@@ -2432,25 +2696,42 @@ export default function ProduksiNPKApp() {
             "Permintaan edit telah dikirim ke AVP/Admin untuk approval!"
           );
         } else if (actualIndex !== -1) {
-          const updatedData = [...produksiNPKData];
-          updatedData[actualIndex] = formProduksiNPK;
-          setProduksiNPKData(updatedData);
-
-          // Send data with __original field to help Google Sheets find the correct row
+          // PENTING: Pastikan ID dari editingItem tetap ada
           const dataToUpdate = {
             ...formProduksiNPK,
-            __original: editingItem,
+            id: editingItem.id || formProduksiNPK.id, // Preserve existing ID
+            _plant: editingItem._plant, // Preserve plant info
+            __original: editingItem, // Untuk fallback matching
           };
 
           console.log("[UPDATE] Sending to Google Sheets:", dataToUpdate);
-          await updateData("produksi_npk", dataToUpdate);
+          console.log("[UPDATE] Original item:", editingItem);
+
+          await updateDataForPlant("produksi_npk", dataToUpdate);
+
+          // Update local state setelah berhasil update ke sheets
+          const updatedData = [...produksiNPKData];
+          updatedData[actualIndex] = dataToUpdate;
+          setProduksiNPKData(updatedData);
+
           showSuccess("Data berhasil diupdate!");
         } else {
           throw new Error("Data tidak ditemukan");
         }
       } else {
-        await saveData("produksi_npk", formProduksiNPK);
-        setProduksiNPKData([...produksiNPKData, formProduksiNPK]);
+        // Detect plant from activeTab for admin users
+        const targetPlant = getPlantFromTab(activeTab);
+        const dataToSave = {
+          ...formProduksiNPK,
+          _plant: targetPlant,
+        };
+
+        await saveDataForPlant("produksi_npk", dataToSave);
+
+        // Refresh data dari server untuk mendapatkan ID yang di-generate
+        const refreshed = await fetchDataForPlant("produksi_npk");
+        setProduksiNPKData(refreshed || []);
+
         addNotification(
           "produksi_npk",
           `Produksi NPK tanggal ${new Date(
@@ -2520,21 +2801,30 @@ export default function ProduksiNPKApp() {
 
             const dataToUpdate = {
               ...formProduksiBlending,
+              _plant: editingItem._plant, // Preserve plant info
               __original: editingItem,
             };
 
-            await updateData("produksi_blending", dataToUpdate);
+            await updateDataForPlant("produksi_blending", dataToUpdate);
             showSuccess("Data berhasil diupdate!");
           } else {
             throw new Error("Data tidak ditemukan");
           }
         }
       } else {
-        await saveData("produksi_blending", formProduksiBlending);
-        setProduksiBlendingData([
-          ...produksiBlendingData,
-          formProduksiBlending,
-        ]);
+        // Detect plant from activeTab for admin users
+        const targetPlant = getPlantFromTab(activeTab);
+        const dataToSave = {
+          ...formProduksiBlending,
+          _plant: targetPlant,
+        };
+
+        await saveDataForPlant("produksi_blending", dataToSave);
+
+        // Refresh data dari server untuk mendapatkan ID yang di-generate
+        const refreshed = await fetchDataForPlant("produksi_blending");
+        setProduksiBlendingData(refreshed || []);
+
         addNotification(
           "produksi_blending",
           `Produksi Blending (${
@@ -2602,18 +2892,29 @@ export default function ProduksiNPKApp() {
 
             const dataToUpdate = {
               ...formProduksiNPKMini,
+              _plant: editingItem._plant, // Preserve plant info
               __original: editingItem,
             };
 
-            await updateData("produksi_npk_mini", dataToUpdate);
+            await updateDataForPlant("produksi_npk_mini", dataToUpdate);
             showSuccess("Data berhasil diupdate!");
           } else {
             throw new Error("Data tidak ditemukan");
           }
         }
       } else {
-        await saveData("produksi_npk_mini", formProduksiNPKMini);
-        setProduksiNPKMiniData([...produksiNPKMiniData, formProduksiNPKMini]);
+        // Detect plant from activeTab for admin users
+        const targetPlant = getPlantFromTab(activeTab);
+        const dataToSave = {
+          ...formProduksiNPKMini,
+          _plant: targetPlant,
+        };
+
+        await saveDataForPlant("produksi_npk_mini", dataToSave);
+
+        // Refresh data dari server untuk mendapatkan ID yang di-generate
+        const refreshed = await fetchDataForPlant("produksi_npk_mini");
+        setProduksiNPKMiniData(refreshed || []);
         addNotification(
           "produksi_npk_mini",
           `Produksi NPK Mini tanggal ${new Date(
@@ -2678,18 +2979,33 @@ export default function ProduksiNPKApp() {
             const updatedData = [...timesheetForkliftData];
             updatedData[actualIndex] = formTimesheetForklift;
             setTimesheetForkliftData(updatedData);
-            await updateData("timesheet_forklift", formTimesheetForklift);
+
+            // Preserve _plant and other metadata when updating
+            const dataToUpdate = {
+              ...formTimesheetForklift,
+              _plant: editingItem._plant, // Preserve plant info
+              __original: editingItem,
+            };
+
+            await updateDataForPlant("timesheet_forklift", dataToUpdate);
             showSuccess("Data berhasil diupdate!");
           } else {
             throw new Error("Data tidak ditemukan");
           }
         }
       } else {
-        await saveData("timesheet_forklift", formTimesheetForklift);
-        setTimesheetForkliftData([
-          ...timesheetForkliftData,
-          formTimesheetForklift,
-        ]);
+        // Detect plant from activeTab for admin users
+        const targetPlant = getPlantFromTab(activeTab);
+        const dataToSave = {
+          ...formTimesheetForklift,
+          _plant: targetPlant,
+        };
+
+        await saveDataForPlant("timesheet_forklift", dataToSave);
+
+        // Refresh data dari server untuk mendapatkan ID yang di-generate
+        const refreshed = await fetchDataForPlant("timesheet_forklift");
+        setTimesheetForkliftData(refreshed || []);
         addNotification(
           "timesheet_forklift",
           `Timesheet Forklift (${
@@ -2760,18 +3076,29 @@ export default function ProduksiNPKApp() {
 
             const dataToUpdate = {
               ...formTimesheetLoader,
+              _plant: editingItem._plant, // Preserve plant info
               __original: editingItem,
             };
 
-            await updateData("timesheet_loader", dataToUpdate);
+            await updateDataForPlant("timesheet_loader", dataToUpdate);
             showSuccess("Data berhasil diupdate!");
           } else {
             throw new Error("Data tidak ditemukan");
           }
         }
       } else {
-        await saveData("timesheet_loader", formTimesheetLoader);
-        setTimesheetLoaderData([...timesheetLoaderData, formTimesheetLoader]);
+        // Detect plant from activeTab for admin users
+        const targetPlant = getPlantFromTab(activeTab);
+        const dataToSave = {
+          ...formTimesheetLoader,
+          _plant: targetPlant,
+        };
+
+        await saveDataForPlant("timesheet_loader", dataToSave);
+
+        // Refresh data dari server untuk mendapatkan ID yang di-generate
+        const refreshed = await fetchDataForPlant("timesheet_loader");
+        setTimesheetLoaderData(refreshed || []);
         addNotification(
           "timesheet_loader",
           `Timesheet Loader tanggal ${new Date(
@@ -2833,10 +3160,11 @@ export default function ProduksiNPKApp() {
             const payloadToUpdate = {
               ...formDowntime,
               id: editingItem.id ?? formDowntime.id,
+              _plant: editingItem._plant, // Preserve plant info
               __original: editingItem,
             };
 
-            await updateData("downtime", payloadToUpdate);
+            await updateDataForPlant("downtime", payloadToUpdate);
 
             // Setelah update, ambil ulang seluruh data downtime dari Google Sheets
             const refreshed = await fetchData("downtime");
@@ -2889,8 +3217,11 @@ export default function ProduksiNPKApp() {
           }
         }
       } else {
-        await saveData("downtime", formDowntime);
-        setDowntimeData([...downtimeData, formDowntime]);
+        await saveDataForPlant("downtime", formDowntime);
+
+        // Refresh data dari server untuk mendapatkan ID yang di-generate
+        const refreshed = await fetchDataForPlant("downtime");
+        setDowntimeData(refreshed || []);
         addNotification(
           "downtime",
           `Downtime ${formDowntime.item} tanggal ${new Date(
@@ -2954,10 +3285,11 @@ export default function ProduksiNPKApp() {
             const payloadToUpdate: any = {
               ...formWorkRequest,
               id: editingItem.id ?? formWorkRequest.id,
+              _plant: editingItem._plant, // Preserve plant info
               __original: editingItem,
             };
 
-            await updateData("work_request", payloadToUpdate);
+            await updateDataForPlant("work_request", payloadToUpdate);
 
             // Setelah update, ambil ulang seluruh data work_request dari Google Sheets
             const refreshed = await fetchData("work_request");
@@ -2986,7 +3318,14 @@ export default function ProduksiNPKApp() {
           }
         }
       } else {
-        await saveData("work_request", formWorkRequest);
+        // Detect plant from activeTab for admin users
+        const targetPlant = getPlantFromTab(activeTab);
+        const dataToSave = {
+          ...formWorkRequest,
+          _plant: targetPlant,
+        };
+
+        await saveDataForPlant("work_request", dataToSave);
         const refreshed = await fetchData("work_request");
         const normalizedWR = (refreshed || []).map((item: any) => {
           let tanggal = item.tanggal;
@@ -3070,19 +3409,32 @@ export default function ProduksiNPKApp() {
           const payloadToUpdate: any = {
             ...formBahanBaku,
             id: oldItem?.id, // pertahankan id agar update apps script tepat
+            _plant: editingItem?._plant, // Preserve plant info
           };
           // Sertakan snapshot original jika id belum ada (legacy row)
           if (!oldItem?.id && currentForm.__original) {
             payloadToUpdate.__original = currentForm.__original;
           }
 
-          await updateData("bahan_baku", payloadToUpdate);
+          await updateDataForPlant("bahan_baku", payloadToUpdate);
           const refreshed = await fetchData("bahan_baku");
           setBahanBakuData(refreshed);
           showSuccess("Data berhasil diupdate!");
         }
       } else {
-        await saveData("bahan_baku", formBahanBaku);
+        // Detect plant from activeTab for admin users
+        const targetPlant = getPlantFromTab(activeTab);
+        const dataToSave = {
+          ...formBahanBaku,
+          _plant: targetPlant,
+        };
+
+        await saveDataForPlant("bahan_baku", dataToSave);
+
+        // Refresh data dari server untuk mendapatkan ID yang di-generate
+        const refreshed = await fetchDataForPlant("bahan_baku");
+        setBahanBakuData(refreshed || []);
+
         addNotification(
           "bahan_baku",
           `Bahan Baku ${formBahanBaku.jenisBahanBaku} (${
@@ -3091,8 +3443,6 @@ export default function ProduksiNPKApp() {
             "id-ID"
           )}`
         );
-        const refreshed = await fetchData("bahan_baku");
-        setBahanBakuData(refreshed);
         showSuccess("Data berhasil disimpan!");
       }
       setFormBahanBaku({
@@ -3138,17 +3488,30 @@ export default function ProduksiNPKApp() {
           const payload: any = {
             ...formVibrasi,
             id: oldItem?.id || current.id,
+            _plant: editingItem?._plant, // Preserve plant info
           };
           if (!payload.id && current.__original) {
             payload.__original = current.__original;
           }
-          await updateData("vibrasi", payload);
+          await updateDataForPlant("vibrasi", payload);
           const refreshed = await fetchData("vibrasi");
           setVibrasiData(refreshed || []);
           showSuccess("Data berhasil diupdate!");
         }
       } else {
-        await saveData("vibrasi", formVibrasi);
+        // Detect plant from activeTab for admin users
+        const targetPlant = getPlantFromTab(activeTab);
+        const dataToSave = {
+          ...formVibrasi,
+          _plant: targetPlant,
+        };
+
+        await saveDataForPlant("vibrasi", dataToSave);
+
+        // Refresh data dari server untuk mendapatkan ID yang di-generate
+        const refreshed = await fetchDataForPlant("vibrasi");
+        setVibrasiData(refreshed || []);
+
         addNotification(
           "vibrasi",
           `Vibrasi ${formVibrasi.equipment} (${
@@ -3157,8 +3520,6 @@ export default function ProduksiNPKApp() {
             "id-ID"
           )}`
         );
-        const refreshed = await fetchData("vibrasi");
-        setVibrasiData(refreshed || []);
         showSuccess("Data berhasil disimpan!");
       }
       setFormVibrasi({
@@ -3206,23 +3567,34 @@ export default function ProduksiNPKApp() {
           const payload: any = {
             ...formGatePass,
             id: oldItem?.id || current.id,
+            _plant: editingItem?._plant, // Preserve plant info
           };
           if (!payload.id && current.__original) {
             payload.__original = current.__original;
           }
-          await updateData("gate_pass", payload);
+          await updateDataForPlant("gate_pass", payload);
           const refreshed = await fetchData("gate_pass");
           setGatePassData(refreshed || []);
           showSuccess("Data berhasil diupdate!");
         }
       } else {
-        await saveData("gate_pass", formGatePass);
+        // Detect plant from activeTab for admin users
+        const targetPlant = getPlantFromTab(activeTab);
+        const dataToSave = {
+          ...formGatePass,
+          _plant: targetPlant,
+        };
+
+        await saveDataForPlant("gate_pass", dataToSave);
+
+        // Refresh data dari server untuk mendapatkan ID yang di-generate
+        const refreshed = await fetchDataForPlant("gate_pass");
+        setGatePassData(refreshed || []);
+
         addNotification(
           "gate_pass",
           `Gate Pass ${formGatePass.noFile} - ${formGatePass.namaBarang}`
         );
-        const refreshed = await fetchData("gate_pass");
-        setGatePassData(refreshed || []);
         showSuccess("Data berhasil disimpan!");
       }
       generateGatePassNumber();
@@ -3310,12 +3682,12 @@ export default function ProduksiNPKApp() {
         if (!payload.id && current.__original) {
           payload.__original = current.__original;
         }
-        await updateData("akun", payload);
+        await updateDataForPlant("akun", payload);
         const refreshed = await fetchData("akun");
         setAkunData(refreshed || []);
         showSuccess("Data berhasil diupdate!");
       } else {
-        await saveData("akun", formAkun);
+        await saveDataForPlant("akun", formAkun);
         addNotification("akun", `Akun ${formAkun.noBadge} - ${formAkun.nama}`);
         const refreshed = await fetchData("akun");
         setAkunData(refreshed || []);
@@ -3357,12 +3729,12 @@ export default function ProduksiNPKApp() {
         if (!payload.id && current.__original) {
           payload.__original = current.__original;
         }
-        await updateData("rkap", payload);
+        await updateDataForPlant("rkap", payload);
         const refreshed = await fetchData("rkap");
         setRkapData(refreshed || []);
         showSuccess("Data berhasil diupdate!");
       } else {
-        await saveData("rkap", formRKAP);
+        await saveDataForPlant("rkap", formRKAP);
         addNotification(
           "rkap",
           `RKAP ${formRKAP.bulan} (Target: ${formRKAP.targetRKAP} ton)`
@@ -3374,6 +3746,7 @@ export default function ProduksiNPKApp() {
       setFormRKAP({
         bulan: "Januari",
         targetRKAP: 0,
+        plant: "NPK2",
       });
       setShowForm(false);
       setEditingIndex(null);
@@ -3467,7 +3840,7 @@ export default function ProduksiNPKApp() {
               console.warn("Failed to parse oldData, using dataId:", e);
             }
           }
-          await deleteDataFromSheet(request.sheetType, dataToDelete);
+          await deleteDataFromSheetForPlant(request.sheetType, dataToDelete);
         } else if (request.action === "edit" && request.newData) {
           // Perform update
           try {
@@ -3476,7 +3849,7 @@ export default function ProduksiNPKApp() {
               ? JSON.parse(request.oldData)
               : {};
             const dataToUpdate = { ...newDataObj, __original: oldDataObj };
-            await updateData(request.sheetType, dataToUpdate);
+            await updateDataForPlant(request.sheetType, dataToUpdate);
           } catch (e) {
             console.error("Failed to parse/apply edit data:", e);
           }
@@ -3614,6 +3987,7 @@ export default function ProduksiNPKApp() {
         role: "user",
         namaLengkap: "",
         status: "active",
+        plant: "NPK2",
       });
       setShowForm(false);
       setEditingIndex(null);
@@ -3668,11 +4042,12 @@ export default function ProduksiNPKApp() {
           const payload: any = {
             ...preparedData,
             id: oldItem?.id || current.id,
+            _plant: editingItem?._plant, // Preserve plant info
           };
           if (!payload.id && current.__original) {
             payload.__original = current.__original;
           }
-          await updateData("perta", payload);
+          await updateDataForPlant("perta", payload);
           const refreshed = await fetchData("perta");
 
           // Normalisasi data setelah fetch
@@ -3695,7 +4070,14 @@ export default function ProduksiNPKApp() {
           showSuccess("Data Perta berhasil diupdate!");
         }
       } else {
-        await saveData("perta", preparedData);
+        // Detect plant from activeTab for admin users
+        const targetPlant = getPlantFromTab(activeTab);
+        const dataToSave = {
+          ...preparedData,
+          _plant: targetPlant,
+        };
+
+        await saveDataForPlant("perta", dataToSave);
         addNotification(
           "perta",
           `Perta ${new Date(formPerta.tanggalMulai).toLocaleDateString(
@@ -3784,11 +4166,12 @@ export default function ProduksiNPKApp() {
           const payload: any = {
             ...preparedData,
             id: oldItem?.id || current.id,
+            _plant: editingItem?._plant, // Preserve plant info
           };
           if (!payload.id && current.__original) {
             payload.__original = current.__original;
           }
-          await updateData("trouble_record", payload);
+          await updateDataForPlant("trouble_record", payload);
           const refreshed = await fetchData("trouble_record");
 
           const normalizedRefreshed = (refreshed || []).map((item: any) => ({
@@ -3811,7 +4194,14 @@ export default function ProduksiNPKApp() {
           showSuccess("Trouble Record berhasil diupdate!");
         }
       } else {
-        await saveData("trouble_record", preparedData);
+        // Detect plant from activeTab for admin users
+        const targetPlant = getPlantFromTab(activeTab);
+        const dataToSave = {
+          ...preparedData,
+          _plant: targetPlant,
+        };
+
+        await saveDataForPlant("trouble_record", dataToSave);
         addNotification(
           "trouble_record",
           `Trouble Record ${formTroubleRecord.nomorBerkas}`
@@ -3874,7 +4264,7 @@ export default function ProduksiNPKApp() {
         ),
       };
 
-      await updateData("trouble_record", updatedRecord);
+      await updateDataForPlant("trouble_record", updatedRecord);
       const refreshed = await fetchData("trouble_record");
 
       const normalizedRefreshed = (refreshed || []).map((item: any) => ({
@@ -4003,49 +4393,65 @@ export default function ProduksiNPKApp() {
 
         switch (dataType) {
           case "produksi_npk":
-            dataToDelete = produksiNPKData[index];
-            await deleteDataFromSheet("produksi_npk", dataToDelete);
-            const newNPKData = produksiNPKData.filter((_, i) => i !== index);
-            setProduksiNPKData(newNPKData);
+            dataToDelete = item || produksiNPKData[index];
+            await deleteDataFromSheetForPlant("produksi_npk", dataToDelete);
+            // Refresh dari server untuk memastikan data konsisten
+            {
+              const refreshed = await fetchDataForPlant("produksi_npk");
+              setProduksiNPKData(refreshed || []);
+            }
             break;
           case "produksi_blending":
-            dataToDelete = produksiBlendingData[index];
-            await deleteDataFromSheet("produksi_blending", dataToDelete);
-            const newBlendingData = produksiBlendingData.filter(
-              (_, i) => i !== index
+            dataToDelete = item || produksiBlendingData[index];
+            await deleteDataFromSheetForPlant(
+              "produksi_blending",
+              dataToDelete
             );
-            setProduksiBlendingData(newBlendingData);
+            // Refresh dari server untuk memastikan data konsisten
+            {
+              const refreshed = await fetchDataForPlant("produksi_blending");
+              setProduksiBlendingData(refreshed || []);
+            }
             break;
           case "produksi_npk_mini":
-            dataToDelete = produksiNPKMiniData[index];
-            await deleteDataFromSheet("produksi_npk_mini", dataToDelete);
-            const newMiniData = produksiNPKMiniData.filter(
-              (_, i) => i !== index
+            dataToDelete = item || produksiNPKMiniData[index];
+            await deleteDataFromSheetForPlant(
+              "produksi_npk_mini",
+              dataToDelete
             );
-            setProduksiNPKMiniData(newMiniData);
+            // Refresh dari server untuk memastikan data konsisten
+            {
+              const refreshed = await fetchDataForPlant("produksi_npk_mini");
+              setProduksiNPKMiniData(refreshed || []);
+            }
             break;
           case "timesheet_forklift":
-            dataToDelete = timesheetForkliftData[index];
-            await deleteDataFromSheet("timesheet_forklift", dataToDelete);
-            const newForkliftData = timesheetForkliftData.filter(
-              (_, i) => i !== index
+            dataToDelete = item || timesheetForkliftData[index];
+            await deleteDataFromSheetForPlant(
+              "timesheet_forklift",
+              dataToDelete
             );
-            setTimesheetForkliftData(newForkliftData);
+            // Refresh dari server untuk memastikan data konsisten
+            {
+              const refreshed = await fetchDataForPlant("timesheet_forklift");
+              setTimesheetForkliftData(refreshed || []);
+            }
             break;
           case "timesheet_loader":
-            dataToDelete = timesheetLoaderData[index];
-            await deleteDataFromSheet("timesheet_loader", dataToDelete);
-            const newLoaderData = timesheetLoaderData.filter(
-              (_, i) => i !== index
-            );
-            setTimesheetLoaderData(newLoaderData);
+            dataToDelete = item || timesheetLoaderData[index];
+            await deleteDataFromSheetForPlant("timesheet_loader", dataToDelete);
+            // Refresh dari server untuk memastikan data konsisten
+            {
+              const refreshed = await fetchDataForPlant("timesheet_loader");
+              setTimesheetLoaderData(refreshed || []);
+            }
             break;
           case "downtime":
             // Untuk downtime, gunakan langsung item yang dikirim dari tabel
             // sehingga tidak ada salah mapping index setelah sort & paginate.
             const downtimeItemToDelete = item || downtimeData[index];
             dataToDelete = downtimeItemToDelete;
-            await deleteDataFromSheet("downtime", dataToDelete);
+            await deleteDataFromSheetForPlant("downtime", dataToDelete);
             const newDowntimeData = downtimeData.filter(
               (row) =>
                 (downtimeItemToDelete.id &&
@@ -4059,10 +4465,10 @@ export default function ProduksiNPKApp() {
             // sehingga tidak ada salah mapping index setelah sort & paginate.
             const wrItemToDelete = item || workRequestData[index];
             dataToDelete = wrItemToDelete;
-            await deleteDataFromSheet("work_request", dataToDelete);
+            await deleteDataFromSheetForPlant("work_request", dataToDelete);
             // Refresh dari backend untuk memastikan baris yang terhapus sesuai
             {
-              const refreshed = await fetchData("work_request");
+              const refreshed = await fetchDataForPlant("work_request");
               const normalizedWR = (refreshed || []).map((item: any) => {
                 let tanggal = item.tanggal;
                 if (tanggal instanceof Date) {
@@ -4086,56 +4492,56 @@ export default function ProduksiNPKApp() {
             // sehingga tidak ada salah mapping index setelah sort & paginate.
             const bahanItemToDelete = item || bahanBakuData[index];
             dataToDelete = bahanItemToDelete;
-            await deleteDataFromSheet("bahan_baku", dataToDelete);
+            await deleteDataFromSheetForPlant("bahan_baku", dataToDelete);
             // Refresh data dari backend setelah delete untuk memastikan konsistensi
-            const refreshedBahan = await fetchData("bahan_baku");
+            const refreshedBahan = await fetchDataForPlant("bahan_baku");
             setBahanBakuData(refreshedBahan);
             break;
           case "vibrasi":
             dataToDelete = item || vibrasiData[index];
-            await deleteDataFromSheet("vibrasi", dataToDelete);
+            await deleteDataFromSheetForPlant("vibrasi", dataToDelete);
             {
-              const refreshed = await fetchData("vibrasi");
+              const refreshed = await fetchDataForPlant("vibrasi");
               setVibrasiData(refreshed || []);
             }
             break;
           case "gate_pass":
             dataToDelete = item || gatePassData[index];
-            await deleteDataFromSheet("gate_pass", dataToDelete);
+            await deleteDataFromSheetForPlant("gate_pass", dataToDelete);
             {
-              const refreshed = await fetchData("gate_pass");
+              const refreshed = await fetchDataForPlant("gate_pass");
               setGatePassData(refreshed || []);
             }
             break;
           case "akun":
             dataToDelete = item || akunData[index];
-            await deleteDataFromSheet("akun", dataToDelete);
+            await deleteDataFromSheetForPlant("akun", dataToDelete);
             {
-              const refreshed = await fetchData("akun");
+              const refreshed = await fetchDataForPlant("akun");
               setAkunData(refreshed || []);
             }
             break;
           case "rkap":
             dataToDelete = item || rkapData[index];
-            await deleteDataFromSheet("rkap", dataToDelete);
+            await deleteDataFromSheetForPlant("rkap", dataToDelete);
             {
-              const refreshed = await fetchData("rkap");
+              const refreshed = await fetchDataForPlant("rkap");
               setRkapData(refreshed || []);
             }
             break;
           case "perta":
             dataToDelete = item || pertaData[index];
-            await deleteDataFromSheet("perta", dataToDelete);
+            await deleteDataFromSheetForPlant("perta", dataToDelete);
             {
-              const refreshed = await fetchData("perta");
+              const refreshed = await fetchDataForPlant("perta");
               setPertaData(refreshed || []);
             }
             break;
           case "trouble_record":
             dataToDelete = item || troubleRecordData[index];
-            await deleteDataFromSheet("trouble_record", dataToDelete);
+            await deleteDataFromSheetForPlant("trouble_record", dataToDelete);
             {
-              const refreshed = await fetchData("trouble_record");
+              const refreshed = await fetchDataForPlant("trouble_record");
               setTroubleRecordData(refreshed || []);
             }
             break;
@@ -4354,10 +4760,22 @@ export default function ProduksiNPKApp() {
     const start = toLocalDateOnly(startDate);
     const end = toLocalDateOnly(endDate);
 
-    const filteredData = produksiNPKData.filter((item) => {
-      const itemDate = toLocalDateOnly(String(item.tanggal));
-      return itemDate >= start && itemDate <= end;
-    });
+    const filteredData = produksiNPKData
+      .filter((item) => {
+        // Filter by plant/tab for ALL plant
+        if (userPlant === "ALL") {
+          if (activeTab === "npk_npk1") {
+            return item._plant === "NPK1";
+          } else if (activeTab === "npk") {
+            return item._plant === "NPK2" || !item._plant;
+          }
+        }
+        return true;
+      })
+      .filter((item) => {
+        const itemDate = toLocalDateOnly(String(item.tanggal));
+        return itemDate >= start && itemDate <= end;
+      });
 
     // Sort by date ascending for report
     const sortedData = [...filteredData].sort((a, b) => {
@@ -4437,6 +4855,14 @@ export default function ProduksiNPKApp() {
       ][today.getMonth()]
     } ${today.getFullYear()}`;
 
+    const isNpk1 =
+      userPlant === "NPK1" || (userPlant === "ALL" && activeTab === "npk_npk1");
+    const reportTitle = isNpk1
+      ? "LAPORAN PRODUKSI NPK GRANUL 1"
+      : "LAPORAN PRODUKSI NPK GRANUL 2";
+    const avpTitle = isNpk1 ? "AVP NPKG 1 & Retail" : "AVP NPKG 2 & Blending";
+    const avpSignature = isNpk1 ? "Kudrat 3972085" : "Soewartono 3972109";
+
     // Generate print HTML
     const printWindow = window.open("", "_blank");
     if (printWindow) {
@@ -4444,7 +4870,7 @@ export default function ProduksiNPKApp() {
         <!DOCTYPE html>
         <html>
         <head>
-          <title>LAPORAN PRODUKSI NPK GRANUL 2</title>
+          <title>${reportTitle}</title>
           <style>
             @page {
               size: A4 portrait;
@@ -4523,7 +4949,7 @@ export default function ProduksiNPKApp() {
         </head>
         <body>
           <div class="header">
-            <h2>LAPORAN PRODUKSI NPK GRANUL 2</h2>
+            <h2>${reportTitle}</h2>
             <h3>PERIODE : ${formatPeriod()}</h3>
           </div>
 
@@ -4596,8 +5022,8 @@ export default function ProduksiNPKApp() {
             <div class="signature-box">
               <div>&nbsp;</div>
               <div style="margin-top: 10px;">Mengetahui</div>
-              <div>AVP NPKG 2 & Blending</div>
-              <div class="signature-line">Soewartono 3972109</div>
+              <div>${avpTitle}</div>
+              <div class="signature-line">${avpSignature}</div>
             </div>
             <div class="signature-box">
               <div>Cikampek, ${todayFormatted}</div>
@@ -4635,8 +5061,34 @@ export default function ProduksiNPKApp() {
     const start = toLocalDateOnly(startDate);
     const end = toLocalDateOnly(endDate);
 
+    const isRetailPrint =
+      userPlant === "NPK1" || (userPlant === "ALL" && activeTab === "retail");
     const filteredData = produksiBlendingData
-      .filter((item) => item.kategori === "Oversack")
+      .filter((item) => {
+        // Filter by plant/tab first
+        if (userPlant === "ALL") {
+          if (activeTab === "retail") {
+            return item._plant === "NPK1";
+          } else if (activeTab === "blending") {
+            const plantMatch = item._plant === "NPK2" || !item._plant;
+            // Apply kategori filter based on selection
+            if (printBlendingKategori === "all") {
+              return plantMatch;
+            }
+            return plantMatch && item.kategori === printBlendingKategori;
+          }
+          return false;
+        }
+        // For specific plant users
+        if (!isRetailPrint) {
+          // Apply kategori filter
+          if (printBlendingKategori === "all") {
+            return true;
+          }
+          return item.kategori === printBlendingKategori;
+        }
+        return true;
+      })
       .filter((item) => {
         const itemDate = toLocalDateOnly(String(item.tanggal));
         return itemDate >= start && itemDate <= end;
@@ -4687,13 +5139,29 @@ export default function ProduksiNPKApp() {
       )}-${String(today.getDate()).padStart(2, "0")}`
     );
 
+    const getReportTitle = () => {
+      if (isRetailPrint) return "LAPORAN PRODUKSI RETAIL";
+      if (printBlendingKategori === "Oversack")
+        return "LAPORAN PRODUKSI BLENDING (OVER SACK)";
+      if (printBlendingKategori === "Fresh")
+        return "LAPORAN PRODUKSI BLENDING (FRESH)";
+      return "LAPORAN PRODUKSI BLENDING";
+    };
+
+    const reportTitle = getReportTitle();
+    const avpTitle = isRetailPrint
+      ? "AVP NPK 1 & Retail"
+      : "AVP NPK 2 & Blending";
+    const avpName = isRetailPrint ? "Kudrat" : "Soewartono";
+    const avpBadge = isRetailPrint ? "3972085" : "3972109";
+
     const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
         <head>
-          <title>LAPORAN PRODUKSI BLENDING (OVER SACK)</title>
+          <title>${reportTitle}</title>
           <style>
             @page {
               size: A4 portrait;
@@ -4731,7 +5199,7 @@ export default function ProduksiNPKApp() {
         <body>
           <table>
             <tr class="title-row">
-              <td class="center bold" colspan="3">LAPORAN PRODUKSI BLENDING (OVER SACK)</td>
+              <td class="center bold" colspan="3">${reportTitle}</td>
             </tr>
             <tr class="title-row">
               <td class="center bold" colspan="3">PERIODE : ${formatPeriodText().toUpperCase()}</td>
@@ -4746,15 +5214,15 @@ export default function ProduksiNPKApp() {
               .map(
                 (item) => `
               <tr>
-                <td>${formatDateLongIndo(item.tanggal)}</td>
+                <td class="center">${formatDateLongIndo(item.tanggal)}</td>
                 <td class="center">${item.formula || "-"}</td>
                 <td class="right">${
-                  item.tonase
-                    ? Number(item.tonase).toLocaleString("id-ID", {
+                  item.tonase !== undefined && item.tonase !== null
+                    ? Number(item.tonase || 0).toLocaleString("id-ID", {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                       }) + " Ton"
-                    : "-"
+                    : "0.00 Ton"
                 }</td>
               </tr>
             `
@@ -4778,7 +5246,7 @@ export default function ProduksiNPKApp() {
             <tr class="no-border">
               <td class="center">Section Head</td>
               <td></td>
-              <td class="center">AVP NPK 2 & Blending</td>
+              <td class="center">${avpTitle}</td>
             </tr>
             <tr class="no-border"><td colspan="3" style="height: 50px;"></td></tr>
             <tr class="no-border">
@@ -4786,14 +5254,14 @@ export default function ProduksiNPKApp() {
                 printBlendingSectionHeadName || "Yohan Triyono"
               }</td>
               <td></td>
-              <td class="center">Soewartono</td>
+              <td class="center">${avpName}</td>
             </tr>
             <tr class="no-border">
               <td class="center">${
                 printBlendingSectionHeadBadge || "3052363"
               }</td>
               <td></td>
-              <td class="center">3972109</td>
+              <td class="center">${avpBadge}</td>
             </tr>
           </table>
 
@@ -4819,10 +5287,18 @@ export default function ProduksiNPKApp() {
     const start = toLocalDateOnly(startDate);
     const end = toLocalDateOnly(endDate);
 
-    const filteredData = produksiNPKMiniData.filter((item) => {
-      const itemDate = toLocalDateOnly(String(item.tanggal));
-      return itemDate >= start && itemDate <= end;
-    });
+    const filteredData = produksiNPKMiniData
+      .filter((item) => {
+        // Filter by plant - mini is NPK2 only
+        if (userPlant === "ALL") {
+          return item._plant === "NPK2" || !item._plant;
+        }
+        return true;
+      })
+      .filter((item) => {
+        const itemDate = toLocalDateOnly(String(item.tanggal));
+        return itemDate >= start && itemDate <= end;
+      });
 
     const sortedData = [...filteredData].sort((a, b) => {
       return new Date(a.tanggal).getTime() - new Date(b.tanggal).getTime();
@@ -4868,6 +5344,10 @@ export default function ProduksiNPKApp() {
         "0"
       )}-${String(today.getDate()).padStart(2, "0")}`
     );
+
+    // NPK Mini is always NPK2
+    const avpName = "Soewartono";
+    const avpBadge = "3972109";
 
     const printWindow = window.open("", "_blank");
     if (printWindow) {
@@ -4966,12 +5446,12 @@ export default function ProduksiNPKApp() {
             <tr class="no-border">
               <td></td>
               <td></td>
-              <td class="center">Soewartono</td>
+              <td class="center">${avpName}</td>
             </tr>
             <tr class="no-border">
               <td></td>
               <td></td>
-              <td class="center">3972109</td>
+              <td class="center">${avpBadge}</td>
             </tr>
           </table>
 
@@ -5114,8 +5594,21 @@ export default function ProduksiNPKApp() {
     const currentMonth = new Date().getMonth();
     const currentYear = dashboardYear;
 
+    // Determine which plant to show based on userPlant and dashboardPlantFilter
+    const activePlantFilter =
+      userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+
+    // Filter data based on plant
+    const filteredProduksiData = produksiNPKData.filter((item: any) => {
+      if (activePlantFilter === "ALL") return true;
+      return (
+        item._plant === activePlantFilter ||
+        (!item._plant && activePlantFilter === "NPK2")
+      );
+    });
+
     // Total production this month
-    const monthlyProduction = produksiNPKData
+    const monthlyProduction = filteredProduksiData
       .filter((item) => {
         const itemDate = new Date(item.tanggal);
         return (
@@ -5126,7 +5619,7 @@ export default function ProduksiNPKApp() {
       .reduce((sum, item) => sum + (item.total || 0), 0);
 
     // Total production this year
-    const yearlyProduction = produksiNPKData
+    const yearlyProduction = filteredProduksiData
       .filter((item) => {
         const itemDate = new Date(item.tanggal);
         return itemDate.getFullYear() === currentYear;
@@ -5149,8 +5642,18 @@ export default function ProduksiNPKApp() {
       "Desember",
     ];
     const currentMonthName = monthNames[currentMonth];
+
+    // Filter RKAP based on plant
+    const filteredRKAPData = rkapData.filter((r: any) => {
+      if (activePlantFilter === "ALL") return true;
+      return (
+        r.plant === activePlantFilter ||
+        (!r.plant && activePlantFilter === "NPK2")
+      );
+    });
+
     const monthlyRKAP = Number(
-      rkapData.find(
+      filteredRKAPData.find(
         (r: any) =>
           r.bulan === currentMonthName &&
           (Number((r as any).tahun) || currentYear) === currentYear
@@ -5158,7 +5661,7 @@ export default function ProduksiNPKApp() {
     );
 
     // Total RKAP for year
-    const yearlyRKAP = rkapData
+    const yearlyRKAP = filteredRKAPData
       .filter(
         (r: any) => (Number((r as any).tahun) || currentYear) === currentYear
       )
@@ -5172,7 +5675,7 @@ export default function ProduksiNPKApp() {
 
     // Monthly breakdown
     const monthlyBreakdown = monthNames.map((month, index) => {
-      const monthData = produksiNPKData.filter((item) => {
+      const monthData = filteredProduksiData.filter((item) => {
         const itemDate = new Date(item.tanggal);
         return (
           itemDate.getMonth() === index &&
@@ -5184,7 +5687,7 @@ export default function ProduksiNPKApp() {
         0
       );
       const rkap = Number(
-        rkapData.find(
+        filteredRKAPData.find(
           (r: any) =>
             r.bulan === month &&
             (Number((r as any).tahun) || currentYear) === currentYear
@@ -5272,6 +5775,24 @@ export default function ProduksiNPKApp() {
     const today = new Date();
     const todayText = formatDate(today);
 
+    // Detect plant from activeTab for ALL users, or use userPlant
+    let detectedPlant = userPlant;
+    if (userPlant === "ALL") {
+      if (activeTab === "forklift_npk1") {
+        detectedPlant = "NPK1";
+      } else if (activeTab === "forklift_npk2" || activeTab === "forklift") {
+        detectedPlant = "NPK2";
+      } else if (filtered.length > 0) {
+        detectedPlant = (filtered[0]._plant as "NPK1" | "NPK2") || "NPK2";
+      }
+    }
+
+    const isNpk1 = detectedPlant === "NPK1";
+    const plantTitle = isNpk1 ? "NPK GRANULAR 1" : "NPK GRANULAR 2";
+    const avpTitle = isNpk1 ? "AVP NPKG 1 & RETAIL" : "AVP NPKG 2 & BLENDING";
+    const avpNameUpper = isNpk1 ? "KUDRAT" : "SOEWARTONO";
+    const avpBadge = isNpk1 ? "3972085" : "3972109";
+
     const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(`
@@ -5296,7 +5817,7 @@ export default function ProduksiNPKApp() {
               <td colspan="9" class="center bold">HASIL PEMERIKSAAN FORKLIFT</td>
             </tr>
             <tr class="no-border">
-              <td colspan="9" class="center bold">NPK GRANULAR 2</td>
+              <td colspan="9" class="center bold">${plantTitle}</td>
             </tr>
             <tr class="no-border"><td colspan="8"></td></tr>
             <tr class="bold">
@@ -5368,14 +5889,14 @@ export default function ProduksiNPKApp() {
             </tr>
             <tr class="no-border"><td colspan="8" style="height: 40px;"></td></tr>
             <tr class="no-border">
-              <td colspan="8" class="right bold">AVP NPKG 2 & BLENDING</td>
+              <td colspan="8" class="right bold">${avpTitle}</td>
             </tr>
             <tr class="no-border"><td colspan="8" style="height: 40px;"></td></tr>
             <tr class="no-border">
-              <td colspan="8" class="right bold">SOEWARTONO</td>
+              <td colspan="8" class="right bold">${avpNameUpper}</td>
             </tr>
             <tr class="no-border">
-              <td colspan="8" class="right bold">3972109</td>
+              <td colspan="8" class="right bold">${avpBadge}</td>
             </tr>
           </table>
 
@@ -5481,12 +6002,30 @@ export default function ProduksiNPKApp() {
     const today = new Date();
     const todayText = formatDate(today);
 
+    // Detect plant from activeTab for ALL users, or use userPlant
+    let detectedPlant = userPlant;
+    if (userPlant === "ALL") {
+      if (activeTab === "loader_npk1") {
+        detectedPlant = "NPK1";
+      } else if (activeTab === "loader_npk2" || activeTab === "loader") {
+        detectedPlant = "NPK2";
+      } else if (filtered.length > 0) {
+        detectedPlant = (filtered[0]._plant as "NPK1" | "NPK2") || "NPK2";
+      }
+    }
+
+    const isNpk1 = detectedPlant === "NPK1";
+    const loaderPlantTitle = isNpk1 ? "NPK GRANUL 1" : "NPK GRANUL 2";
+    const avpTitle = isNpk1 ? "AVP NPKG 1 & Retail" : "AVP NPKG 2 & Blending";
+    const avpName = isNpk1 ? "Kudrat" : "Soewartono";
+    const avpBadge = isNpk1 ? "3972085" : "3972109";
+
     const generateHTML = () => {
       return `
         <div>
           <table>
             <tr class="no-border">
-              <td colspan="7" class="center bold" style="font-size: 11pt;">TIME SHEET LOADER SEWAAN NPK GRANUL 2</td>
+              <td colspan="7" class="center bold" style="font-size: 11pt;">TIME SHEET LOADER SEWAAN ${loaderPlantTitle}</td>
             </tr>
             <tr class="no-border">
               <td colspan="7" class="center bold" style="font-size: 10pt;">PT. PUPUK KUJANG CIKAMPEK</td>
@@ -5540,18 +6079,18 @@ export default function ProduksiNPKApp() {
               <td colspan="3" class="center bold">Pelaksana</td>
             </tr>
             <tr class="no-border">
-              <td colspan="2" class="center">AVP NPKG 2 & Blending</td>
+              <td colspan="2" class="center">${avpTitle}</td>
               <td colspan="2" class="center">Direktur CV. Putra Manggala</td>
               <td colspan="3"></td>
             </tr>
             <tr class="no-border"><td colspan="7" style="height: 60px;"></td></tr>
             <tr class="no-border">
-              <td colspan="2" class="center bold" style="text-decoration: underline;">Soewartono</td>
+              <td colspan="2" class="center bold" style="text-decoration: underline;">${avpName}</td>
               <td colspan="2" class="center bold" style="text-decoration: underline;">Isep Surherlan</td>
               <td colspan="3" class="center bold" style="text-decoration: underline; font-style: italic;">Operator Loader</td>
             </tr>
             <tr class="no-border">
-              <td colspan="2" class="center">3972109</td>
+              <td colspan="2" class="center">${avpBadge}</td>
               <td colspan="2" class="center">Direktur CV. Putra Manggala</td>
               <td colspan="3"></td>
             </tr>
@@ -5736,21 +6275,111 @@ export default function ProduksiNPKApp() {
   const renderDashboard = () => {
     return (
       <div className="space-y-6">
-        {/* Year Filter */}
-        <div className="flex items-center justify-end gap-3">
-          <label className="text-sm text-gray-600">Tahun</label>
-          <select
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00B4D8]"
-            value={dashboardYear}
-            onChange={(e) => setDashboardYear(Number(e.target.value))}
-          >
-            {availableYears.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+        {/* Year and Plant Filters */}
+        <div className="flex items-center justify-end gap-6">
+          {/* Plant Filter - only for users with ALL access */}
+          {userPlant === "ALL" && (
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-gray-600 font-medium">
+                Plant:
+              </label>
+              <select
+                className="border-2 border-[#00B4D8] rounded-md px-4 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#00B4D8] bg-white"
+                value={dashboardPlantFilter}
+                onChange={(e) =>
+                  setDashboardPlantFilter(
+                    e.target.value as "NPK1" | "NPK2" | "ALL"
+                  )
+                }
+              >
+                <option value="ALL">🏭 Kedua Plant (Gabungan)</option>
+                <option value="NPK1">🔵 NPK 1 Only</option>
+                <option value="NPK2">🟢 NPK 2 Only</option>
+              </select>
+            </div>
+          )}
+
+          {/* Year Filter */}
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-600 font-medium">Tahun:</label>
+            <select
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#00B4D8]"
+              value={dashboardYear}
+              onChange={(e) => setDashboardYear(Number(e.target.value))}
+            >
+              {availableYears.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+
+        {/* Plant Info Banner */}
+        <div
+          className={`rounded-lg p-4 border-2 ${
+            userPlant === "NPK1"
+              ? "bg-blue-50 border-blue-300"
+              : userPlant === "NPK2"
+              ? "bg-green-50 border-green-300"
+              : dashboardPlantFilter === "ALL"
+              ? "bg-purple-50 border-purple-300"
+              : dashboardPlantFilter === "NPK1"
+              ? "bg-blue-50 border-blue-300"
+              : "bg-green-50 border-green-300"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Factory
+                className={`w-6 h-6 ${
+                  userPlant === "NPK1" || dashboardPlantFilter === "NPK1"
+                    ? "text-blue-600"
+                    : userPlant === "NPK2" || dashboardPlantFilter === "NPK2"
+                    ? "text-green-600"
+                    : "text-purple-600"
+                }`}
+              />
+              <div>
+                <div className="font-bold text-lg">
+                  {userPlant === "ALL"
+                    ? dashboardPlantFilter === "ALL"
+                      ? "Dashboard Gabungan NPK 1 & NPK 2"
+                      : dashboardPlantFilter === "NPK1"
+                      ? "Plant NPK 1 (Retail)"
+                      : "Plant NPK 2 (Blending + Mini)"
+                    : userPlant === "NPK1"
+                    ? "Plant NPK 1 (Retail)"
+                    : "Plant NPK 2 (Blending + Mini)"}
+                </div>
+                <div className="text-sm text-gray-600">
+                  {userPlant === "ALL" && dashboardPlantFilter === "ALL"
+                    ? "Menampilkan data produksi dari kedua pabrik untuk laporan management"
+                    : userPlant === "NPK1" || dashboardPlantFilter === "NPK1"
+                    ? "Data produksi retail NPK 1"
+                    : "Data produksi blending dan NPK mini"}
+                </div>
+              </div>
+            </div>
+            <div
+              className={`px-4 py-2 rounded-full font-bold text-sm ${
+                userPlant === "NPK1" || dashboardPlantFilter === "NPK1"
+                  ? "bg-blue-200 text-blue-800"
+                  : userPlant === "NPK2" || dashboardPlantFilter === "NPK2"
+                  ? "bg-green-200 text-green-800"
+                  : "bg-purple-200 text-purple-800"
+              }`}
+            >
+              {userPlant === "ALL" && dashboardPlantFilter === "ALL"
+                ? "🏭 GABUNGAN"
+                : userPlant === "NPK1" || dashboardPlantFilter === "NPK1"
+                ? "🔵 NPK 1"
+                : "🟢 NPK 2"}
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-[#00B4D8] to-[#5FE9C5] text-white shadow-lg border-none">
             <CardHeader className="pb-3">
@@ -6723,6 +7352,82 @@ export default function ProduksiNPKApp() {
     );
   };
 
+  const isRetailMode =
+    userPlant === "NPK1" || (userPlant === "ALL" && activeTab === "retail");
+
+  // Helper functions to get displayed data based on plant and active tab
+  const getPlantFromTab = (tab: string): "NPK1" | "NPK2" | "ALL" => {
+    if (tab.endsWith("_npk1")) return "NPK1";
+    if (tab.endsWith("_npk2")) return "NPK2";
+    return userPlant;
+  };
+
+  const getDisplayedDataByTab = (dataArray: any[], activeTabName: string) => {
+    if (userPlant === "ALL") {
+      const plantFilter = getPlantFromTab(activeTabName);
+      if (plantFilter === "NPK1") {
+        return dataArray.filter((d) => d._plant === "NPK1");
+      } else if (plantFilter === "NPK2") {
+        return dataArray.filter((d) => d._plant === "NPK2" || !d._plant);
+      }
+      return dataArray;
+    }
+    return dataArray;
+  };
+
+  const getDisplayedNpkData = () => {
+    if (userPlant === "ALL") {
+      let filtered;
+      if (activeTab === "npk_npk1") {
+        filtered = produksiNPKData.filter((d) => d._plant === "NPK1");
+        console.log(
+          `🔍 NPK filter (tab=${activeTab}): ${filtered.length}/${produksiNPKData.length} items (NPK1)`
+        );
+        return filtered;
+      }
+      if (activeTab === "npk") {
+        filtered = produksiNPKData.filter(
+          (d) => d._plant === "NPK2" || !d._plant
+        );
+        console.log(
+          `🔍 NPK filter (tab=${activeTab}): ${filtered.length}/${produksiNPKData.length} items (NPK2)`
+        );
+        return filtered;
+      }
+      // Default: show all when no specific tab
+      console.log(
+        `🔍 NPK filter (tab=${activeTab}): ${produksiNPKData.length} items (all)`
+      );
+      return produksiNPKData;
+    }
+    return produksiNPKData;
+  };
+
+  const getDisplayedBlendingData = () => {
+    if (userPlant === "ALL") {
+      if (activeTab === "retail") {
+        return produksiBlendingData.filter((d) => d._plant === "NPK1");
+      }
+      if (activeTab === "blending") {
+        return produksiBlendingData.filter(
+          (d) => d._plant === "NPK2" || !d._plant
+        );
+      }
+      // Default: show all when no specific tab
+      return produksiBlendingData;
+    }
+    return produksiBlendingData;
+  };
+
+  const getDisplayedMiniData = () => {
+    if (userPlant === "ALL") {
+      return produksiNPKMiniData.filter(
+        (d) => d._plant === "NPK2" || !d._plant
+      );
+    }
+    return produksiNPKMiniData;
+  };
+
   // Render content based on active navigation
   const renderContent = () => {
     if (activeNav === "home") {
@@ -6730,13 +7435,21 @@ export default function ProduksiNPKApp() {
     }
 
     if (activeNav === "produksi") {
-      if (activeTab === "npk") {
+      if (activeTab === "npk" || activeTab === "npk_npk1") {
+        const displayedNpkData = getDisplayedNpkData();
+        // NPK1 now allowed (Granul NPK1)
         return (
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-[#001B44]">Produksi Granul</CardTitle>
+              <CardTitle className="text-[#001B44]">
+                {userPlant === "NPK1" || activeTab === "npk_npk1"
+                  ? "Produksi Granul NPK 1"
+                  : "Produksi Granul"}
+              </CardTitle>
               <CardDescription>
-                Data produksi NPK Granul harian per shift
+                {userPlant === "NPK1" || activeTab === "npk_npk1"
+                  ? "Data produksi NPK Granul Plant NPK 1"
+                  : "Data produksi NPK Granul harian per shift"}
               </CardDescription>
             </CardHeader>
             <CardContent className="bg-gray-50 p-6">
@@ -6961,7 +7674,10 @@ export default function ProduksiNPKApp() {
 
               {/* Print Modal */}
               <Modal
-                isOpen={showPrintModal}
+                isOpen={
+                  showPrintModal &&
+                  (activeTab === "npk" || activeTab === "npk_npk1")
+                }
                 onClose={() => setShowPrintModal(false)}
                 title="Print Laporan Produksi NPK"
                 size="md"
@@ -7123,7 +7839,7 @@ export default function ProduksiNPKApp() {
                     </thead>
                     <tbody className="bg-white">
                       {paginateData(
-                        sortByDateDesc(produksiNPKData),
+                        sortByDateDesc(displayedNpkData),
                         currentPage.produksi_npk,
                         itemsPerPage
                       ).map((item, idx) => {
@@ -7214,7 +7930,7 @@ export default function ProduksiNPKApp() {
                 <Pagination
                   currentPage={currentPage.produksi_npk}
                   totalPages={getTotalPages(
-                    produksiNPKData.length,
+                    displayedNpkData.length,
                     itemsPerPage
                   )}
                   onPageChange={(page) =>
@@ -7227,21 +7943,33 @@ export default function ProduksiNPKApp() {
         );
       }
 
-      if (activeTab === "blending") {
+      if (activeTab === "blending" || activeTab === "retail") {
+        const blendingData = getDisplayedBlendingData();
+        const retailMode = isRetailMode || activeTab === "retail";
+        const title = retailMode ? "Produksi Retail" : "Produksi Blending";
+        const description = retailMode
+          ? "Data produksi retail Plant NPK 1"
+          : "Data produksi blending";
+
         return (
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-[#001B44]">
-                Produksi Blending
-              </CardTitle>
-              <CardDescription>Data produksi blending</CardDescription>
+              <CardTitle className="text-[#001B44]">{title}</CardTitle>
+              <CardDescription>{description}</CardDescription>
             </CardHeader>
             <CardContent className="bg-gray-50 p-6">
               {/* Print Modal Blending */}
               <Modal
-                isOpen={showPrintModal && activeTab === "blending"}
+                isOpen={
+                  showPrintModal &&
+                  (activeTab === "blending" || activeTab === "retail")
+                }
                 onClose={() => setShowPrintModal(false)}
-                title="Print Laporan Produksi Blending (Over Sack)"
+                title={
+                  retailMode
+                    ? "Print Laporan Produksi Retail"
+                    : "Print Laporan Produksi Blending"
+                }
                 size="md"
               >
                 <div className="space-y-4">
@@ -7275,6 +8003,25 @@ export default function ProduksiNPKApp() {
                       />
                     </div>
                   </div>
+                  {!retailMode && (
+                    <div>
+                      <Label htmlFor="kategoriBlending">Kategori</Label>
+                      <select
+                        id="kategoriBlending"
+                        value={printBlendingKategori}
+                        onChange={(e) =>
+                          setPrintBlendingKategori(
+                            e.target.value as "all" | "Oversack" | "Fresh"
+                          )
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00B4D8]"
+                      >
+                        <option value="all">Semua Kategori</option>
+                        <option value="Oversack">Oversack</option>
+                        <option value="Fresh">Fresh</option>
+                      </select>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="sectionHeadName">Nama Section Head</Label>
@@ -7328,7 +8075,11 @@ export default function ProduksiNPKApp() {
                 }}
                 title={
                   editingIndex !== null
-                    ? "Edit Data Produksi Blending"
+                    ? retailMode
+                      ? "Edit Data Produksi Retail"
+                      : "Edit Data Produksi Blending"
+                    : retailMode
+                    ? "Tambah Data Produksi Retail"
                     : "Tambah Data Produksi Blending"
                 }
                 size="lg"
@@ -7337,7 +8088,11 @@ export default function ProduksiNPKApp() {
                   onSubmit={handleSubmitProduksiBlending}
                   className="space-y-4"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div
+                    className={`grid grid-cols-1 ${
+                      retailMode ? "md:grid-cols-1" : "md:grid-cols-2"
+                    } gap-4`}
+                  >
                     <div>
                       <Label htmlFor="tanggalBlending">Tanggal</Label>
                       <Input
@@ -7353,26 +8108,28 @@ export default function ProduksiNPKApp() {
                         required
                       />
                     </div>
-                    <div>
-                      <Label htmlFor="kategori">Kategori</Label>
-                      <Select
-                        value={formProduksiBlending.kategori}
-                        onValueChange={(value) =>
-                          setFormProduksiBlending({
-                            ...formProduksiBlending,
-                            kategori: value,
-                          })
-                        }
-                      >
-                        <SelectTrigger id="kategori">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="Fresh">Fresh</SelectItem>
-                          <SelectItem value="Oversack">Oversack</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                    {!retailMode && (
+                      <div>
+                        <Label htmlFor="kategori">Kategori</Label>
+                        <Select
+                          value={formProduksiBlending.kategori}
+                          onValueChange={(value) =>
+                            setFormProduksiBlending({
+                              ...formProduksiBlending,
+                              kategori: value,
+                            })
+                          }
+                        >
+                          <SelectTrigger id="kategori">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Fresh">Fresh</SelectItem>
+                            <SelectItem value="Oversack">Oversack</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     <div>
                       <Label htmlFor="formula">Formula</Label>
                       <Input
@@ -7442,11 +8199,16 @@ export default function ProduksiNPKApp() {
               <div className="mt-8">
                 <div className="flex justify-between items-center mb-4">
                   <h4 className="font-semibold text-[#001B44] text-lg">
-                    Data Produksi Blending
+                    {retailMode
+                      ? "Data Produksi Retail"
+                      : "Data Produksi Blending"}
                   </h4>
                   <div className="flex gap-2">
                     <Button
-                      onClick={() => setShowPrintModal(true)}
+                      onClick={() => {
+                        setShowPrintModal(true);
+                        setPrintBlendingKategori("all");
+                      }}
                       variant="outline"
                       className="border-[#00B4D8] text-[#00B4D8] hover:bg-[#00B4D8] hover:text-white"
                     >
@@ -7460,7 +8222,7 @@ export default function ProduksiNPKApp() {
                           setEditingIndex(null);
                           setFormProduksiBlending({
                             tanggal: new Date().toISOString().split("T")[0],
-                            kategori: "Fresh",
+                            kategori: retailMode ? "Retail" : "Fresh",
                             formula: "",
                             tonase: 0,
                           });
@@ -7480,9 +8242,11 @@ export default function ProduksiNPKApp() {
                         <th className="text-left py-3 px-4 font-semibold">
                           Tanggal
                         </th>
-                        <th className="text-left py-3 px-4 font-semibold">
-                          Kategori
-                        </th>
+                        {!retailMode && (
+                          <th className="text-left py-3 px-4 font-semibold">
+                            Kategori
+                          </th>
+                        )}
                         <th className="text-left py-3 px-4 font-semibold">
                           Formula
                         </th>
@@ -7496,7 +8260,7 @@ export default function ProduksiNPKApp() {
                     </thead>
                     <tbody className="bg-white">
                       {paginateData(
-                        sortByDateDesc(produksiBlendingData),
+                        sortByDateDesc(blendingData),
                         currentPage.produksi_blending,
                         itemsPerPage
                       ).map((item, idx) => {
@@ -7522,9 +8286,11 @@ export default function ProduksiNPKApp() {
                                 }
                               )}
                             </td>
-                            <td className="py-3 px-4 text-gray-700">
-                              {item.kategori}
-                            </td>
+                            {!retailMode && (
+                              <td className="py-3 px-4 text-gray-700">
+                                {item.kategori}
+                              </td>
+                            )}
                             <td className="py-3 px-4 text-gray-700">
                               {item.formula}
                             </td>
@@ -7573,10 +8339,7 @@ export default function ProduksiNPKApp() {
                 </div>
                 <Pagination
                   currentPage={currentPage.produksi_blending}
-                  totalPages={getTotalPages(
-                    produksiBlendingData.length,
-                    itemsPerPage
-                  )}
+                  totalPages={getTotalPages(blendingData.length, itemsPerPage)}
                   onPageChange={(page) =>
                     handlePageChange("produksi_blending", page)
                   }
@@ -7588,6 +8351,27 @@ export default function ProduksiNPKApp() {
       }
 
       if (activeTab === "mini") {
+        // NPK1 tidak boleh akses Produksi NPK Mini (kecuali mode ALL memilih tab lain)
+        if (userPlant === "NPK1") {
+          return (
+            <Card className="border-red-200 shadow-md">
+              <CardContent className="flex items-center justify-center h-96">
+                <div className="text-center">
+                  <p className="text-red-500 font-semibold">❌ Akses Ditolak</p>
+                  <p className="text-gray-500 mt-2">
+                    Plant NPK 1 tidak memiliki Produksi NPK Mini.
+                  </p>
+                  <p className="text-gray-500">
+                    Silakan pilih "Produksi Retail".
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        }
+
+        const displayedMiniData = getDisplayedMiniData();
+
         return (
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
@@ -7812,7 +8596,7 @@ export default function ProduksiNPKApp() {
                     </thead>
                     <tbody className="bg-white">
                       {paginateData(
-                        sortByDateDesc(produksiNPKMiniData),
+                        sortByDateDesc(displayedMiniData),
                         currentPage.produksi_npk_mini,
                         itemsPerPage
                       ).map((item, idx) => {
@@ -7886,7 +8670,7 @@ export default function ProduksiNPKApp() {
                 <Pagination
                   currentPage={currentPage.produksi_npk_mini}
                   totalPages={getTotalPages(
-                    produksiNPKMiniData.length,
+                    displayedMiniData.length,
                     itemsPerPage
                   )}
                   onPageChange={(page) =>
@@ -7901,12 +8685,36 @@ export default function ProduksiNPKApp() {
     }
 
     if (activeNav === "laporan") {
-      if (activeTab === "forklift") {
+      const isForkliftTab =
+        activeTab === "forklift" ||
+        activeTab === "forklift_npk1" ||
+        activeTab === "forklift_npk2";
+      const isLoaderTab =
+        activeTab === "loader" ||
+        activeTab === "loader_npk1" ||
+        activeTab === "loader_npk2";
+      const isDowntimeTab =
+        activeTab === "downtime" ||
+        activeTab === "downtime_npk1" ||
+        activeTab === "downtime_npk2";
+
+      if (isForkliftTab) {
+        const filteredForkliftData = getDisplayedDataByTab(
+          timesheetForkliftData,
+          activeTab
+        );
+        const plantLabel =
+          getPlantFromTab(activeTab) === "NPK1"
+            ? " NPK 1"
+            : getPlantFromTab(activeTab) === "NPK2"
+            ? " NPK 2"
+            : "";
+
         return (
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
               <CardTitle className="text-[#001B44]">
-                Timesheet Forklift
+                Timesheet Forklift{plantLabel}
               </CardTitle>
               <CardDescription>
                 Input timesheet dan tracking downtime forklift
@@ -7939,11 +8747,11 @@ export default function ProduksiNPKApp() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="F19">F19</SelectItem>
-                        <SelectItem value="F20">F20</SelectItem>
-                        <SelectItem value="F21">F21</SelectItem>
-                        <SelectItem value="F22">F22</SelectItem>
-                        <SelectItem value="F23">F23</SelectItem>
+                        {forkliftOptions.map((opt) => (
+                          <SelectItem key={opt} value={opt}>
+                            {opt}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -8016,11 +8824,11 @@ export default function ProduksiNPKApp() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="F19">F19</SelectItem>
-                          <SelectItem value="F20">F20</SelectItem>
-                          <SelectItem value="F21">F21</SelectItem>
-                          <SelectItem value="F22">F22</SelectItem>
-                          <SelectItem value="F23">F23</SelectItem>
+                          {forkliftOptions.map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -8204,7 +9012,7 @@ export default function ProduksiNPKApp() {
                     </thead>
                     <tbody>
                       {paginateData(
-                        sortByDateDesc(timesheetForkliftData),
+                        sortByDateDesc(filteredForkliftData),
                         currentPage.timesheet_forklift,
                         itemsPerPage
                       ).map((item, idx) => {
@@ -8293,7 +9101,7 @@ export default function ProduksiNPKApp() {
                 <Pagination
                   currentPage={currentPage.timesheet_forklift}
                   totalPages={getTotalPages(
-                    timesheetForkliftData.length,
+                    filteredForkliftData.length,
                     itemsPerPage
                   )}
                   onPageChange={(page) =>
@@ -8306,11 +9114,24 @@ export default function ProduksiNPKApp() {
         );
       }
 
-      if (activeTab === "loader") {
+      if (isLoaderTab) {
+        const filteredLoaderData = getDisplayedDataByTab(
+          timesheetLoaderData,
+          activeTab
+        );
+        const plantLabel =
+          getPlantFromTab(activeTab) === "NPK1"
+            ? " NPK 1"
+            : getPlantFromTab(activeTab) === "NPK2"
+            ? " NPK 2"
+            : "";
+
         return (
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-[#001B44]">Timesheet Loader</CardTitle>
+              <CardTitle className="text-[#001B44]">
+                Timesheet Loader{plantLabel}
+              </CardTitle>
               <CardDescription>
                 Input timesheet dan tracking downtime loader per shift
               </CardDescription>
@@ -8584,7 +9405,7 @@ export default function ProduksiNPKApp() {
                     </thead>
                     <tbody>
                       {paginateData(
-                        sortByDateDesc(timesheetLoaderData),
+                        sortByDateDesc(filteredLoaderData),
                         currentPage.timesheet_loader,
                         itemsPerPage
                       ).map((item, idx) => {
@@ -8673,7 +9494,7 @@ export default function ProduksiNPKApp() {
                 <Pagination
                   currentPage={currentPage.timesheet_loader}
                   totalPages={getTotalPages(
-                    timesheetLoaderData.length,
+                    filteredLoaderData.length,
                     itemsPerPage
                   )}
                   onPageChange={(page) =>
@@ -8686,11 +9507,24 @@ export default function ProduksiNPKApp() {
         );
       }
 
-      if (activeTab === "downtime") {
+      if (isDowntimeTab) {
+        const filteredDowntimeData = getDisplayedDataByTab(
+          downtimeData,
+          activeTab
+        );
+        const plantLabel =
+          getPlantFromTab(activeTab) === "NPK1"
+            ? " NPK 1"
+            : getPlantFromTab(activeTab) === "NPK2"
+            ? " NPK 2"
+            : "";
+
         return (
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-[#001B44]">Downtime</CardTitle>
+              <CardTitle className="text-[#001B44]">
+                Downtime{plantLabel}
+              </CardTitle>
               <CardDescription>Input data downtime peralatan</CardDescription>
             </CardHeader>
             <CardContent className="bg-gray-50 p-6">
@@ -8882,20 +9716,20 @@ export default function ProduksiNPKApp() {
                     </thead>
                     <tbody>
                       {(() => {
-                        const filtered = sortByDateDesc(downtimeData).filter(
-                          (item) => {
-                            if (!searchDowntime) return true;
-                            const searchLower = searchDowntime.toLowerCase();
-                            return (
-                              (item.item || "")
-                                .toLowerCase()
-                                .includes(searchLower) ||
-                              (item.deskripsi || "")
-                                .toLowerCase()
-                                .includes(searchLower)
-                            );
-                          }
-                        );
+                        const filtered = sortByDateDesc(
+                          filteredDowntimeData
+                        ).filter((item) => {
+                          if (!searchDowntime) return true;
+                          const searchLower = searchDowntime.toLowerCase();
+                          return (
+                            (item.item || "")
+                              .toLowerCase()
+                              .includes(searchLower) ||
+                            (item.deskripsi || "")
+                              .toLowerCase()
+                              .includes(searchLower)
+                          );
+                        });
                         return paginateData(
                           filtered,
                           currentPage.downtime,
@@ -8966,7 +9800,7 @@ export default function ProduksiNPKApp() {
                 <Pagination
                   currentPage={currentPage.downtime}
                   totalPages={getTotalPages(
-                    sortByDateDesc(downtimeData).filter((item) => {
+                    sortByDateDesc(filteredDowntimeData).filter((item) => {
                       if (!searchDowntime) return true;
                       const searchLower = searchDowntime.toLowerCase();
                       return (
@@ -8988,11 +9822,49 @@ export default function ProduksiNPKApp() {
     }
 
     if (activeNav === "data") {
-      if (activeTab === "workrequest") {
+      const isWorkRequestTab =
+        activeTab === "workrequest" ||
+        activeTab === "workrequest_npk1" ||
+        activeTab === "workrequest_npk2";
+      const isBahanBakuTab =
+        activeTab === "bahanbaku" ||
+        activeTab === "bahanbaku_npk1" ||
+        activeTab === "bahanbaku_npk2";
+      const isVibrasiTab =
+        activeTab === "vibrasi" ||
+        activeTab === "vibrasi_npk1" ||
+        activeTab === "vibrasi_npk2";
+      const isGatePassTab =
+        activeTab === "gatepass" ||
+        activeTab === "gatepass_npk1" ||
+        activeTab === "gatepass_npk2";
+      const isPertaTab =
+        activeTab === "perta" ||
+        activeTab === "perta_npk1" ||
+        activeTab === "perta_npk2";
+      const isTroubleRecordTab =
+        activeTab === "troublerecord" ||
+        activeTab === "troublerecord_npk1" ||
+        activeTab === "troublerecord_npk2";
+
+      if (isWorkRequestTab) {
+        const filteredWorkRequestData = getDisplayedDataByTab(
+          workRequestData,
+          activeTab
+        );
+        const plantLabel =
+          getPlantFromTab(activeTab) === "NPK1"
+            ? " NPK 1"
+            : getPlantFromTab(activeTab) === "NPK2"
+            ? " NPK 2"
+            : "";
+
         return (
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-[#001B44]">Work Request</CardTitle>
+              <CardTitle className="text-[#001B44]">
+                Work Request{plantLabel}
+              </CardTitle>
               <CardDescription>
                 Input data work request pekerjaan
               </CardDescription>
@@ -9208,36 +10080,33 @@ export default function ProduksiNPKApp() {
                     </thead>
                     <tbody>
                       {(() => {
-                        const filtered = sortByDateDesc(workRequestData).filter(
-                          (item) => {
-                            if (!searchWorkRequest) return true;
-                            try {
-                              const searchLower =
-                                searchWorkRequest.toLowerCase();
-                              const nomorWR = String(
-                                item.nomorWR || ""
-                              ).toLowerCase();
-                              const itemName = String(
-                                item.item || ""
-                              ).toLowerCase();
-                              const area = String(
-                                item.area || ""
-                              ).toLowerCase();
-                              const eksekutor = String(
-                                item.eksekutor || ""
-                              ).toLowerCase();
+                        const filtered = sortByDateDesc(
+                          filteredWorkRequestData
+                        ).filter((item) => {
+                          if (!searchWorkRequest) return true;
+                          try {
+                            const searchLower = searchWorkRequest.toLowerCase();
+                            const nomorWR = String(
+                              item.nomorWR || ""
+                            ).toLowerCase();
+                            const itemName = String(
+                              item.item || ""
+                            ).toLowerCase();
+                            const area = String(item.area || "").toLowerCase();
+                            const eksekutor = String(
+                              item.eksekutor || ""
+                            ).toLowerCase();
 
-                              return (
-                                nomorWR.includes(searchLower) ||
-                                itemName.includes(searchLower) ||
-                                area.includes(searchLower) ||
-                                eksekutor.includes(searchLower)
-                              );
-                            } catch (e) {
-                              return true;
-                            }
+                            return (
+                              nomorWR.includes(searchLower) ||
+                              itemName.includes(searchLower) ||
+                              area.includes(searchLower) ||
+                              eksekutor.includes(searchLower)
+                            );
+                          } catch (e) {
+                            return true;
                           }
-                        );
+                        });
                         return paginateData(
                           filtered,
                           currentPage.work_request,
@@ -9309,7 +10178,7 @@ export default function ProduksiNPKApp() {
                 <Pagination
                   currentPage={currentPage.work_request}
                   totalPages={getTotalPages(
-                    sortByDateDesc(workRequestData).filter((item) => {
+                    sortByDateDesc(filteredWorkRequestData).filter((item) => {
                       if (!searchWorkRequest) return true;
                       try {
                         const searchLower = searchWorkRequest.toLowerCase();
@@ -9344,11 +10213,24 @@ export default function ProduksiNPKApp() {
         );
       }
 
-      if (activeTab === "bahanbaku") {
+      if (isBahanBakuTab) {
+        const filteredBahanBakuData = getDisplayedDataByTab(
+          bahanBakuData,
+          activeTab
+        );
+        const plantLabel =
+          getPlantFromTab(activeTab) === "NPK1"
+            ? " NPK 1"
+            : getPlantFromTab(activeTab) === "NPK2"
+            ? " NPK 2"
+            : "";
+
         return (
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-[#001B44]">Bahan Baku</CardTitle>
+              <CardTitle className="text-[#001B44]">
+                Bahan Baku{plantLabel}
+              </CardTitle>
               <CardDescription>Input data bahan baku</CardDescription>
             </CardHeader>
             <CardContent className="bg-gray-50 p-6">
@@ -9508,12 +10390,13 @@ export default function ProduksiNPKApp() {
                     </thead>
                     <tbody>
                       {paginateData(
-                        sortByDateDesc(bahanBakuData),
+                        sortByDateDesc(filteredBahanBakuData),
                         currentPage.bahan_baku,
                         itemsPerPage
                       ).map((item, idx) => {
-                        const actualIdx =
-                          sortByDateDesc(bahanBakuData).indexOf(item);
+                        const actualIdx = sortByDateDesc(
+                          filteredBahanBakuData
+                        ).indexOf(item);
                         return (
                           <tr key={idx} className="border-b hover:bg-gray-50">
                             <td className="py-2 px-3">
@@ -9571,7 +10454,10 @@ export default function ProduksiNPKApp() {
                 </div>
                 <Pagination
                   currentPage={currentPage.bahan_baku}
-                  totalPages={getTotalPages(bahanBakuData.length, itemsPerPage)}
+                  totalPages={getTotalPages(
+                    filteredBahanBakuData.length,
+                    itemsPerPage
+                  )}
                   onPageChange={(page) => handlePageChange("bahan_baku", page)}
                 />
               </div>
@@ -9580,11 +10466,24 @@ export default function ProduksiNPKApp() {
         );
       }
 
-      if (activeTab === "vibrasi") {
+      if (isVibrasiTab) {
+        const filteredVibrasiData = getDisplayedDataByTab(
+          vibrasiData,
+          activeTab
+        );
+        const plantLabel =
+          getPlantFromTab(activeTab) === "NPK1"
+            ? " NPK 1"
+            : getPlantFromTab(activeTab) === "NPK2"
+            ? " NPK 2"
+            : "";
+
         return (
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-[#001B44]">Vibrasi</CardTitle>
+              <CardTitle className="text-[#001B44]">
+                Vibrasi{plantLabel}
+              </CardTitle>
               <CardDescription>
                 Input data pengukuran vibrasi equipment
               </CardDescription>
@@ -9772,12 +10671,12 @@ export default function ProduksiNPKApp() {
                     </thead>
                     <tbody>
                       {paginateData(
-                        sortByDateDesc(vibrasiData),
+                        sortByDateDesc(filteredVibrasiData),
                         currentPage.vibrasi,
                         itemsPerPage
                       ).map((item, idx) => {
                         const actualIdx =
-                          sortByDateDesc(vibrasiData).indexOf(item);
+                          sortByDateDesc(filteredVibrasiData).indexOf(item);
                         return (
                           <tr key={idx} className="border-b hover:bg-gray-50">
                             <td className="py-2 px-3">
@@ -9833,7 +10732,10 @@ export default function ProduksiNPKApp() {
                 </div>
                 <Pagination
                   currentPage={currentPage.vibrasi}
-                  totalPages={getTotalPages(vibrasiData.length, itemsPerPage)}
+                  totalPages={getTotalPages(
+                    filteredVibrasiData.length,
+                    itemsPerPage
+                  )}
                   onPageChange={(page) => handlePageChange("vibrasi", page)}
                 />
               </div>
@@ -9842,11 +10744,24 @@ export default function ProduksiNPKApp() {
         );
       }
 
-      if (activeTab === "gatepass") {
+      if (isGatePassTab) {
+        const filteredGatePassData = getDisplayedDataByTab(
+          gatePassData,
+          activeTab
+        );
+        const plantLabel =
+          getPlantFromTab(activeTab) === "NPK1"
+            ? " NPK 1"
+            : getPlantFromTab(activeTab) === "NPK2"
+            ? " NPK 2"
+            : "";
+
         return (
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-[#001B44]">Gate Pass</CardTitle>
+              <CardTitle className="text-[#001B44]">
+                Gate Pass{plantLabel}
+              </CardTitle>
               <CardDescription>
                 Input data gate pass untuk pengeluaran barang
               </CardDescription>
@@ -10057,12 +10972,12 @@ export default function ProduksiNPKApp() {
                     </thead>
                     <tbody>
                       {paginateData(
-                        sortByDateDesc(gatePassData),
+                        sortByDateDesc(filteredGatePassData),
                         currentPage.gate_pass,
                         itemsPerPage
                       ).map((item, idx) => {
                         const actualIdx =
-                          sortByDateDesc(gatePassData).indexOf(item);
+                          sortByDateDesc(filteredGatePassData).indexOf(item);
                         return (
                           <tr key={idx} className="border-b hover:bg-gray-50">
                             <td className="py-2 px-3 font-mono text-xs">
@@ -10133,7 +11048,10 @@ export default function ProduksiNPKApp() {
                 </div>
                 <Pagination
                   currentPage={currentPage.gate_pass}
-                  totalPages={getTotalPages(gatePassData.length, itemsPerPage)}
+                  totalPages={getTotalPages(
+                    filteredGatePassData.length,
+                    itemsPerPage
+                  )}
                   onPageChange={(page) => handlePageChange("gate_pass", page)}
                 />
               </div>
@@ -10142,11 +11060,21 @@ export default function ProduksiNPKApp() {
         );
       }
 
-      if (activeTab === "perta") {
+      if (isPertaTab) {
+        const filteredPertaData = getDisplayedDataByTab(pertaData, activeTab);
+        const plantLabel =
+          getPlantFromTab(activeTab) === "NPK1"
+            ? " NPK 1"
+            : getPlantFromTab(activeTab) === "NPK2"
+            ? " NPK 2"
+            : "";
+
         return (
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-[#001B44]">Perta</CardTitle>
+              <CardTitle className="text-[#001B44]">
+                Perta{plantLabel}
+              </CardTitle>
               <CardDescription>Permintaan barang dan alat</CardDescription>
             </CardHeader>
             <CardContent className="bg-gray-50 p-6">
@@ -10387,12 +11315,12 @@ export default function ProduksiNPKApp() {
                     </thead>
                     <tbody>
                       {paginateData(
-                        sortPertaByDateDesc(pertaData),
+                        sortPertaByDateDesc(filteredPertaData),
                         currentPage.perta,
                         itemsPerPage
                       ).map((item, idx) => {
                         const actualIdx =
-                          sortPertaByDateDesc(pertaData).indexOf(item);
+                          sortPertaByDateDesc(filteredPertaData).indexOf(item);
 
                         // Hitung durasi perta dalam hari
                         const startDate = new Date(item.tanggalMulai);
@@ -10489,7 +11417,10 @@ export default function ProduksiNPKApp() {
                 </div>
                 <Pagination
                   currentPage={currentPage.perta}
-                  totalPages={getTotalPages(pertaData.length, itemsPerPage)}
+                  totalPages={getTotalPages(
+                    filteredPertaData.length,
+                    itemsPerPage
+                  )}
                   onPageChange={(page) => handlePageChange("perta", page)}
                 />
               </div>
@@ -10498,11 +11429,24 @@ export default function ProduksiNPKApp() {
         );
       }
 
-      if (activeTab === "troublerecord") {
+      if (isTroubleRecordTab) {
+        const filteredTroubleRecordData = getDisplayedDataByTab(
+          troubleRecordData,
+          activeTab
+        );
+        const plantLabel =
+          getPlantFromTab(activeTab) === "NPK1"
+            ? " NPK 1"
+            : getPlantFromTab(activeTab) === "NPK2"
+            ? " NPK 2"
+            : "";
+
         return (
           <Card className="border-gray-200 shadow-md">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-[#001B44]">Trouble Record</CardTitle>
+              <CardTitle className="text-[#001B44]">
+                Trouble Record{plantLabel}
+              </CardTitle>
               <CardDescription>
                 Pencatatan masalah dan penyelesaiannya
               </CardDescription>
@@ -11140,7 +12084,7 @@ export default function ProduksiNPKApp() {
                     <tbody>
                       {paginateData(
                         sortByDateDesc(
-                          troubleRecordData.map((item: any) => ({
+                          filteredTroubleRecordData.map((item: any) => ({
                             ...item,
                             tanggal: item.tanggalKejadian,
                           }))
@@ -11265,7 +12209,7 @@ export default function ProduksiNPKApp() {
                 <Pagination
                   currentPage={currentPage.trouble_record}
                   totalPages={getTotalPages(
-                    troubleRecordData.length,
+                    filteredTroubleRecordData.length,
                     itemsPerPage
                   )}
                   onPageChange={(page) =>
@@ -11622,6 +12566,33 @@ export default function ProduksiNPKApp() {
                       />
                     </div>
                     <div>
+                      <Label htmlFor="plantRKAP">Plant</Label>
+                      <Select
+                        value={formRKAP.plant}
+                        onValueChange={(value: any) =>
+                          setFormRKAP({ ...formRKAP, plant: value })
+                        }
+                      >
+                        <SelectTrigger id="plantRKAP">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NPK1">
+                            <div className="flex items-center gap-2">
+                              <Factory className="w-4 h-4 text-blue-600" />
+                              <span>NPK 1</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="NPK2">
+                            <div className="flex items-center gap-2">
+                              <Factory className="w-4 h-4 text-green-600" />
+                              <span>NPK 2</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
                       <Label htmlFor="targetRKAP">Target RKAP (Ton)</Label>
                       <Input
                         id="targetRKAP"
@@ -11677,6 +12648,7 @@ export default function ProduksiNPKApp() {
                           bulan: "Januari",
                           tahun: new Date().getFullYear(),
                           targetRKAP: 0,
+                          plant: "NPK2",
                         });
                       }}
                       className="bg-[#00B4D8] hover:bg-[#0096C7]"
@@ -11692,6 +12664,7 @@ export default function ProduksiNPKApp() {
                       <tr>
                         <th className="text-left py-2 px-3">Bulan</th>
                         <th className="text-left py-2 px-3">Tahun</th>
+                        <th className="text-center py-2 px-3">Plant</th>
                         <th className="text-right py-2 px-3">
                           Target RKAP (Ton)
                         </th>
@@ -11711,6 +12684,17 @@ export default function ProduksiNPKApp() {
                               {item.bulan}
                             </td>
                             <td className="py-2 px-3">{item.tahun ?? "-"}</td>
+                            <td className="text-center py-2 px-3">
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-semibold ${
+                                  item.plant === "NPK1"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-green-100 text-green-700"
+                                }`}
+                              >
+                                {item.plant}
+                              </span>
+                            </td>
                             <td className="text-right py-2 px-3">
                               {Number(item.targetRKAP || 0).toFixed(2)}
                             </td>
@@ -12313,6 +13297,43 @@ export default function ProduksiNPKApp() {
                       </Select>
                     </div>
                     <div>
+                      <Label htmlFor="plant">Plant</Label>
+                      <Select
+                        value={formUser.plant}
+                        onValueChange={(value: any) =>
+                          setFormUser({ ...formUser, plant: value })
+                        }
+                      >
+                        <SelectTrigger id="plant">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NPK1">
+                            <div className="flex items-center gap-2">
+                              <Factory className="w-4 h-4 text-blue-600" />
+                              <span>NPK 1 (Retail)</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="NPK2">
+                            <div className="flex items-center gap-2">
+                              <Factory className="w-4 h-4 text-green-600" />
+                              <span>NPK 2 (Blending + Mini)</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="ALL">
+                            <div className="flex items-center gap-2">
+                              <Factory className="w-4 h-4 text-purple-600" />
+                              <span>ALL Plants (Management)</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        NPK1: Retail | NPK2: Blending+Mini | ALL: Dashboard
+                        Gabungan
+                      </p>
+                    </div>
+                    <div>
                       <Label htmlFor="status">Status</Label>
                       <Select
                         value={formUser.status}
@@ -12387,6 +13408,7 @@ export default function ProduksiNPKApp() {
                           role: "user",
                           namaLengkap: "",
                           status: "active",
+                          plant: "NPK2",
                         });
                       }}
                       className="bg-[#00B4D8] hover:bg-[#0096C7]"
@@ -12403,6 +13425,7 @@ export default function ProduksiNPKApp() {
                         <th className="text-left py-3 px-4">Username</th>
                         <th className="text-left py-3 px-4">Nama Lengkap</th>
                         <th className="text-left py-3 px-4">Role</th>
+                        <th className="text-center py-3 px-4">Plant</th>
                         <th className="text-center py-3 px-4">Status</th>
                         <th className="text-left py-3 px-4">Last Login</th>
                         <th className="text-center py-3 px-4">Aksi</th>
@@ -12447,6 +13470,19 @@ export default function ProduksiNPKApp() {
                                 )}`}
                               >
                                 {item.role.toUpperCase()}
+                              </span>
+                            </td>
+                            <td className="text-center py-3 px-4">
+                              <span
+                                className={`px-2 py-1 rounded text-xs font-semibold ${
+                                  item.plant === "NPK1"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : item.plant === "NPK2"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-purple-100 text-purple-700"
+                                }`}
+                              >
+                                {item.plant || "NPK2"}
                               </span>
                             </td>
                             <td className="text-center py-3 px-4">
@@ -12552,40 +13588,101 @@ export default function ProduksiNPKApp() {
 
   // Dynamic navItems berdasarkan role
   const getNavItems = () => {
+    // Build produksi tabs based on plant
+    let produksiTabs: { id: string; label: string }[] = [];
+
+    // NPK1: Granul NPK1 + Retail
+    if (userPlant === "NPK1") {
+      produksiTabs = [
+        { id: "npk", label: "Produksi Granul NPK 1" },
+        { id: "blending", label: "Produksi Retail" },
+      ];
+    }
+    // NPK2: Granul + Blending + Mini
+    else if (userPlant === "NPK2") {
+      produksiTabs = [
+        { id: "npk", label: "Produksi Granul" },
+        { id: "blending", label: "Produksi Blending" },
+        { id: "mini", label: "Produksi NPK Mini" },
+      ];
+    }
+    // ALL: Show all options explicitly per plant
+    else if (userPlant === "ALL") {
+      produksiTabs = [
+        { id: "npk", label: "Produksi Granul NPK 2" },
+        { id: "npk_npk1", label: "Produksi Granul NPK 1" },
+        { id: "blending", label: "Produksi Blending" },
+        { id: "mini", label: "Produksi NPK Mini" },
+        { id: "retail", label: "Produksi Retail" },
+      ];
+    }
+
+    // Build laporan tabs based on plant
+    let laporanTabs: { id: string; label: string }[] = [];
+    if (userPlant === "ALL") {
+      laporanTabs = [
+        { id: "forklift_npk2", label: "Timesheet Forklift NPK 2" },
+        { id: "forklift_npk1", label: "Timesheet Forklift NPK 1" },
+        { id: "loader_npk2", label: "Timesheet Loader NPK 2" },
+        { id: "loader_npk1", label: "Timesheet Loader NPK 1" },
+        { id: "downtime_npk2", label: "Downtime NPK 2" },
+        { id: "downtime_npk1", label: "Downtime NPK 1" },
+      ];
+    } else {
+      laporanTabs = [
+        { id: "forklift", label: "Timesheet Forklift" },
+        { id: "loader", label: "Timesheet Loader" },
+        { id: "downtime", label: "Downtime" },
+      ];
+    }
+
+    // Build data tabs based on plant
+    let dataTabs: { id: string; label: string }[] = [];
+    if (userPlant === "ALL") {
+      dataTabs = [
+        { id: "workrequest_npk2", label: "Work Request NPK 2" },
+        { id: "workrequest_npk1", label: "Work Request NPK 1" },
+        { id: "bahanbaku_npk2", label: "Bahan Baku NPK 2" },
+        { id: "bahanbaku_npk1", label: "Bahan Baku NPK 1" },
+        { id: "vibrasi_npk2", label: "Vibrasi NPK 2" },
+        { id: "vibrasi_npk1", label: "Vibrasi NPK 1" },
+        { id: "gatepass_npk2", label: "Gate Pass NPK 2" },
+        { id: "gatepass_npk1", label: "Gate Pass NPK 1" },
+        { id: "perta_npk2", label: "Perta NPK 2" },
+        { id: "perta_npk1", label: "Perta NPK 1" },
+        { id: "troublerecord_npk2", label: "Trouble Record NPK 2" },
+        { id: "troublerecord_npk1", label: "Trouble Record NPK 1" },
+      ];
+    } else {
+      dataTabs = [
+        { id: "workrequest", label: "Work Request" },
+        { id: "bahanbaku", label: "Bahan Baku" },
+        { id: "vibrasi", label: "Vibrasi" },
+        { id: "gatepass", label: "Gate Pass" },
+        { id: "perta", label: "Perta" },
+        { id: "troublerecord", label: "Trouble Record" },
+      ];
+    }
+
     const baseItems = [
       { id: "home", icon: Home, label: "Home", tabs: [] },
       {
         id: "produksi",
         icon: Factory,
         label: "Produksi",
-        tabs: [
-          { id: "npk", label: "Produksi Granul" },
-          { id: "blending", label: "Produksi Blending" },
-          { id: "mini", label: "Produksi NPK Mini" },
-        ],
+        tabs: produksiTabs,
       },
       {
         id: "laporan",
         icon: FileText,
         label: "Laporan",
-        tabs: [
-          { id: "forklift", label: "Timesheet Forklift" },
-          { id: "loader", label: "Timesheet Loader" },
-          { id: "downtime", label: "Downtime" },
-        ],
+        tabs: laporanTabs,
       },
       {
         id: "data",
         icon: Database,
         label: "Data",
-        tabs: [
-          { id: "workrequest", label: "Work Request" },
-          { id: "bahanbaku", label: "Bahan Baku" },
-          { id: "vibrasi", label: "Vibrasi" },
-          { id: "gatepass", label: "Gate Pass" },
-          { id: "perta", label: "Perta" },
-          { id: "troublerecord", label: "Trouble Record" },
-        ],
+        tabs: dataTabs,
       },
     ];
 
@@ -12885,7 +13982,7 @@ export default function ProduksiNPKApp() {
           <div className="mt-auto border-t border-white/20">
             <div className="p-4">
               <p className="text-xs opacity-75">
-                V 1.29 - 2025 | NPKG-2 Production
+                V 1.31 - 2025 | NPKG-2 Production
               </p>
               <p className="text-xs opacity-75 mt-1">
                 Made with <span className="text-red-500">🤍</span>
