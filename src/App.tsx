@@ -504,6 +504,7 @@ interface ApprovalRequest {
   id?: string;
   requestBy: string;
   requestByName: string;
+  requesterPlant?: string;
   sheetType: string;
   action: "edit" | "delete";
   dataId: string;
@@ -847,6 +848,8 @@ export default function ProduksiNPKApp() {
     timestamp: Date;
     read: boolean;
     type: string;
+    fromUser?: string;
+    fromPlant?: string;
   }
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -1343,18 +1346,34 @@ export default function ProduksiNPKApp() {
 
   // Helper function to add notification (only for user role)
   const addNotification = (type: string, message: string) => {
-    if (userRole === "user") {
-      const newNotif: Notification = {
-        id: Date.now().toString(),
-        message: `User menambahkan data: ${message}`,
-        timestamp: new Date(),
-        read: false,
-        type,
-      };
-      const updatedNotifs = [...notifications, newNotif];
-      setNotifications(updatedNotifs);
-      localStorage.setItem("notifications", JSON.stringify(updatedNotifs));
+    // User yang melakukan aksi TIDAK mendapat notifikasi
+    // Hanya kirim notifikasi ke admin, supervisor, dan avp yang sesuai plant
+
+    // Skip jika user adalah admin/supervisor/avp (mereka tidak perlu notif dari diri sendiri)
+    if (
+      userRole === "admin" ||
+      userRole === "supervisor" ||
+      userRole === "avp"
+    ) {
+      return;
     }
+
+    // Buat notifikasi untuk admin/supervisor/avp
+    const newNotif: Notification = {
+      id: Date.now().toString(),
+      message: `${
+        displayName || loginUsername
+      } (${userPlant}) menambahkan data: ${message}`,
+      timestamp: new Date(),
+      read: false,
+      type,
+      fromUser: loginUsername,
+      fromPlant: userPlant,
+    };
+
+    const updatedNotifs = [...notifications, newNotif];
+    setNotifications(updatedNotifs);
+    localStorage.setItem("notifications", JSON.stringify(updatedNotifs));
   };
 
   // Close notification dropdown when clicking outside
@@ -2646,6 +2665,7 @@ export default function ProduksiNPKApp() {
       const newRequest: ApprovalRequest = {
         requestBy: loginUsername,
         requestByName: displayName || loginUsername,
+        requesterPlant: userPlant,
         sheetType,
         action,
         dataId,
@@ -3787,6 +3807,7 @@ export default function ProduksiNPKApp() {
       const newRequest: ApprovalRequest = {
         requestBy: loginUsername,
         requestByName: displayName || loginUsername,
+        requesterPlant: userPlant,
         sheetType: approvalRequestForm.sheetType,
         action: approvalRequestForm.action,
         dataId: approvalRequestForm.dataId,
@@ -13967,7 +13988,7 @@ export default function ProduksiNPKApp() {
                     onClick={() => handleNavClick(item.id)}
                     className={`w-full flex items-center gap-3 ${
                       sidebarCollapsed ? "px-3 justify-center" : "px-6"
-                    } py-3 transition-all ${
+                    } py-3 transition-all relative ${
                       activeNav === item.id
                         ? "bg-white/20 border-l-4 border-white"
                         : "hover:bg-white/10"
@@ -13978,6 +13999,29 @@ export default function ProduksiNPKApp() {
                     {!sidebarCollapsed && (
                       <span className="font-medium">{item.label}</span>
                     )}
+                    {/* Badge untuk Approval */}
+                    {item.id === "approval" &&
+                      (userRole === "admin" ||
+                        userRole === "supervisor" ||
+                        userRole === "avp" ||
+                        userRole === "manager") &&
+                      (() => {
+                        const pendingCount = approvalRequestsData.filter(
+                          (r) =>
+                            r.status === "pending" &&
+                            (userPlant === "ALL" ||
+                              r.requesterPlant === userPlant ||
+                              !r.requesterPlant)
+                        ).length;
+                        if (pendingCount > 0) {
+                          return (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                              {pendingCount}
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
                   </button>
 
                   {!sidebarCollapsed &&
@@ -14143,11 +14187,28 @@ export default function ProduksiNPKApp() {
               className="relative border-[#00B4D8] text-[#001B44] hover:bg-[#00B4D8] hover:text-white"
             >
               <Bell className="w-5 h-5" />
-              {notifications.filter((n) => !n.read).length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                  {notifications.filter((n) => !n.read).length}
-                </span>
-              )}
+              {(() => {
+                // Filter notifikasi berdasarkan plant untuk admin/supervisor/avp
+                const relevantNotifs = notifications.filter((n) => {
+                  if (n.read) return false;
+                  // Admin dengan plant ALL melihat semua notifikasi
+                  if (userPlant === "ALL") return true;
+                  // Supervisor/AVP hanya melihat notifikasi dari plant mereka
+                  return (
+                    !n.fromPlant ||
+                    n.fromPlant === userPlant ||
+                    n.fromPlant === "ALL"
+                  );
+                });
+                if (relevantNotifs.length > 0) {
+                  return (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                      {relevantNotifs.length}
+                    </span>
+                  );
+                }
+                return null;
+              })()}
             </Button>
 
             {/* Notification Dropdown */}
@@ -14190,79 +14251,104 @@ export default function ProduksiNPKApp() {
                   </div>
                 </div>
 
-                {notifications.length === 0 ? (
-                  <div className="p-8 text-center text-gray-500">
-                    <Bell className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                    <p>Tidak ada notifikasi</p>
-                  </div>
-                ) : (
-                  <div className="divide-y divide-gray-100">
-                    {notifications
-                      .slice()
-                      .reverse()
-                      .map((notif) => (
-                        <div
-                          key={notif.id}
-                          className={`p-4 hover:bg-gray-50 transition-colors ${
-                            !notif.read ? "bg-blue-50" : ""
-                          }`}
-                          onClick={() => {
-                            const updatedNotifs = notifications.map((n) =>
-                              n.id === notif.id ? { ...n, read: true } : n
-                            );
-                            setNotifications(updatedNotifs);
-                            localStorage.setItem(
-                              "notifications",
-                              JSON.stringify(updatedNotifs)
-                            );
-                          }}
-                        >
-                          <div className="flex items-start gap-2">
-                            {!notif.read && (
-                              <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm text-gray-800 break-words">
-                                {notif.message}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {new Date(notif.timestamp).toLocaleString(
-                                  "id-ID",
-                                  {
-                                    day: "2-digit",
-                                    month: "short",
-                                    year: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  }
-                                )}
-                              </p>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const updatedNotifs = notifications.filter(
-                                  (n) => n.id !== notif.id
-                                );
-                                setNotifications(updatedNotifs);
-                                localStorage.setItem(
-                                  "notifications",
-                                  JSON.stringify(updatedNotifs)
-                                );
-                              }}
-                              className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
-                            >
-                              <X className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
+                {(() => {
+                  // Filter notifikasi berdasarkan plant
+                  const relevantNotifs = notifications.filter((n) => {
+                    // Admin dengan plant ALL melihat semua notifikasi
+                    if (userPlant === "ALL") return true;
+                    // Supervisor/AVP hanya melihat notifikasi dari plant mereka
+                    return (
+                      !n.fromPlant ||
+                      n.fromPlant === userPlant ||
+                      n.fromPlant === "ALL"
+                    );
+                  });
 
-                {notifications.length > 0 && (
+                  if (relevantNotifs.length === 0) {
+                    return (
+                      <div className="p-8 text-center text-gray-500">
+                        <Bell className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                        <p>Tidak ada notifikasi</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="divide-y divide-gray-100">
+                      {relevantNotifs
+                        .slice()
+                        .reverse()
+                        .map((notif) => (
+                          <div
+                            key={notif.id}
+                            className={`p-4 hover:bg-gray-50 transition-colors ${
+                              !notif.read ? "bg-blue-50" : ""
+                            }`}
+                            onClick={() => {
+                              const updatedNotifs = notifications.map((n) =>
+                                n.id === notif.id ? { ...n, read: true } : n
+                              );
+                              setNotifications(updatedNotifs);
+                              localStorage.setItem(
+                                "notifications",
+                                JSON.stringify(updatedNotifs)
+                              );
+                            }}
+                          >
+                            <div className="flex items-start gap-2">
+                              {!notif.read && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-gray-800 break-words">
+                                  {notif.message}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {new Date(notif.timestamp).toLocaleString(
+                                    "id-ID",
+                                    {
+                                      day: "2-digit",
+                                      month: "short",
+                                      year: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )}
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const updatedNotifs = notifications.filter(
+                                    (n) => n.id !== notif.id
+                                  );
+                                  setNotifications(updatedNotifs);
+                                  localStorage.setItem(
+                                    "notifications",
+                                    JSON.stringify(updatedNotifs)
+                                  );
+                                }}
+                                className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
+                              >
+                                <X className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  );
+                })()}
+
+                {notifications.filter((n) => {
+                  if (userPlant === "ALL") return true;
+                  return (
+                    !n.fromPlant ||
+                    n.fromPlant === userPlant ||
+                    n.fromPlant === "ALL"
+                  );
+                }).length > 0 && (
                   <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 py-2">
                     <Button
                       size="sm"
