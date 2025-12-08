@@ -2207,22 +2207,27 @@ export default function ProduksiNPKApp() {
   // Fetch data from Google Sheets
   const fetchData = async (sheetName: string) => {
     try {
-      const response = await fetch(
-        `${WEBHOOK_URL}?action=read&sheet=${sheetName}`,
-        {
-          method: "GET",
-          redirect: "follow",
-        }
-      );
+      const url = `${WEBHOOK_URL}?action=read&sheet=${sheetName}`;
+      console.log(`🌐 Fetching ${sheetName} from:`, url);
+      
+      const response = await fetch(url, {
+        method: "GET",
+        redirect: "follow",
+      });
+
+      console.log(`📡 Response for ${sheetName}:`, response.status, response.statusText);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log(`✅ Data received for ${sheetName}:`, data);
+      console.log(`📊 ${sheetName} count:`, Array.isArray(data) ? data.length : 'Not an array');
+      
       return data;
     } catch (error) {
-      console.error(`Error fetching ${sheetName}:`, error);
+      console.error(`❌ Error fetching ${sheetName}:`, error);
       return [];
     }
   };
