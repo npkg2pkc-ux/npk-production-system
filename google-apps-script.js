@@ -1101,7 +1101,7 @@ function getHeadersForSheet(sheetName) {
       "oldData",
       "newData",
     ],
-    monthly_notes: ["id", "bulan", "tahun", "catatan", "_plant"],
+    monthly_notes: ["id", "bulan", "tahun", "catatan", "plant"],
   };
 
   return headersMap[sheetName] || [];

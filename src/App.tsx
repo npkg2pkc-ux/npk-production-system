@@ -353,6 +353,7 @@ interface MonthlyNote {
   tahun: string;
   catatan: string;
   _plant?: string;
+  plant?: string; // Google Sheets uses 'plant' field
 }
 
 interface TimesheetForklift {
@@ -1240,6 +1241,7 @@ export default function ProduksiNPKApp() {
         tahun,
         catatan: note,
         _plant: userPlant,
+        plant: userPlant, // Also send 'plant' field for Google Sheets compatibility
       };
 
       if (existingNote && existingNote.id) {
@@ -2699,10 +2701,22 @@ export default function ProduksiNPKApp() {
         // Set approval requests data (accessible by admin and avp)
         setApprovalRequestsData(approvalRequests || []);
 
-        // Set monthly notes data
+        // Set monthly notes data - normalize plant field
         console.log("📝 Monthly notes loaded:", monthlyNotes);
+        console.log("📝 Monthly notes count:", monthlyNotes?.length);
+        if (monthlyNotes && monthlyNotes.length > 0) {
+          console.log("📝 First note sample:", monthlyNotes[0]);
+          console.log("📝 Note fields:", Object.keys(monthlyNotes[0]));
+        }
         console.log("👤 User plant:", userPlant);
-        setMonthlyNotesData(monthlyNotes || []);
+        
+        // Normalize: handle both 'plant' and '_plant' field names
+        const normalizedNotes = (monthlyNotes || []).map((note: any) => ({
+          ...note,
+          _plant: note._plant || note.plant || "NPK2", // Default to NPK2 if no plant specified
+        }));
+        console.log("📝 Normalized notes:", normalizedNotes);
+        setMonthlyNotesData(normalizedNotes);
       } catch (error) {
         console.error("❌ Error loading data:", error);
         setLoadingData(false);
