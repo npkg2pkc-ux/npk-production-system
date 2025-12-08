@@ -101,7 +101,7 @@ function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
     const action = data.action;
-    const sheet = data.sheet;
+    const sheet = data.sheet || data.dataType; // Support both sheet and dataType
     const rowData = data.data;
 
     // Log session-related actions
@@ -116,6 +116,7 @@ function doPost(e) {
     let result;
 
     switch (action) {
+      case "add":
       case "create":
         // Gunakan fungsi spesifik untuk trouble_record
         if (sheet === "trouble_record") {
@@ -1095,6 +1096,7 @@ function getHeadersForSheet(sheetName) {
       "oldData",
       "newData",
     ],
+    monthly_notes: ["id", "bulan", "tahun", "catatan"],
   };
 
   return headersMap[sheetName] || [];
@@ -1119,6 +1121,7 @@ function getIdField(sheetName) {
     trouble_record: "nomorBerkas",
     users: "username",
     approval_requests: "id",
+    monthly_notes: "id",
   };
 
   return idFieldMap[sheetName] || "tanggal";

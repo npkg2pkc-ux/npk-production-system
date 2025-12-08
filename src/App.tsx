@@ -347,6 +347,14 @@ interface ProduksiNPKMini {
   _plant?: string;
 }
 
+interface MonthlyNote {
+  id?: string;
+  bulan: string;
+  tahun: string;
+  catatan: string;
+  _plant?: string;
+}
+
 interface TimesheetForklift {
   id?: string;
   tanggal: string;
@@ -975,12 +983,7 @@ export default function ProduksiNPKApp() {
   });
 
   // Monthly notes state
-  const [monthlyNotes, setMonthlyNotes] = useState<{ [key: string]: string }>(
-    () => {
-      const saved = localStorage.getItem("monthlyNotes");
-      return saved ? JSON.parse(saved) : {};
-    }
-  );
+  const [monthlyNotesData, setMonthlyNotesData] = useState<MonthlyNote[]>([]);
 
   // Form states for Produksi NPK
   const [formProduksiNPK, setFormProduksiNPK] = useState<ProduksiNPK>({
@@ -1218,29 +1221,79 @@ export default function ProduksiNPKApp() {
     }
   }, []);
 
-  // Save monthly notes to localStorage
-  useEffect(() => {
-    localStorage.setItem("monthlyNotes", JSON.stringify(monthlyNotes));
-  }, [monthlyNotes]);
+  // Handle monthly note change - Save to Google Sheets
+  const handleMonthlyNoteChange = async (bulan: string, note: string) => {
+    try {
+      const tahun = dashboardYear.toString();
+      const existingNote = monthlyNotesData.find(
+        (n) => n.bulan === bulan && n.tahun === tahun
+      );
 
-  // Handle monthly note change
-  const handleMonthlyNoteChange = (bulan: string, note: string) => {
-    setMonthlyNotes((prev) => ({
-      ...prev,
-      [bulan]: note,
-    }));
+      const noteData: MonthlyNote = {
+        bulan,
+        tahun,
+        catatan: note,
+        _plant: userPlant,
+      };
+
+      if (existingNote && existingNote.id) {
+        // Update existing note
+        const response = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "update",
+            dataType: "monthly_notes",
+            id: existingNote.id,
+            data: noteData,
+          }),
+        });
+
+        if (response.ok) {
+          setMonthlyNotesData((prev) =>
+            prev.map((n) =>
+              n.id === existingNote.id ? { ...n, ...noteData } : n
+            )
+          );
+        }
+      } else {
+        // Add new note
+        const response = await fetch(WEBHOOK_URL, {
+          method: "POST",
+          body: JSON.stringify({
+            action: "add",
+            dataType: "monthly_notes",
+            data: noteData,
+          }),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            const newNote = { ...noteData, id: result.id || Date.now().toString() };
+            setMonthlyNotesData((prev) => [...prev, newNote]);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error saving note:", error);
+      alert("Gagal menyimpan catatan. Silakan coba lagi.");
+    }
   };
 
   // Open note modal
   const openNoteModal = (bulan: string) => {
     setCurrentNoteMonth(bulan);
-    setTempNote(monthlyNotes[bulan] || "");
+    const tahun = dashboardYear.toString();
+    const existingNote = monthlyNotesData.find(
+      (n) => n.bulan === bulan && n.tahun === tahun
+    );
+    setTempNote(existingNote?.catatan || "");
     setShowNoteModal(true);
   };
 
   // Save note from modal
-  const saveNote = () => {
-    handleMonthlyNoteChange(currentNoteMonth, tempNote);
+  const saveNote = async () => {
+    await handleMonthlyNoteChange(currentNoteMonth, tempNote);
     setShowNoteModal(false);
     setTempNote("");
     setCurrentNoteMonth("");
@@ -1421,9 +1474,9 @@ export default function ProduksiNPKApp() {
 
   // Format number with thousand separator (100.000 instead of 100000)
   const formatNumber = (num: number, decimals: number = 2): string => {
-    return num.toLocaleString('id-ID', {
+    return num.toLocaleString("id-ID", {
       minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals
+      maximumFractionDigits: decimals,
     });
   };
 
@@ -2474,6 +2527,7 @@ export default function ProduksiNPKApp() {
           troubleRecord,
           users,
           approvalRequests,
+          monthlyNotes,
         ] = await Promise.all([
           fetchDataForPlant("timesheet_forklift"),
           fetchDataForPlant("timesheet_loader"),
@@ -2486,6 +2540,7 @@ export default function ProduksiNPKApp() {
           fetchDataForPlant("trouble_record"),
           fetchData("users"), // Users is shared
           fetchData("approval_requests"), // Approval requests is shared
+          fetchDataForPlant("monthly_notes"), // Monthly notes per plant
         ]);
 
         const loadTime2 = Date.now() - startTime;
@@ -2605,6 +2660,9 @@ export default function ProduksiNPKApp() {
 
         // Set approval requests data (accessible by admin and avp)
         setApprovalRequestsData(approvalRequests || []);
+
+        // Set monthly notes data
+        setMonthlyNotesData(monthlyNotes || []);
       } catch (error) {
         console.error("❌ Error loading data:", error);
         setLoadingData(false);
@@ -6749,13 +6807,21 @@ export default function ProduksiNPKApp() {
                           size="sm"
                           onClick={() => openNoteModal(month.bulan)}
                           className={`${
-                            monthlyNotes[month.bulan]
+                            monthlyNotesData.find(
+                              (n) =>
+                                n.bulan === month.bulan &&
+                                n.tahun === dashboardYear.toString()
+                            )?.catatan
                               ? "border-[#00B4D8] bg-[#00B4D8]/10 text-[#00B4D8] hover:bg-[#00B4D8] hover:text-white"
                               : "border-gray-300 text-gray-600 hover:border-[#00B4D8] hover:text-[#00B4D8]"
                           }`}
                         >
                           <StickyNote className="w-4 h-4 mr-2" />
-                          {monthlyNotes[month.bulan]
+                          {monthlyNotesData.find(
+                            (n) =>
+                              n.bulan === month.bulan &&
+                              n.tahun === dashboardYear.toString()
+                          )?.catatan
                             ? "Lihat Catatan"
                             : "Tambah Catatan"}
                         </Button>
@@ -7433,8 +7499,13 @@ export default function ProduksiNPKApp() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#001B44]">
-                {formatNumber(produksiBlendingData
-                  .reduce((sum, item) => sum + (Number(item.tonase) || 0), 0), 2)}{" "}
+                {formatNumber(
+                  produksiBlendingData.reduce(
+                    (sum, item) => sum + (Number(item.tonase) || 0),
+                    0
+                  ),
+                  2
+                )}{" "}
                 Ton
               </div>
               <p className="text-xs text-gray-500 mt-1">
@@ -7451,8 +7522,13 @@ export default function ProduksiNPKApp() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#001B44]">
-                {formatNumber(produksiNPKMiniData
-                  .reduce((sum, item) => sum + (Number(item.tonase) || 0), 0), 2)}{" "}
+                {formatNumber(
+                  produksiNPKMiniData.reduce(
+                    (sum, item) => sum + (Number(item.tonase) || 0),
+                    0
+                  ),
+                  2
+                )}{" "}
                 Ton
               </div>
               <p className="text-xs text-gray-500 mt-1">
@@ -7469,8 +7545,13 @@ export default function ProduksiNPKApp() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#001B44]">
-                {formatNumber(downtimeData
-                  .reduce((sum, item) => sum + (item.downtime || 0), 0), 1)}{" "}
+                {formatNumber(
+                  downtimeData.reduce(
+                    (sum, item) => sum + (item.downtime || 0),
+                    0
+                  ),
+                  1
+                )}{" "}
                 Jam
               </div>
               <p className="text-xs text-gray-500 mt-1">
@@ -8040,22 +8121,40 @@ export default function ProduksiNPKApp() {
                               )}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {formatNumber(Number(item.shiftMalamOnspek || 0), 2)}
+                              {formatNumber(
+                                Number(item.shiftMalamOnspek || 0),
+                                2
+                              )}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {formatNumber(Number(item.shiftMalamOffspek || 0), 2)}
+                              {formatNumber(
+                                Number(item.shiftMalamOffspek || 0),
+                                2
+                              )}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {formatNumber(Number(item.shiftPagiOnspek || 0), 2)}
+                              {formatNumber(
+                                Number(item.shiftPagiOnspek || 0),
+                                2
+                              )}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {formatNumber(Number(item.shiftPagiOffspek || 0), 2)}
+                              {formatNumber(
+                                Number(item.shiftPagiOffspek || 0),
+                                2
+                              )}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {formatNumber(Number(item.shiftSoreOnspek || 0), 2)}
+                              {formatNumber(
+                                Number(item.shiftSoreOnspek || 0),
+                                2
+                              )}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {formatNumber(Number(item.shiftSoreOffspek || 0), 2)}
+                              {formatNumber(
+                                Number(item.shiftSoreOffspek || 0),
+                                2
+                              )}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700 font-semibold">
                               {formatNumber(Number(item.totalOnspek || 0), 2)}
