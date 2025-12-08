@@ -14726,7 +14726,7 @@ export default function ProduksiNPKApp() {
           <div className="mt-auto border-t border-white/20">
             <div className="p-4">
               <p className="text-xs opacity-75">
-                V 1.36 - 2025 | NPKG-2 Production
+                V 1.37 - 2025 | NPKG-2 Production
               </p>
               <p className="text-xs opacity-75 mt-1">
                 Made with <span className="text-red-500">🤍</span>

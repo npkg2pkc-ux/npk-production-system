@@ -346,7 +346,9 @@ function readData(sheetName) {
 
   // Baris pertama adalah header
   const headers = values[0];
-  Logger.log("[READ] Sheet: " + sheetName + ", Headers: " + JSON.stringify(headers));
+  Logger.log(
+    "[READ] Sheet: " + sheetName + ", Headers: " + JSON.stringify(headers)
+  );
   Logger.log("[READ] Total rows (including header): " + values.length);
   const data = [];
 
