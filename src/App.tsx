@@ -1304,13 +1304,13 @@ export default function ProduksiNPKApp() {
     try {
       const success = await handleMonthlyNoteChange(currentNoteMonth, tempNote);
       // Delay sedikit agar user melihat animasi success
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       if (success !== false) {
         setSuccessMessage("✅ Catatan berhasil disimpan!");
         setTimeout(() => setSuccessMessage(""), 3000);
       }
-      
+
       setShowNoteModal(false);
       setTempNote("");
       setCurrentNoteMonth("");
@@ -5929,6 +5929,65 @@ export default function ProduksiNPKApp() {
     };
   };
 
+  // Calculate metrics per plant for comparison
+  const calculatePlantMetrics = (plant: "NPK1" | "NPK2") => {
+    const currentYear = dashboardYear;
+    const currentMonth = new Date().getMonth();
+
+    const plantData = produksiNPKData.filter((item: any) => {
+      return (
+        item._plant === plant || (!item._plant && plant === "NPK2")
+      );
+    });
+
+    const monthlyProduction = plantData
+      .filter((item) => {
+        const itemDate = new Date(item.tanggal);
+        return (
+          itemDate.getMonth() === currentMonth &&
+          itemDate.getFullYear() === currentYear
+        );
+      })
+      .reduce((sum, item) => sum + (item.total || 0), 0);
+
+    const yearlyProduction = plantData
+      .filter((item) => {
+        const itemDate = new Date(item.tanggal);
+        return itemDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, item) => sum + (item.total || 0), 0);
+
+    const monthNames = [
+      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+      "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+    ];
+
+    const monthlyBreakdown = monthNames.map((month, index) => {
+      const monthData = plantData.filter((item) => {
+        const itemDate = new Date(item.tanggal);
+        return (
+          itemDate.getMonth() === index &&
+          itemDate.getFullYear() === currentYear
+        );
+      });
+      const production = monthData.reduce(
+        (sum, item) => sum + (item.total || 0),
+        0
+      );
+      return {
+        bulan: month.substring(0, 3),
+        produksi: production,
+      };
+    });
+
+    return {
+      plant,
+      monthlyProduction,
+      yearlyProduction,
+      monthlyBreakdown,
+    };
+  };
+
   // Print function for Timesheet Forklift
   const handlePrintTimesheetForklift = () => {
     const [yearStr, monthStr] = printForkliftMonth.split("-");
@@ -6679,22 +6738,187 @@ export default function ProduksiNPKApp() {
           </Card>
         </div>
 
+        {/* Grafik Comparison Per Plant - Hanya tampil saat filter ALL */}
+        {userPlant === "ALL" && dashboardPlantFilter === "ALL" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-[#00B4D8] to-[#5FE9C5] border-b-2">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  Perbandingan Produksi NPK 1 vs NPK 2
+                </CardTitle>
+                <CardDescription className="text-white/90">
+                  Grafik perbandingan produksi bulanan antar plant
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <ResponsiveContainer width="100%" height={350}>
+                  <BarChart
+                    data={(() => {
+                      const npk1Metrics = calculatePlantMetrics("NPK1");
+                      const npk2Metrics = calculatePlantMetrics("NPK2");
+                      return npk1Metrics.monthlyBreakdown.map((item, idx) => ({
+                        bulan: item.bulan,
+                        NPK1: item.produksi,
+                        NPK2: npk2Metrics.monthlyBreakdown[idx].produksi,
+                      }));
+                    })()}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
+                    <YAxis stroke="#666" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#fff",
+                        border: "2px solid #00B4D8",
+                        borderRadius: "8px",
+                      }}
+                      formatter={(value: number) => [
+                        formatNumber(value, 2) + " Ton",
+                        "",
+                      ]}
+                    />
+                    <Legend />
+                    <Bar
+                      dataKey="NPK1"
+                      name="🔵 NPK 1"
+                      fill="#3B82F6"
+                      radius={[8, 8, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="NPK2"
+                      name="🟢 NPK 2"
+                      fill="#10B981"
+                      radius={[8, 8, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-[#001B44] to-[#00B4D8] border-b-2">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Target className="w-5 h-5" />
+                  Total Produksi Per Plant ({dashboardYear})
+                </CardTitle>
+                <CardDescription className="text-white/90">
+                  Kontribusi produksi tahunan masing-masing plant
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <div className="space-y-6">
+                  {(() => {
+                    const npk1Metrics = calculatePlantMetrics("NPK1");
+                    const npk2Metrics = calculatePlantMetrics("NPK2");
+                    const total =
+                      npk1Metrics.yearlyProduction +
+                      npk2Metrics.yearlyProduction;
+                    const npk1Percentage =
+                      total > 0
+                        ? (npk1Metrics.yearlyProduction / total) * 100
+                        : 0;
+                    const npk2Percentage =
+                      total > 0
+                        ? (npk2Metrics.yearlyProduction / total) * 100
+                        : 0;
+
+                    return (
+                      <>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                              <span className="font-semibold text-gray-700">
+                                NPK 1
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-bold text-[#001B44]">
+                                {formatNumber(
+                                  npk1Metrics.yearlyProduction,
+                                  2
+                                )}{" "}
+                                Ton
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {formatNumber(npk1Percentage, 1)}% dari total
+                              </p>
+                            </div>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-4">
+                            <div
+                              className="bg-gradient-to-r from-blue-500 to-blue-400 h-4 rounded-full transition-all duration-500"
+                              style={{ width: `${npk1Percentage}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                              <span className="font-semibold text-gray-700">
+                                NPK 2
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-bold text-[#001B44]">
+                                {formatNumber(
+                                  npk2Metrics.yearlyProduction,
+                                  2
+                                )}{" "}
+                                Ton
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {formatNumber(npk2Percentage, 1)}% dari total
+                              </p>
+                            </div>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-4">
+                            <div
+                              className="bg-gradient-to-r from-green-500 to-green-400 h-4 rounded-full transition-all duration-500"
+                              style={{ width: `${npk2Percentage}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="pt-4 border-t-2 border-gray-200">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-lg text-gray-700">
+                              Total Gabungan
+                            </span>
+                            <p className="text-3xl font-bold text-[#00B4D8]">
+                              {formatNumber(total, 2)} Ton
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="border-gray-200 shadow-md">
-            <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-[#001B44]">
+          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-[#00B4D8] to-[#7FFFD4]">
+              <CardTitle className="text-white flex items-center gap-2">
+                <BarChart className="w-5 h-5" />
                 Grafik Produksi vs RKAP Tahunan ({dashboardYear})
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-white/90">
                 Perbandingan produksi dengan target RKAP per bulan
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="pt-6">
+              <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={metrics.monthlyBreakdown}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis dataKey="bulan" stroke="#666" />
-                  <YAxis stroke="#666" />
+                  <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
+                  <YAxis stroke="#666" fontSize={12} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "#fff",
@@ -6720,27 +6944,32 @@ export default function ProduksiNPKApp() {
             </CardContent>
           </Card>
 
-          <Card className="border-gray-200 shadow-md">
-            <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-[#001B44]">
+          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-[#001B44] via-[#003366] to-[#00B4D8]">
+              <CardTitle className="text-white flex items-center gap-2">
+                <TrendingUp className="w-5 h-5" />
                 Persentase Pencapaian Bulanan ({dashboardYear})
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-white/90">
                 Tracking pencapaian terhadap RKAP setiap bulan
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
+            <CardContent className="pt-6">
+              <ResponsiveContainer width="100%" height={320}>
                 <LineChart data={metrics.monthlyBreakdown}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis dataKey="bulan" stroke="#666" />
-                  <YAxis stroke="#666" unit="%" />
+                  <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
+                  <YAxis stroke="#666" unit="%" fontSize={12} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "#fff",
-                      border: "1px solid #00B4D8",
+                      border: "2px solid #00B4D8",
+                      borderRadius: "8px",
                     }}
-                    formatter={(value: number) => `${value.toFixed(1)}%`}
+                    formatter={(value: number) => [
+                      formatNumber(value, 1) + "%",
+                      "Pencapaian",
+                    ]}
                   />
                   <Legend />
                   <Line
@@ -6749,8 +6978,8 @@ export default function ProduksiNPKApp() {
                     name="Pencapaian (%)"
                     stroke="#00B4D8"
                     strokeWidth={3}
-                    dot={{ fill: "#00B4D8", r: 5 }}
-                    activeDot={{ r: 8 }}
+                    dot={{ fill: "#00B4D8", r: 6 }}
+                    activeDot={{ r: 9, fill: "#7FFFD4" }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -6758,45 +6987,46 @@ export default function ProduksiNPKApp() {
           </Card>
         </div>
 
-        <Card className="border-gray-200 shadow-md">
-          <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-            <CardTitle className="text-[#001B44]">
+        <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <CardHeader className="bg-gradient-to-r from-[#7FFFD4] to-[#00B4D8]">
+            <CardTitle className="text-[#001B44] font-bold flex items-center gap-2">
+              <FileText className="w-5 h-5" />
               Detail Pencapaian Bulanan
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-[#001B44]/80">
               Rincian produksi dan pencapaian setiap bulan
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-semibold text-[#001B44]">
+                <thead className="bg-gradient-to-r from-[#00B4D8] to-[#5FE9C5]">
+                  <tr>
+                    <th className="text-left py-4 px-4 font-bold text-white">
                       Bulan
                     </th>
-                    <th className="text-right py-3 px-4 font-semibold text-[#001B44]">
+                    <th className="text-right py-4 px-4 font-bold text-white">
                       Produksi (Ton)
                     </th>
-                    <th className="text-right py-3 px-4 font-semibold text-[#001B44]">
+                    <th className="text-right py-4 px-4 font-bold text-white">
                       Target RKAP (Ton)
                     </th>
-                    <th className="text-right py-3 px-4 font-semibold text-[#001B44]">
+                    <th className="text-right py-4 px-4 font-bold text-white">
                       Pencapaian (%)
                     </th>
-                    <th className="text-center py-3 px-4 font-semibold text-[#001B44]">
+                    <th className="text-center py-4 px-4 font-bold text-white">
                       Status
                     </th>
-                    <th className="text-center py-3 px-4 font-semibold text-[#001B44]">
+                    <th className="text-center py-4 px-4 font-bold text-white">
                       Catatan
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white">
                   {metrics.monthlyBreakdown.map((month, idx) => (
                     <tr
                       key={idx}
-                      className="border-b border-gray-100 hover:bg-[#00B4D8]/5"
+                      className="border-b border-gray-100 hover:bg-[#00B4D8]/5 transition-colors"
                     >
                       <td className="py-3 px-4 font-medium">{month.bulan}</td>
                       <td className="text-right py-3 px-4">
