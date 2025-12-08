@@ -1298,31 +1298,31 @@ export default function ProduksiNPKApp() {
   const openNoteModal = (bulan: string) => {
     setCurrentNoteMonth(bulan);
     const tahun = dashboardYear.toString();
-    
+
     console.log("🔍 Opening note modal for:", { bulan, tahun, userPlant });
     console.log("🔍 Total notes in state:", monthlyNotesData.length);
     console.log("🔍 All notes:", monthlyNotesData);
-    
+
     // Find existing note for this month/year and plant
     // ALL plant users can see all notes, others see their plant + ALL notes
-    const existingNote = monthlyNotesData.find(
-      (n) => {
-        const match = n.bulan === bulan &&
-          n.tahun === tahun &&
-          (userPlant === "ALL" || n._plant === userPlant || n._plant === "ALL");
-        
-        console.log("🔍 Checking note:", { 
-          note: n, 
-          bulanMatch: n.bulan === bulan,
-          tahunMatch: n.tahun === tahun,
-          plantMatch: (userPlant === "ALL" || n._plant === userPlant || n._plant === "ALL"),
-          overallMatch: match
-        });
-        
-        return match;
-      }
-    );
-    
+    const existingNote = monthlyNotesData.find((n) => {
+      const match =
+        n.bulan === bulan &&
+        n.tahun === tahun &&
+        (userPlant === "ALL" || n._plant === userPlant || n._plant === "ALL");
+
+      console.log("🔍 Checking note:", {
+        note: n,
+        bulanMatch: n.bulan === bulan,
+        tahunMatch: n.tahun === tahun,
+        plantMatch:
+          userPlant === "ALL" || n._plant === userPlant || n._plant === "ALL",
+        overallMatch: match,
+      });
+
+      return match;
+    });
+
     console.log("🔍 Found existing note:", existingNote);
     setTempNote(existingNote?.catatan || "");
     setShowNoteModal(true);

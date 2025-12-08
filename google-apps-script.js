@@ -332,6 +332,7 @@ function readData(sheetName) {
 
   // Jika sheet belum ada, buat sheet baru
   if (!sheet) {
+    Logger.log("[READ] Creating new sheet: " + sheetName);
     sheet = createSheet(sheetName);
   }
 
@@ -339,11 +340,14 @@ function readData(sheetName) {
   const values = range.getValues();
 
   if (values.length === 0) {
+    Logger.log("[READ] Sheet " + sheetName + " is empty");
     return [];
   }
 
   // Baris pertama adalah header
   const headers = values[0];
+  Logger.log("[READ] Sheet: " + sheetName + ", Headers: " + JSON.stringify(headers));
+  Logger.log("[READ] Total rows (including header): " + values.length);
   const data = [];
 
   // Convert array ke object
