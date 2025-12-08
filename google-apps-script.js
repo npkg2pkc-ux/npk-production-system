@@ -40,6 +40,7 @@
  *    - users (untuk user management) - add 'plant' column (NPK1/NPK2/ALL)
  *    - approval_requests (untuk approval system)
  *    - sessions (untuk multi-login detection)
+ *    - monthly_notes (untuk catatan bulanan per plant) - add '_plant' column
  *
  * 3. Buka Extensions > Apps Script
  * 4. Copy paste script ini
@@ -1096,7 +1097,7 @@ function getHeadersForSheet(sheetName) {
       "oldData",
       "newData",
     ],
-    monthly_notes: ["id", "bulan", "tahun", "catatan"],
+    monthly_notes: ["id", "bulan", "tahun", "catatan", "_plant"],
   };
 
   return headersMap[sheetName] || [];

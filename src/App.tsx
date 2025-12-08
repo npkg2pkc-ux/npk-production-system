@@ -2388,7 +2388,7 @@ export default function ProduksiNPKApp() {
 
     // For "ALL" plant (dashboard view), fetch both NPK1 and NPK2 data
     if (plantToUse === "ALL") {
-      const sharedSheets = ["users", "sessions", "approval_requests"];
+      const sharedSheets = ["users", "sessions", "approval_requests", "monthly_notes"];
       if (sharedSheets.includes(baseSheet)) {
         return await fetchData(baseSheet);
       }
@@ -2685,6 +2685,8 @@ export default function ProduksiNPKApp() {
         setApprovalRequestsData(approvalRequests || []);
 
         // Set monthly notes data
+        console.log("📝 Monthly notes loaded:", monthlyNotes);
+        console.log("👤 User plant:", userPlant);
         setMonthlyNotesData(monthlyNotes || []);
       } catch (error) {
         console.error("❌ Error loading data:", error);
