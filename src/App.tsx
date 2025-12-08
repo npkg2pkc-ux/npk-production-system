@@ -3168,23 +3168,52 @@ export default function ProduksiNPKApp() {
       } else {
         // Detect plant from activeTab for admin users
         const targetPlant = getPlantFromTab(activeTab);
-        const dataToSave = {
-          ...formTimesheetLoader,
-          _plant: targetPlant,
-        };
+        
+        // Check if 'All' is selected
+        if (formTimesheetLoader.shift === "All") {
+          // Save data for all shifts
+          const shiftsToSave = ["Malam", "Pagi", "Sore"];
+          
+          for (const shiftValue of shiftsToSave) {
+            const dataToSave = {
+              ...formTimesheetLoader,
+              shift: shiftValue,
+              _plant: targetPlant,
+            };
+            await saveDataForPlant("timesheet_loader", dataToSave);
+          }
+          
+          // Refresh data dari server
+          const refreshed = await fetchDataForPlant("timesheet_loader");
+          setTimesheetLoaderData(refreshed || []);
+          
+          addNotification(
+            "timesheet_loader",
+            `Timesheet Loader (All Shifts: Malam, Pagi, Sore) tanggal ${new Date(
+              formTimesheetLoader.tanggal
+            ).toLocaleDateString("id-ID")}`
+          );
+          showSuccess(`Data berhasil disimpan untuk 3 shift!`);
+        } else {
+          // Save for single shift
+          const dataToSave = {
+            ...formTimesheetLoader,
+            _plant: targetPlant,
+          };
 
-        await saveDataForPlant("timesheet_loader", dataToSave);
+          await saveDataForPlant("timesheet_loader", dataToSave);
 
-        // Refresh data dari server untuk mendapatkan ID yang di-generate
-        const refreshed = await fetchDataForPlant("timesheet_loader");
-        setTimesheetLoaderData(refreshed || []);
-        addNotification(
-          "timesheet_loader",
-          `Timesheet Loader tanggal ${new Date(
-            formTimesheetLoader.tanggal
-          ).toLocaleDateString("id-ID")}`
-        );
-        showSuccess("Data berhasil disimpan!");
+          // Refresh data dari server untuk mendapatkan ID yang di-generate
+          const refreshed = await fetchDataForPlant("timesheet_loader");
+          setTimesheetLoaderData(refreshed || []);
+          addNotification(
+            "timesheet_loader",
+            `Timesheet Loader tanggal ${new Date(
+              formTimesheetLoader.tanggal
+            ).toLocaleDateString("id-ID")}`
+          );
+          showSuccess("Data berhasil disimpan!");
+        }
       }
       setFormTimesheetLoader({
         tanggal: new Date().toISOString().split("T")[0],
@@ -9361,11 +9390,17 @@ export default function ProduksiNPKApp() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="All">All (Simpan ke semua shift)</SelectItem>
                           <SelectItem value="Malam">Malam</SelectItem>
                           <SelectItem value="Pagi">Pagi</SelectItem>
                           <SelectItem value="Sore">Sore</SelectItem>
                         </SelectContent>
                       </Select>
+                      {formTimesheetLoader.shift === "All" && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          💡 Data akan disimpan untuk semua shift (Malam, Pagi, Sore)
+                        </p>
+                      )}
                     </div>
                     <div className="md:col-span-2">
                       <Label htmlFor="deskripsiTemuanLoader">
