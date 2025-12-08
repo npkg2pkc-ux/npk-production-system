@@ -897,6 +897,7 @@ export default function ProduksiNPKApp() {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [currentNoteMonth, setCurrentNoteMonth] = useState("");
   const [tempNote, setTempNote] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
 
   // Search states
   const [searchDowntime, setSearchDowntime] = useState("");
@@ -1254,6 +1255,7 @@ export default function ProduksiNPKApp() {
               n.id === existingNote.id ? { ...n, ...noteData } : n
             )
           );
+          return true;
         }
       } else {
         // Add new note
@@ -1269,14 +1271,19 @@ export default function ProduksiNPKApp() {
         if (response.ok) {
           const result = await response.json();
           if (result.success) {
-            const newNote = { ...noteData, id: result.id || Date.now().toString() };
+            const newNote = {
+              ...noteData,
+              id: result.id || Date.now().toString(),
+            };
             setMonthlyNotesData((prev) => [...prev, newNote]);
+            return true;
           }
         }
       }
+      return false;
     } catch (error) {
       console.error("Error saving note:", error);
-      alert("Gagal menyimpan catatan. Silakan coba lagi.");
+      throw error;
     }
   };
 
@@ -1293,10 +1300,26 @@ export default function ProduksiNPKApp() {
 
   // Save note from modal
   const saveNote = async () => {
-    await handleMonthlyNoteChange(currentNoteMonth, tempNote);
-    setShowNoteModal(false);
-    setTempNote("");
-    setCurrentNoteMonth("");
+    setSavingNote(true);
+    try {
+      const success = await handleMonthlyNoteChange(currentNoteMonth, tempNote);
+      // Delay sedikit agar user melihat animasi success
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (success !== false) {
+        setSuccessMessage("✅ Catatan berhasil disimpan!");
+        setTimeout(() => setSuccessMessage(""), 3000);
+      }
+      
+      setShowNoteModal(false);
+      setTempNote("");
+      setCurrentNoteMonth("");
+    } catch (error) {
+      console.error("Error saving note:", error);
+      alert("❌ Gagal menyimpan catatan. Silakan coba lagi.");
+    } finally {
+      setSavingNote(false);
+    }
   };
 
   // Load chat messages
@@ -7115,7 +7138,27 @@ export default function ProduksiNPKApp() {
           title={`Catatan Bulan ${currentNoteMonth}`}
           size="md"
         >
-          <div className="space-y-4">
+          <div className="space-y-4 relative">
+            {/* Loading Overlay */}
+            {savingNote && (
+              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50 rounded-lg">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative">
+                    <div className="w-16 h-16 border-4 border-[#00B4D8]/20 rounded-full"></div>
+                    <div className="absolute top-0 left-0 w-16 h-16 border-4 border-[#00B4D8] border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-[#001B44] font-semibold animate-pulse">
+                      Menyimpan catatan...
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Harap tunggu sebentar
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div>
               <Label htmlFor="monthNote">Catatan</Label>
               <textarea
@@ -7124,7 +7167,8 @@ export default function ProduksiNPKApp() {
                 onChange={(e) => setTempNote(e.target.value)}
                 placeholder="Tulis catatan untuk bulan ini..."
                 rows={5}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent resize-none"
+                disabled={savingNote}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
               />
             </div>
             <div className="flex justify-end gap-2">
@@ -7135,14 +7179,26 @@ export default function ProduksiNPKApp() {
                   setTempNote("");
                   setCurrentNoteMonth("");
                 }}
+                disabled={savingNote}
               >
                 Batal
               </Button>
               <Button
                 onClick={saveNote}
-                className="bg-[#00B4D8] hover:bg-[#0096C7]"
+                disabled={savingNote}
+                className="bg-[#00B4D8] hover:bg-[#0096C7] min-w-[140px] relative"
               >
-                Simpan Catatan
+                {savingNote ? (
+                  <span className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Menyimpan...</span>
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4" />
+                    <span>Simpan Catatan</span>
+                  </span>
+                )}
               </Button>
             </div>
           </div>
@@ -14373,7 +14429,7 @@ export default function ProduksiNPKApp() {
           <div className="mt-auto border-t border-white/20">
             <div className="p-4">
               <p className="text-xs opacity-75">
-                V 1.32 - 2025 | NPKG-2 Production
+                V 1.33 - 2025 | NPKG-2 Production
               </p>
               <p className="text-xs opacity-75 mt-1">
                 Made with <span className="text-red-500">🤍</span>
