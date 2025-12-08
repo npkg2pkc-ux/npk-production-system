@@ -462,7 +462,8 @@ function createData(sheetName, rowData) {
 
   // Filter internal properties yang tidak perlu disimpan ke sheet
   // Exception: monthly_notes perlu menyimpan _plant karena shared sheet
-  const internalProps = sheetName === "monthly_notes" ? ["__original"] : ["_plant", "__original"];
+  const internalProps =
+    sheetName === "monthly_notes" ? ["__original"] : ["_plant", "__original"];
   const cleanedData = {};
   Object.keys(rowData || {}).forEach((key) => {
     if (!internalProps.includes(key)) {
@@ -565,7 +566,8 @@ function updateData(sheetName, rowData) {
 
   // Filter internal properties yang tidak perlu disimpan ke sheet
   // Exception: monthly_notes perlu menyimpan _plant karena shared sheet
-  const internalProps = sheetName === "monthly_notes" ? ["__original"] : ["_plant", "__original"];
+  const internalProps =
+    sheetName === "monthly_notes" ? ["__original"] : ["_plant", "__original"];
   const cleanedData = {};
   Object.keys(rowData || {}).forEach((key) => {
     if (!internalProps.includes(key)) {
