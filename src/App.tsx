@@ -2388,7 +2388,12 @@ export default function ProduksiNPKApp() {
 
     // For "ALL" plant (dashboard view), fetch both NPK1 and NPK2 data
     if (plantToUse === "ALL") {
-      const sharedSheets = ["users", "sessions", "approval_requests", "monthly_notes"];
+      const sharedSheets = [
+        "users",
+        "sessions",
+        "approval_requests",
+        "monthly_notes",
+      ];
       if (sharedSheets.includes(baseSheet)) {
         return await fetchData(baseSheet);
       }
