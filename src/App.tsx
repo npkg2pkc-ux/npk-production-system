@@ -1227,7 +1227,7 @@ export default function ProduksiNPKApp() {
     try {
       const tahun = dashboardYear.toString();
       const existingNote = monthlyNotesData.find(
-        (n) => n.bulan === bulan && n.tahun === tahun
+        (n) => n.bulan === bulan && n.tahun === tahun && n._plant === userPlant
       );
 
       const noteData: MonthlyNote = {
@@ -1292,7 +1292,7 @@ export default function ProduksiNPKApp() {
     setCurrentNoteMonth(bulan);
     const tahun = dashboardYear.toString();
     const existingNote = monthlyNotesData.find(
-      (n) => n.bulan === bulan && n.tahun === tahun
+      (n) => n.bulan === bulan && n.tahun === tahun && n._plant === userPlant
     );
     setTempNote(existingNote?.catatan || "");
     setShowNoteModal(true);
@@ -7075,7 +7075,8 @@ export default function ProduksiNPKApp() {
                             monthlyNotesData.find(
                               (n) =>
                                 n.bulan === month.bulan &&
-                                n.tahun === dashboardYear.toString()
+                                n.tahun === dashboardYear.toString() &&
+                                n._plant === userPlant
                             )?.catatan
                               ? "border-[#00B4D8] bg-[#00B4D8]/10 text-[#00B4D8] hover:bg-[#00B4D8] hover:text-white"
                               : "border-gray-300 text-gray-600 hover:border-[#00B4D8] hover:text-[#00B4D8]"
@@ -7085,7 +7086,8 @@ export default function ProduksiNPKApp() {
                           {monthlyNotesData.find(
                             (n) =>
                               n.bulan === month.bulan &&
-                              n.tahun === dashboardYear.toString()
+                              n.tahun === dashboardYear.toString() &&
+                              n._plant === userPlant
                           )?.catatan
                             ? "Lihat Catatan"
                             : "Tambah Catatan"}
