@@ -3171,13 +3171,28 @@ export default function ProduksiNPKApp() {
         
         // Check if 'All' is selected
         if (formTimesheetLoader.shift === "All") {
-          // Save data for all shifts
+          // Save data for all shifts with proper calculation
           const shiftsToSave = ["Malam", "Pagi", "Sore"];
           
           for (const shiftValue of shiftsToSave) {
+            // Calculate jam operasi for each shift
+            const off = parseFloat(formTimesheetLoader.jamOff || "0");
+            const start = parseFloat(formTimesheetLoader.jamStart || "0");
+            const grounded = start - off;
+            let operasi = 0;
+            
+            if (shiftValue === "Malam") operasi = 8 - grounded;
+            else if (shiftValue === "Pagi") operasi = 7 - grounded;
+            else if (shiftValue === "Sore") operasi = 7 - grounded;
+            
+            const keterangan = grounded < 3 ? "OK" : "Grounded";
+            
             const dataToSave = {
               ...formTimesheetLoader,
               shift: shiftValue,
+              jamGrounded: grounded,
+              jamOperasi: operasi,
+              keterangan: keterangan,
               _plant: targetPlant,
             };
             await saveDataForPlant("timesheet_loader", dataToSave);
