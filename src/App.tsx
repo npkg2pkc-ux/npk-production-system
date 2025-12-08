@@ -3168,25 +3168,25 @@ export default function ProduksiNPKApp() {
       } else {
         // Detect plant from activeTab for admin users
         const targetPlant = getPlantFromTab(activeTab);
-        
+
         // Check if 'All' is selected
         if (formTimesheetLoader.shift === "All") {
           // Save data for all shifts with proper calculation
           const shiftsToSave = ["Malam", "Pagi", "Sore"];
-          
+
           for (const shiftValue of shiftsToSave) {
             // Calculate jam operasi for each shift
             const off = parseFloat(formTimesheetLoader.jamOff || "0");
             const start = parseFloat(formTimesheetLoader.jamStart || "0");
             const grounded = start - off;
             let operasi = 0;
-            
+
             if (shiftValue === "Malam") operasi = 8 - grounded;
             else if (shiftValue === "Pagi") operasi = 7 - grounded;
             else if (shiftValue === "Sore") operasi = 7 - grounded;
-            
+
             const keterangan = grounded < 3 ? "OK" : "Grounded";
-            
+
             const dataToSave = {
               ...formTimesheetLoader,
               shift: shiftValue,
@@ -3197,11 +3197,11 @@ export default function ProduksiNPKApp() {
             };
             await saveDataForPlant("timesheet_loader", dataToSave);
           }
-          
+
           // Refresh data dari server
           const refreshed = await fetchDataForPlant("timesheet_loader");
           setTimesheetLoaderData(refreshed || []);
-          
+
           addNotification(
             "timesheet_loader",
             `Timesheet Loader (All Shifts: Malam, Pagi, Sore) tanggal ${new Date(
@@ -9405,7 +9405,9 @@ export default function ProduksiNPKApp() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="All">All (Simpan ke semua shift)</SelectItem>
+                          <SelectItem value="All">
+                            All (Simpan ke semua shift)
+                          </SelectItem>
                           <SelectItem value="Malam">Malam</SelectItem>
                           <SelectItem value="Pagi">Pagi</SelectItem>
                           <SelectItem value="Sore">Sore</SelectItem>
@@ -9413,7 +9415,8 @@ export default function ProduksiNPKApp() {
                       </Select>
                       {formTimesheetLoader.shift === "All" && (
                         <p className="text-xs text-blue-600 mt-1">
-                          💡 Data akan disimpan untuk semua shift (Malam, Pagi, Sore)
+                          💡 Data akan disimpan untuk semua shift (Malam, Pagi,
+                          Sore)
                         </p>
                       )}
                     </div>
@@ -14876,64 +14879,44 @@ export default function ProduksiNPKApp() {
 
       {/* Loading Data Overlay (After Login) */}
       {loadingData && (
-        <div className="fixed inset-0 bg-gradient-to-br from-[#001B44] via-[#003366] to-[#00B4D8] flex items-center justify-center overflow-hidden z-[100]">
-          {/* Animated background elements */}
-          <div className="absolute inset-0">
-            <div className="absolute top-20 left-20 w-72 h-72 bg-white/5 rounded-full animate-pulse"></div>
-            <div
-              className="absolute bottom-32 right-20 w-96 h-96 bg-white/5 rounded-full animate-pulse"
-              style={{ animationDelay: "1s" }}
-            ></div>
-            <div
-              className="absolute top-1/2 left-1/3 w-48 h-48 bg-white/5 rounded-full animate-pulse"
-              style={{ animationDelay: "2s" }}
-            ></div>
-          </div>
-
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-md flex items-center justify-center overflow-hidden z-[100]">
           {/* Loading content */}
-          <div className="relative z-10 flex flex-col items-center gap-8 animate-fade-in">
+          <div className="relative z-10 flex flex-col items-center gap-8 animate-fade-in bg-white/95 rounded-2xl p-10 shadow-2xl">
             {/* Logo dengan animasi */}
             <div className="relative">
-              <div className="absolute inset-0 w-40 h-40 bg-[#7FFFD4]/20 rounded-full animate-ping"></div>
-              <div className="absolute inset-0 w-40 h-40 bg-[#00B4D8]/20 rounded-full animate-pulse"></div>
-              <div className="relative w-40 h-40 bg-white rounded-full shadow-2xl flex items-center justify-center p-4 animate-bounce">
+              <div className="absolute inset-0 w-32 h-32 bg-[#00B4D8]/10 rounded-full animate-ping"></div>
+              <div className="relative w-32 h-32 bg-gradient-to-br from-[#00B4D8] to-[#5FE9C5] rounded-full shadow-xl flex items-center justify-center p-4">
                 <img
                   src="/icon-new.png"
                   alt="Loading"
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-contain animate-pulse"
                 />
               </div>
             </div>
 
             {/* Text dan progress */}
-            <div className="text-center space-y-4">
-              <h2 className="text-4xl font-bold text-white animate-fade-in">
+            <div className="text-center space-y-3">
+              <h2 className="text-3xl font-bold text-[#001B44] animate-fade-in">
                 Reguler System
               </h2>
-              <p
-                className="text-xl text-[#7FFFD4] animate-fade-in"
-                style={{ animationDelay: "0.3s" }}
-              >
+              <p className="text-lg text-[#00B4D8] animate-fade-in">
                 Sistem Manajemen Produksi NPK
               </p>
 
               {/* Loading spinner */}
-              <div className="flex justify-center gap-2 mt-6">
-                <div className="w-3 h-3 bg-white rounded-full animate-bounce"></div>
+              <div className="flex justify-center gap-2 mt-4">
+                <div className="w-3 h-3 bg-[#00B4D8] rounded-full animate-bounce"></div>
                 <div
-                  className="w-3 h-3 bg-white rounded-full animate-bounce"
+                  className="w-3 h-3 bg-[#00B4D8] rounded-full animate-bounce"
                   style={{ animationDelay: "0.1s" }}
                 ></div>
                 <div
-                  className="w-3 h-3 bg-white rounded-full animate-bounce"
+                  className="w-3 h-3 bg-[#00B4D8] rounded-full animate-bounce"
                   style={{ animationDelay: "0.2s" }}
                 ></div>
               </div>
 
-              <p
-                className="text-sm text-white/70 mt-4 animate-fade-in"
-                style={{ animationDelay: "0.6s" }}
-              >
+              <p className="text-sm text-gray-600 mt-3 animate-fade-in">
                 Memuat data dashboard...
               </p>
             </div>
