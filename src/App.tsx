@@ -1419,6 +1419,14 @@ export default function ProduksiNPKApp() {
     return userRole === "admin" || userRole === "avp";
   };
 
+  // Format number with thousand separator (100.000 instead of 100000)
+  const formatNumber = (num: number, decimals: number = 2): string => {
+    return num.toLocaleString('id-ID', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    });
+  };
+
   // Generate unique session ID for current browser
   const currentSessionId = useRef(
     Math.random().toString(36).substr(2, 9) + Date.now()
@@ -6516,10 +6524,10 @@ export default function ProduksiNPKApp() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {metrics.monthlyProduction.toFixed(2)} Ton
+                {formatNumber(metrics.monthlyProduction, 2)} Ton
               </div>
               <p className="text-xs mt-2 opacity-90">
-                Target: {metrics.monthlyRKAP} Ton
+                Target: {formatNumber(metrics.monthlyRKAP, 0)} Ton
               </p>
             </CardContent>
           </Card>
@@ -6533,7 +6541,7 @@ export default function ProduksiNPKApp() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {metrics.monthlyPercentage.toFixed(1)}%
+                {formatNumber(metrics.monthlyPercentage, 1)}%
               </div>
               <div className="w-full bg-white/20 rounded-full h-2 mt-3">
                 <div
@@ -6555,10 +6563,10 @@ export default function ProduksiNPKApp() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {metrics.yearlyProduction.toFixed(2)} Ton
+                {formatNumber(metrics.yearlyProduction, 2)} Ton
               </div>
               <p className="text-xs mt-2 opacity-90">
-                Target: {metrics.yearlyRKAP} Ton
+                Target: {formatNumber(metrics.yearlyRKAP, 0)} Ton
               </p>
             </CardContent>
           </Card>
@@ -6576,7 +6584,7 @@ export default function ProduksiNPKApp() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {metrics.yearlyPercentage.toFixed(1)}%
+                {formatNumber(metrics.yearlyPercentage, 1)}%
               </div>
               <div className="w-full bg-[#001B44]/20 rounded-full h-2 mt-3">
                 <div
@@ -6711,13 +6719,13 @@ export default function ProduksiNPKApp() {
                     >
                       <td className="py-3 px-4 font-medium">{month.bulan}</td>
                       <td className="text-right py-3 px-4">
-                        {month.produksi.toFixed(2)}
+                        {formatNumber(month.produksi, 2)}
                       </td>
                       <td className="text-right py-3 px-4">
-                        {month.rkap.toFixed(2)}
+                        {formatNumber(month.rkap, 2)}
                       </td>
                       <td className="text-right py-3 px-4 font-semibold">
-                        {month.percentage.toFixed(1)}%
+                        {formatNumber(month.percentage, 1)}%
                       </td>
                       <td className="text-center py-3 px-4">
                         {month.percentage >= 100 ? (
@@ -7425,9 +7433,8 @@ export default function ProduksiNPKApp() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#001B44]">
-                {produksiBlendingData
-                  .reduce((sum, item) => sum + (Number(item.tonase) || 0), 0)
-                  .toFixed(2)}{" "}
+                {formatNumber(produksiBlendingData
+                  .reduce((sum, item) => sum + (Number(item.tonase) || 0), 0), 2)}{" "}
                 Ton
               </div>
               <p className="text-xs text-gray-500 mt-1">
@@ -7444,9 +7451,8 @@ export default function ProduksiNPKApp() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#001B44]">
-                {produksiNPKMiniData
-                  .reduce((sum, item) => sum + (Number(item.tonase) || 0), 0)
-                  .toFixed(2)}{" "}
+                {formatNumber(produksiNPKMiniData
+                  .reduce((sum, item) => sum + (Number(item.tonase) || 0), 0), 2)}{" "}
                 Ton
               </div>
               <p className="text-xs text-gray-500 mt-1">
@@ -7463,9 +7469,8 @@ export default function ProduksiNPKApp() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#001B44]">
-                {downtimeData
-                  .reduce((sum, item) => sum + (item.downtime || 0), 0)
-                  .toFixed(1)}{" "}
+                {formatNumber(downtimeData
+                  .reduce((sum, item) => sum + (item.downtime || 0), 0), 1)}{" "}
                 Jam
               </div>
               <p className="text-xs text-gray-500 mt-1">
@@ -8035,31 +8040,31 @@ export default function ProduksiNPKApp() {
                               )}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {Number(item.shiftMalamOnspek || 0).toFixed(2)}
+                              {formatNumber(Number(item.shiftMalamOnspek || 0), 2)}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {Number(item.shiftMalamOffspek || 0).toFixed(2)}
+                              {formatNumber(Number(item.shiftMalamOffspek || 0), 2)}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {Number(item.shiftPagiOnspek || 0).toFixed(2)}
+                              {formatNumber(Number(item.shiftPagiOnspek || 0), 2)}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {Number(item.shiftPagiOffspek || 0).toFixed(2)}
+                              {formatNumber(Number(item.shiftPagiOffspek || 0), 2)}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {Number(item.shiftSoreOnspek || 0).toFixed(2)}
+                              {formatNumber(Number(item.shiftSoreOnspek || 0), 2)}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {Number(item.shiftSoreOffspek || 0).toFixed(2)}
+                              {formatNumber(Number(item.shiftSoreOffspek || 0), 2)}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700 font-semibold">
-                              {Number(item.totalOnspek || 0).toFixed(2)}
+                              {formatNumber(Number(item.totalOnspek || 0), 2)}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700 font-semibold">
-                              {Number(item.totalOffspek || 0).toFixed(2)}
+                              {formatNumber(Number(item.totalOffspek || 0), 2)}
                             </td>
                             <td className="text-right py-3 px-4 font-bold text-[#001B44]">
-                              {Number(item.total || 0).toFixed(2)}
+                              {formatNumber(Number(item.total || 0), 2)}
                             </td>
                             <td className="text-center py-3 px-4">
                               <div className="flex gap-2 justify-center">
@@ -8471,7 +8476,7 @@ export default function ProduksiNPKApp() {
                               {item.formula}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {Number(item.tonase || 0).toFixed(2)}
+                              {formatNumber(Number(item.tonase || 0), 2)}
                             </td>
                             <td className="text-center py-3 px-4">
                               <div className="flex gap-2 justify-center">
@@ -8801,7 +8806,7 @@ export default function ProduksiNPKApp() {
                               {item.formulasi}
                             </td>
                             <td className="text-right py-3 px-4 text-gray-700">
-                              {Number(item.tonase || 0).toFixed(2)}
+                              {formatNumber(Number(item.tonase || 0), 2)}
                             </td>
                             <td className="text-center py-3 px-4">
                               <div className="flex gap-2 justify-center">
@@ -9950,7 +9955,7 @@ export default function ProduksiNPKApp() {
                                 {item.jamStart}
                               </td>
                               <td className="text-right py-2 px-3 font-semibold">
-                                {item.downtime?.toFixed(1)} jam
+                                {formatNumber(item.downtime || 0, 1)} jam
                               </td>
                               <td className="text-center py-2 px-3">
                                 <div className="flex gap-2 justify-center">
@@ -14091,7 +14096,11 @@ export default function ProduksiNPKApp() {
         className={`${
           sidebarCollapsed ? "w-16" : "w-64"
         } bg-[#001B44] text-white flex flex-col fixed left-0 top-0 bottom-0 overflow-y-auto shadow-xl transition-all duration-300 z-50
-        ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
+        ${
+          mobileMenuOpen
+            ? "translate-x-0"
+            : "-translate-x-full lg:translate-x-0"
+        }`}
       >
         <div className="p-6 border-b border-white/10">
           {!sidebarCollapsed && (
@@ -14632,7 +14641,9 @@ export default function ProduksiNPKApp() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
                     <div className="font-semibold text-gray-700">Nama:</div>
-                    <div className="col-span-1 sm:col-span-2">{viewAkunModal.data!.nama}</div>
+                    <div className="col-span-1 sm:col-span-2">
+                      {viewAkunModal.data!.nama}
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
                     <div className="font-semibold text-gray-700">Jabatan:</div>
