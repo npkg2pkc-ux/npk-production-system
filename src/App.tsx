@@ -1226,9 +1226,13 @@ export default function ProduksiNPKApp() {
   const handleMonthlyNoteChange = async (bulan: string, note: string) => {
     try {
       const tahun = dashboardYear.toString();
-      // Find existing note for this month/year and plant (or ALL)
+      // Find existing note for this month/year and plant
+      // ALL plant users can see all notes, others see their plant + ALL notes
       const existingNote = monthlyNotesData.find(
-        (n) => n.bulan === bulan && n.tahun === tahun && (n._plant === userPlant || n._plant === "ALL")
+        (n) =>
+          n.bulan === bulan &&
+          n.tahun === tahun &&
+          (userPlant === "ALL" || n._plant === userPlant || n._plant === "ALL")
       );
 
       const noteData: MonthlyNote = {
@@ -1292,9 +1296,13 @@ export default function ProduksiNPKApp() {
   const openNoteModal = (bulan: string) => {
     setCurrentNoteMonth(bulan);
     const tahun = dashboardYear.toString();
-    // Find existing note for this month/year and plant (or ALL)
+    // Find existing note for this month/year and plant
+    // ALL plant users can see all notes, others see their plant + ALL notes
     const existingNote = monthlyNotesData.find(
-      (n) => n.bulan === bulan && n.tahun === tahun && (n._plant === userPlant || n._plant === "ALL")
+      (n) =>
+        n.bulan === bulan &&
+        n.tahun === tahun &&
+        (userPlant === "ALL" || n._plant === userPlant || n._plant === "ALL")
     );
     setTempNote(existingNote?.catatan || "");
     setShowNoteModal(true);
@@ -7085,7 +7093,9 @@ export default function ProduksiNPKApp() {
                               (n) =>
                                 n.bulan === month.bulan &&
                                 n.tahun === dashboardYear.toString() &&
-                                (n._plant === userPlant || n._plant === "ALL")
+                                (userPlant === "ALL" ||
+                                  n._plant === userPlant ||
+                                  n._plant === "ALL")
                             )?.catatan
                               ? "border-[#00B4D8] bg-[#00B4D8]/10 text-[#00B4D8] hover:bg-[#00B4D8] hover:text-white"
                               : "border-gray-300 text-gray-600 hover:border-[#00B4D8] hover:text-[#00B4D8]"
@@ -7096,7 +7106,9 @@ export default function ProduksiNPKApp() {
                             (n) =>
                               n.bulan === month.bulan &&
                               n.tahun === dashboardYear.toString() &&
-                              (n._plant === userPlant || n._plant === "ALL")
+                              (userPlant === "ALL" ||
+                                n._plant === userPlant ||
+                                n._plant === "ALL")
                           )?.catatan
                             ? "Lihat Catatan"
                             : "Tambah Catatan"}
