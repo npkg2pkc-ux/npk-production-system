@@ -4595,6 +4595,8 @@ export default function ProduksiNPKApp() {
         return pertaData;
       case "trouble_record":
         return troubleRecordData;
+      case "users":
+        return usersData;
       default:
         return [];
     }
@@ -4758,6 +4760,14 @@ export default function ProduksiNPKApp() {
             {
               const refreshed = await fetchDataForPlant("trouble_record");
               setTroubleRecordData(refreshed || []);
+            }
+            break;
+          case "users":
+            dataToDelete = item || usersData[index];
+            await deleteDataFromSheetForPlant("users", dataToDelete);
+            {
+              const refreshed = await fetchDataForPlant("users");
+              setUsersData(refreshed || []);
             }
             break;
         }
@@ -5935,9 +5945,7 @@ export default function ProduksiNPKApp() {
     const currentMonth = new Date().getMonth();
 
     const plantData = produksiNPKData.filter((item: any) => {
-      return (
-        item._plant === plant || (!item._plant && plant === "NPK2")
-      );
+      return item._plant === plant || (!item._plant && plant === "NPK2");
     });
 
     const monthlyProduction = plantData
@@ -5958,8 +5966,18 @@ export default function ProduksiNPKApp() {
       .reduce((sum, item) => sum + (item.total || 0), 0);
 
     const monthNames = [
-      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-      "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+      "Januari",
+      "Februari",
+      "Maret",
+      "April",
+      "Mei",
+      "Juni",
+      "Juli",
+      "Agustus",
+      "September",
+      "Oktober",
+      "November",
+      "Desember",
     ];
 
     const monthlyBreakdown = monthNames.map((month, index) => {
@@ -6835,10 +6853,7 @@ export default function ProduksiNPKApp() {
                             </div>
                             <div className="text-right">
                               <p className="text-2xl font-bold text-[#001B44]">
-                                {formatNumber(
-                                  npk1Metrics.yearlyProduction,
-                                  2
-                                )}{" "}
+                                {formatNumber(npk1Metrics.yearlyProduction, 2)}{" "}
                                 Ton
                               </p>
                               <p className="text-sm text-gray-500">
@@ -6864,10 +6879,7 @@ export default function ProduksiNPKApp() {
                             </div>
                             <div className="text-right">
                               <p className="text-2xl font-bold text-[#001B44]">
-                                {formatNumber(
-                                  npk2Metrics.yearlyProduction,
-                                  2
-                                )}{" "}
+                                {formatNumber(npk2Metrics.yearlyProduction, 2)}{" "}
                                 Ton
                               </p>
                               <p className="text-sm text-gray-500">
