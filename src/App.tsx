@@ -1032,6 +1032,15 @@ export default function ProduksiNPKApp() {
   const forkliftOptions = useMemo(
     () =>
       userPlant === "NPK1"
+        ? ["All", "F15", "F16", "F17", "F18"]
+        : ["All", "F19", "F20", "F21", "F22", "F23"],
+    [userPlant]
+  );
+
+  // Get actual forklift units (without 'All')
+  const actualForkliftUnits = useMemo(
+    () =>
+      userPlant === "NPK1"
         ? ["F15", "F16", "F17", "F18"]
         : ["F19", "F20", "F21", "F22", "F23"],
     [userPlant]
@@ -3046,29 +3055,62 @@ export default function ProduksiNPKApp() {
       } else {
         // Detect plant from activeTab for admin users
         const targetPlant = getPlantFromTab(activeTab);
-        const dataToSave = {
-          ...formTimesheetForklift,
-          _plant: targetPlant,
-        };
 
-        await saveDataForPlant("timesheet_forklift", dataToSave);
+        // Check if 'All' is selected
+        if (formTimesheetForklift.forklift === "All") {
+          // Save data for all forklift units
+          const forkliftUnitsToSave = actualForkliftUnits;
 
-        // Refresh data dari server untuk mendapatkan ID yang di-generate
-        const refreshed = await fetchDataForPlant("timesheet_forklift");
-        setTimesheetForkliftData(refreshed || []);
-        addNotification(
-          "timesheet_forklift",
-          `Timesheet Forklift (${
-            formTimesheetForklift.forklift
-          }) tanggal ${new Date(
-            formTimesheetForklift.tanggal
-          ).toLocaleDateString("id-ID")}`
-        );
-        showSuccess("Data berhasil disimpan!");
+          for (const forkliftUnit of forkliftUnitsToSave) {
+            const dataToSave = {
+              ...formTimesheetForklift,
+              forklift: forkliftUnit,
+              _plant: targetPlant,
+            };
+            await saveDataForPlant("timesheet_forklift", dataToSave);
+          }
+
+          // Refresh data dari server
+          const refreshed = await fetchDataForPlant("timesheet_forklift");
+          setTimesheetForkliftData(refreshed || []);
+
+          addNotification(
+            "timesheet_forklift",
+            `Timesheet Forklift (All Units: ${forkliftUnitsToSave.join(
+              ", "
+            )}) tanggal ${new Date(
+              formTimesheetForklift.tanggal
+            ).toLocaleDateString("id-ID")}`
+          );
+          showSuccess(
+            `Data berhasil disimpan untuk ${forkliftUnitsToSave.length} unit forklift!`
+          );
+        } else {
+          // Save for single forklift unit
+          const dataToSave = {
+            ...formTimesheetForklift,
+            _plant: targetPlant,
+          };
+
+          await saveDataForPlant("timesheet_forklift", dataToSave);
+
+          // Refresh data dari server untuk mendapatkan ID yang di-generate
+          const refreshed = await fetchDataForPlant("timesheet_forklift");
+          setTimesheetForkliftData(refreshed || []);
+          addNotification(
+            "timesheet_forklift",
+            `Timesheet Forklift (${
+              formTimesheetForklift.forklift
+            }) tanggal ${new Date(
+              formTimesheetForklift.tanggal
+            ).toLocaleDateString("id-ID")}`
+          );
+          showSuccess("Data berhasil disimpan!");
+        }
       }
       setFormTimesheetForklift({
         tanggal: new Date().toISOString().split("T")[0],
-        forklift: "F19",
+        forklift: forkliftOptions[0],
         deskripsiTemuan: "",
         jamOff: "",
         jamStart: "",
@@ -8848,11 +8890,13 @@ export default function ProduksiNPKApp() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {forkliftOptions.map((opt) => (
-                          <SelectItem key={opt} value={opt}>
-                            {opt}
-                          </SelectItem>
-                        ))}
+                        {forkliftOptions
+                          .filter((opt) => opt !== "All")
+                          .map((opt) => (
+                            <SelectItem key={opt} value={opt}>
+                              {opt}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -8928,10 +8972,17 @@ export default function ProduksiNPKApp() {
                           {forkliftOptions.map((opt) => (
                             <SelectItem key={opt} value={opt}>
                               {opt}
+                              {opt === "All" && " (Simpan ke semua unit)"}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {formTimesheetForklift.forklift === "All" && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          💡 Data akan disimpan untuk semua unit forklift (
+                          {actualForkliftUnits.join(", ")})
+                        </p>
+                      )}
                     </div>
                     <div className="md:col-span-2">
                       <Label htmlFor="deskripsiTemuanForklift">
