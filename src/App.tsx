@@ -57,6 +57,7 @@ import {
   Users,
   UserPlus,
   Shield,
+  Menu,
 } from "lucide-react";
 
 const WEBHOOK_URL =
@@ -867,6 +868,7 @@ export default function ProduksiNPKApp() {
   const [showLoginOverlay, setShowLoginOverlay] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Chat states
   interface ChatMessage {
@@ -13968,6 +13970,8 @@ export default function ProduksiNPKApp() {
     } else {
       setActiveTab("");
     }
+    // Close mobile menu after navigation
+    setMobileMenuOpen(false);
   };
 
   // Show login screen if not logged in
@@ -14067,14 +14071,39 @@ export default function ProduksiNPKApp() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+        className="lg:hidden fixed top-4 left-4 z-[60] p-2 bg-[#001B44] text-white rounded-lg shadow-lg hover:bg-[#00B4D8] transition-all"
+      >
+        <Menu className="w-6 h-6" />
+      </button>
+
+      {/* Mobile Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
       <aside
         className={`${
           sidebarCollapsed ? "w-16" : "w-64"
-        } bg-[#001B44] text-white flex flex-col fixed left-0 top-0 bottom-0 overflow-y-auto shadow-xl transition-all duration-300`}
+        } bg-[#001B44] text-white flex flex-col fixed left-0 top-0 bottom-0 overflow-y-auto shadow-xl transition-all duration-300 z-50
+        ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
         <div className="p-6 border-b border-white/10">
           {!sidebarCollapsed && (
             <div className="relative">
+              {/* Mobile Close Button */}
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="lg:hidden absolute -right-3 -top-3 p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-all"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+
               <div className="text-center">
                 <h1 className="text-xl font-bold text-white leading-tight">
                   NPK Production
@@ -14084,10 +14113,10 @@ export default function ProduksiNPKApp() {
                 </p>
               </div>
 
-              {/* Small Toggle Button */}
+              {/* Small Toggle Button - Desktop Only */}
               <button
                 onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="group absolute -right-2 top-0 p-1.5 rounded-lg bg-gradient-to-r from-[#00B4D8] to-[#7FFFD4] hover:shadow-lg hover:shadow-[#00B4D8]/50 transition-all duration-300 hover:scale-110"
+                className="hidden lg:block group absolute -right-2 top-0 p-1.5 rounded-lg bg-gradient-to-r from-[#00B4D8] to-[#7FFFD4] hover:shadow-lg hover:shadow-[#00B4D8]/50 transition-all duration-300 hover:scale-110"
                 title="Collapse sidebar"
               >
                 <ChevronLeft className="w-4 h-4 text-white group-hover:translate-x-0.5 transition-transform" />
@@ -14247,7 +14276,7 @@ export default function ProduksiNPKApp() {
       </aside>
 
       {/* Header Right - User Menu & Notification - Fixed Position */}
-      <div className="fixed top-6 right-6 z-50 flex items-center gap-3">
+      <div className="fixed top-4 right-4 lg:top-6 lg:right-6 z-50 flex items-center gap-2 lg:gap-3">
         {/* User Menu Button */}
         <div className="relative">
           <Button
@@ -14349,7 +14378,7 @@ export default function ProduksiNPKApp() {
 
             {/* Notification Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-96 overflow-y-auto">
                 <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex justify-between items-center">
                   <h3 className="font-semibold text-[#001B44]">Notifikasi</h3>
                   <div className="flex gap-2">
@@ -14509,12 +14538,12 @@ export default function ProduksiNPKApp() {
 
       <main
         className={`flex-1 ${
-          sidebarCollapsed ? "ml-16" : "ml-64"
-        } px-8 pt-8 pb-4 overflow-y-auto overflow-x-hidden h-screen transition-all duration-300`}
+          sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
+        } ml-0 px-4 lg:px-8 pt-20 lg:pt-8 pb-4 overflow-y-auto overflow-x-hidden h-screen transition-all duration-300`}
       >
         <div className="max-w-7xl mx-auto">
           <div className="mb-6">
-            <h2 className="text-3xl font-bold text-[#001B44]">
+            <h2 className="text-2xl lg:text-3xl font-bold text-[#001B44]">
               {navItems.find((item) => item.id === activeNav)?.label}
             </h2>
             {activeTab && (
@@ -14593,25 +14622,25 @@ export default function ProduksiNPKApp() {
             <div className="p-6">
               {viewAkunModal.data && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
                     <div className="font-semibold text-gray-700">
                       No. Badge:
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 sm:col-span-2">
                       {viewAkunModal.data!.noBadge}
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
                     <div className="font-semibold text-gray-700">Nama:</div>
-                    <div className="col-span-2">{viewAkunModal.data!.nama}</div>
+                    <div className="col-span-1 sm:col-span-2">{viewAkunModal.data!.nama}</div>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
                     <div className="font-semibold text-gray-700">Jabatan:</div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 sm:col-span-2">
                       {viewAkunModal.data!.jabatan}
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-4 items-start">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 items-start">
                     <div className="font-semibold text-gray-700 pt-2">
                       Password ESS:
                     </div>
@@ -14848,11 +14877,11 @@ export default function ProduksiNPKApp() {
                       </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
                     <div className="font-semibold text-gray-700">
                       Tanggal Update:
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 sm:col-span-2">
                       {new Date(
                         viewAkunModal.data!.tanggalUpdate
                       ).toLocaleDateString("id-ID", {
