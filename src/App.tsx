@@ -1298,14 +1298,32 @@ export default function ProduksiNPKApp() {
   const openNoteModal = (bulan: string) => {
     setCurrentNoteMonth(bulan);
     const tahun = dashboardYear.toString();
+    
+    console.log("🔍 Opening note modal for:", { bulan, tahun, userPlant });
+    console.log("🔍 Total notes in state:", monthlyNotesData.length);
+    console.log("🔍 All notes:", monthlyNotesData);
+    
     // Find existing note for this month/year and plant
     // ALL plant users can see all notes, others see their plant + ALL notes
     const existingNote = monthlyNotesData.find(
-      (n) =>
-        n.bulan === bulan &&
-        n.tahun === tahun &&
-        (userPlant === "ALL" || n._plant === userPlant || n._plant === "ALL")
+      (n) => {
+        const match = n.bulan === bulan &&
+          n.tahun === tahun &&
+          (userPlant === "ALL" || n._plant === userPlant || n._plant === "ALL");
+        
+        console.log("🔍 Checking note:", { 
+          note: n, 
+          bulanMatch: n.bulan === bulan,
+          tahunMatch: n.tahun === tahun,
+          plantMatch: (userPlant === "ALL" || n._plant === userPlant || n._plant === "ALL"),
+          overallMatch: match
+        });
+        
+        return match;
+      }
     );
+    
+    console.log("🔍 Found existing note:", existingNote);
     setTempNote(existingNote?.catatan || "");
     setShowNoteModal(true);
   };
@@ -2709,7 +2727,7 @@ export default function ProduksiNPKApp() {
           console.log("📝 Note fields:", Object.keys(monthlyNotes[0]));
         }
         console.log("👤 User plant:", userPlant);
-        
+
         // Normalize: handle both 'plant' and '_plant' field names
         const normalizedNotes = (monthlyNotes || []).map((note: any) => ({
           ...note,
@@ -14708,7 +14726,7 @@ export default function ProduksiNPKApp() {
           <div className="mt-auto border-t border-white/20">
             <div className="p-4">
               <p className="text-xs opacity-75">
-                V 1.35 - 2025 | NPKG-2 Production
+                V 1.36 - 2025 | NPKG-2 Production
               </p>
               <p className="text-xs opacity-75 mt-1">
                 Made with <span className="text-red-500">🤍</span>
