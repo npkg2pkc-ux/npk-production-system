@@ -828,19 +828,6 @@ export default function ProduksiNPKApp() {
     return "ALL"; // default to ALL for admin/unknown
   };
 
-  // Helper function untuk format timestamp dengan timezone Jakarta
-  const formatTimestamp = (dateStr: string | Date) => {
-    return new Date(dateStr).toLocaleString("id-ID", {
-      timeZone: "Asia/Jakarta",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-  };
-
   // Login states
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState<
