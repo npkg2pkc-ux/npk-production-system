@@ -7527,138 +7527,297 @@ export default function ProduksiNPKApp() {
           </div>
         )}
 
-        <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader className="bg-gradient-to-r from-[#7FFFD4] to-[#00B4D8]">
-            <CardTitle className="text-[#001B44] font-bold flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Detail Pencapaian Bulanan
-            </CardTitle>
-            <CardDescription className="text-[#001B44]/80">
-              Rincian produksi dan pencapaian setiap bulan
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gradient-to-r from-[#00B4D8] to-[#5FE9C5]">
-                  <tr>
-                    <th className="text-left py-4 px-4 font-bold text-white">
-                      Bulan
-                    </th>
-                    <th className="text-right py-4 px-4 font-bold text-white">
-                      Produksi (Ton)
-                    </th>
-                    <th className="text-right py-4 px-4 font-bold text-white">
-                      Target RKAP (Ton)
-                    </th>
-                    <th className="text-right py-4 px-4 font-bold text-white">
-                      Pencapaian (%)
-                    </th>
-                    <th className="text-center py-4 px-4 font-bold text-white">
-                      Status
-                    </th>
-                    <th className="text-center py-4 px-4 font-bold text-white">
-                      Catatan
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white">
-                  {metrics.monthlyBreakdown.map((month, idx) => (
-                    <tr
-                      key={idx}
-                      className="border-b border-gray-100 hover:bg-[#00B4D8]/5 transition-colors"
-                    >
-                      <td className="py-3 px-4 font-medium">{month.bulan}</td>
-                      <td className="text-right py-3 px-4">
-                        {formatNumber(month.produksi, 2)}
-                      </td>
-                      <td className="text-right py-3 px-4">
-                        {formatNumber(month.rkap, 2)}
-                      </td>
-                      <td className="text-right py-3 px-4 font-semibold">
-                        {formatNumber(month.percentage, 1)}%
-                      </td>
-                      <td className="text-center py-3 px-4">
-                        {month.percentage >= 100 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[#00B4D8]/20 text-[#001B44]">
-                            <CheckCircle className="w-3 h-3" /> Target Tercapai
-                          </span>
-                        ) : month.percentage >= 80 ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            <TrendingUp className="w-3 h-3" /> Mendekati Target
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            <AlertCircle className="w-3 h-3" /> Perlu
-                            Peningkatan
-                          </span>
-                        )}
-                      </td>
-                      <td className="text-center py-3 px-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            console.log("🔘 Button clicked for month:", {
-                              bulan: month.bulan,
-                              tahun: dashboardYear.toString(),
-                              userPlant,
-                              dashboardPlantFilter,
-                              targetPlant:
+        {/* Detail Pencapaian Bulanan - Side by Side untuk ALL plant */}
+        {dashboardPlantFilter === "ALL" ? (
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            {/* NPK1 */}
+            <Card className="border-gray-200 shadow-md hover:shadow-lg transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-[#7FFFD4] to-[#00B4D8] py-3">
+                <CardTitle className="text-[#001B44] font-bold flex items-center gap-2 text-base">
+                  <FileText className="w-4 h-4" />
+                  Detail Pencapaian NPK1
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gradient-to-r from-[#00B4D8] to-[#5FE9C5]">
+                      <tr>
+                        <th className="text-left py-2 px-2 font-bold text-white text-xs">
+                          Bulan
+                        </th>
+                        <th className="text-right py-2 px-2 font-bold text-white text-xs">
+                          Produksi
+                        </th>
+                        <th className="text-right py-2 px-2 font-bold text-white text-xs">
+                          Target
+                        </th>
+                        <th className="text-right py-2 px-2 font-bold text-white text-xs">
+                          %
+                        </th>
+                        <th className="text-center py-2 px-2 font-bold text-white text-xs">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {(() => {
+                        const npk1Metrics = calculatePlantMetrics("NPK1");
+                        return npk1Metrics.monthlyBreakdown.map(
+                          (month: any, idx: number) => (
+                            <tr
+                              key={idx}
+                              className="border-b border-gray-100 hover:bg-[#00B4D8]/5"
+                            >
+                              <td className="py-2 px-2 font-medium text-xs">
+                                {month.bulan}
+                              </td>
+                              <td className="text-right py-2 px-2 text-xs">
+                                {formatNumber(month.produksi, 1)}
+                              </td>
+                              <td className="text-right py-2 px-2 text-xs">
+                                {formatNumber(month.rkap, 1)}
+                              </td>
+                              <td className="text-right py-2 px-2 font-semibold text-xs">
+                                {formatNumber(month.percentage, 1)}%
+                              </td>
+                              <td className="text-center py-2 px-2">
+                                {month.percentage >= 100 ? (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-[#00B4D8]/20 text-[#001B44]">
+                                    <CheckCircle className="w-3 h-3" /> Tercapai
+                                  </span>
+                                ) : month.percentage >= 80 ? (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800">
+                                    <TrendingUp className="w-3 h-3" /> Mendekati
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-800">
+                                    <AlertCircle className="w-3 h-3" /> Rendah
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        );
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* NPK2 */}
+            <Card className="border-gray-200 shadow-md hover:shadow-lg transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-[#7FFFD4] to-[#00B4D8] py-3">
+                <CardTitle className="text-[#001B44] font-bold flex items-center gap-2 text-base">
+                  <FileText className="w-4 h-4" />
+                  Detail Pencapaian NPK2
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gradient-to-r from-[#00B4D8] to-[#5FE9C5]">
+                      <tr>
+                        <th className="text-left py-2 px-2 font-bold text-white text-xs">
+                          Bulan
+                        </th>
+                        <th className="text-right py-2 px-2 font-bold text-white text-xs">
+                          Produksi
+                        </th>
+                        <th className="text-right py-2 px-2 font-bold text-white text-xs">
+                          Target
+                        </th>
+                        <th className="text-right py-2 px-2 font-bold text-white text-xs">
+                          %
+                        </th>
+                        <th className="text-center py-2 px-2 font-bold text-white text-xs">
+                          Status
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {(() => {
+                        const npk2Metrics = calculatePlantMetrics("NPK2");
+                        return npk2Metrics.monthlyBreakdown.map(
+                          (month: any, idx: number) => (
+                            <tr
+                              key={idx}
+                              className="border-b border-gray-100 hover:bg-[#00B4D8]/5"
+                            >
+                              <td className="py-2 px-2 font-medium text-xs">
+                                {month.bulan}
+                              </td>
+                              <td className="text-right py-2 px-2 text-xs">
+                                {formatNumber(month.produksi, 1)}
+                              </td>
+                              <td className="text-right py-2 px-2 text-xs">
+                                {formatNumber(month.rkap, 1)}
+                              </td>
+                              <td className="text-right py-2 px-2 font-semibold text-xs">
+                                {formatNumber(month.percentage, 1)}%
+                              </td>
+                              <td className="text-center py-2 px-2">
+                                {month.percentage >= 100 ? (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-[#00B4D8]/20 text-[#001B44]">
+                                    <CheckCircle className="w-3 h-3" /> Tercapai
+                                  </span>
+                                ) : month.percentage >= 80 ? (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-yellow-100 text-yellow-800">
+                                    <TrendingUp className="w-3 h-3" /> Mendekati
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs bg-red-100 text-red-800">
+                                    <AlertCircle className="w-3 h-3" /> Rendah
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          )
+                        );
+                      })()}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+            <CardHeader className="bg-gradient-to-r from-[#7FFFD4] to-[#00B4D8]">
+              <CardTitle className="text-[#001B44] font-bold flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Detail Pencapaian Bulanan
+              </CardTitle>
+              <CardDescription className="text-[#001B44]/80">
+                Rincian produksi dan pencapaian setiap bulan
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gradient-to-r from-[#00B4D8] to-[#5FE9C5]">
+                    <tr>
+                      <th className="text-left py-4 px-4 font-bold text-white">
+                        Bulan
+                      </th>
+                      <th className="text-right py-4 px-4 font-bold text-white">
+                        Produksi (Ton)
+                      </th>
+                      <th className="text-right py-4 px-4 font-bold text-white">
+                        Target RKAP (Ton)
+                      </th>
+                      <th className="text-right py-4 px-4 font-bold text-white">
+                        Pencapaian (%)
+                      </th>
+                      <th className="text-center py-4 px-4 font-bold text-white">
+                        Status
+                      </th>
+                      <th className="text-center py-4 px-4 font-bold text-white">
+                        Catatan
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white">
+                    {metrics.monthlyBreakdown.map((month, idx) => (
+                      <tr
+                        key={idx}
+                        className="border-b border-gray-100 hover:bg-[#00B4D8]/5 transition-colors"
+                      >
+                        <td className="py-3 px-4 font-medium">{month.bulan}</td>
+                        <td className="text-right py-3 px-4">
+                          {formatNumber(month.produksi, 2)}
+                        </td>
+                        <td className="text-right py-3 px-4">
+                          {formatNumber(month.rkap, 2)}
+                        </td>
+                        <td className="text-right py-3 px-4 font-semibold">
+                          {formatNumber(month.percentage, 1)}%
+                        </td>
+                        <td className="text-center py-3 px-4">
+                          {month.percentage >= 100 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-[#00B4D8]/20 text-[#001B44]">
+                              <CheckCircle className="w-3 h-3" /> Target
+                              Tercapai
+                            </span>
+                          ) : month.percentage >= 80 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              <TrendingUp className="w-3 h-3" /> Mendekati
+                              Target
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              <AlertCircle className="w-3 h-3" /> Perlu
+                              Peningkatan
+                            </span>
+                          )}
+                        </td>
+                        <td className="text-center py-3 px-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              console.log("🔘 Button clicked for month:", {
+                                bulan: month.bulan,
+                                tahun: dashboardYear.toString(),
+                                userPlant,
+                                dashboardPlantFilter,
+                                targetPlant:
+                                  userPlant === "ALL"
+                                    ? dashboardPlantFilter
+                                    : userPlant,
+                                availableNotes: monthlyNotesData,
+                              });
+                              openNoteModal(month.bulan);
+                            }}
+                            className={`${(() => {
+                              const targetPlant =
                                 userPlant === "ALL"
                                   ? dashboardPlantFilter
-                                  : userPlant,
-                              availableNotes: monthlyNotesData,
-                            });
-                            openNoteModal(month.bulan);
-                          }}
-                          className={`${(() => {
-                            const targetPlant =
-                              userPlant === "ALL"
-                                ? dashboardPlantFilter
-                                : userPlant;
-                            const found = monthlyNotesData.find(
+                                  : userPlant;
+                              const found = monthlyNotesData.find(
+                                (n) =>
+                                  n.bulan === month.bulan &&
+                                  n.tahun === dashboardYear.toString() &&
+                                  n.plant === targetPlant
+                              );
+                              if (month.bulan === "Agustus") {
+                                console.log(`🔍 Button render for Agustus:`, {
+                                  targetPlant,
+                                  searchBulan: month.bulan,
+                                  searchTahun: dashboardYear.toString(),
+                                  found: !!found,
+                                  foundNote: found,
+                                  allNotes: monthlyNotesData,
+                                });
+                              }
+                              return found?.catatan
+                                ? "border-[#00B4D8] bg-[#00B4D8]/10 text-[#00B4D8] hover:bg-[#00B4D8] hover:text-white"
+                                : "border-gray-300 text-gray-600 hover:border-[#00B4D8] hover:text-[#00B4D8]";
+                            })()}`}
+                          >
+                            <StickyNote className="w-4 h-4 mr-2" />
+                            {monthlyNotesData.find(
                               (n) =>
                                 n.bulan === month.bulan &&
                                 n.tahun === dashboardYear.toString() &&
-                                n.plant === targetPlant
-                            );
-                            if (month.bulan === "Agustus") {
-                              console.log(`🔍 Button render for Agustus:`, {
-                                targetPlant,
-                                searchBulan: month.bulan,
-                                searchTahun: dashboardYear.toString(),
-                                found: !!found,
-                                foundNote: found,
-                                allNotes: monthlyNotesData,
-                              });
-                            }
-                            return found?.catatan
-                              ? "border-[#00B4D8] bg-[#00B4D8]/10 text-[#00B4D8] hover:bg-[#00B4D8] hover:text-white"
-                              : "border-gray-300 text-gray-600 hover:border-[#00B4D8] hover:text-[#00B4D8]";
-                          })()}`}
-                        >
-                          <StickyNote className="w-4 h-4 mr-2" />
-                          {monthlyNotesData.find(
-                            (n) =>
-                              n.bulan === month.bulan &&
-                              n.tahun === dashboardYear.toString() &&
-                              n.plant ===
-                                (userPlant === "ALL"
-                                  ? dashboardPlantFilter
-                                  : userPlant)
-                          )?.catatan
-                            ? "Lihat Catatan"
-                            : "Tambah Catatan"}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                                n.plant ===
+                                  (userPlant === "ALL"
+                                    ? dashboardPlantFilter
+                                    : userPlant)
+                            )?.catatan
+                              ? "Lihat Catatan"
+                              : "Tambah Catatan"}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Grid 2 Kolom untuk Grafik Downtime */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
