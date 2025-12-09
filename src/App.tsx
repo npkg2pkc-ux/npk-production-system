@@ -2079,11 +2079,25 @@ export default function ProduksiNPKApp() {
       "XII",
     ][now.getMonth()];
     const year = now.getFullYear();
-    const count = gatePassData.length + 1;
-    const noFile = `${String(count).padStart(
-      3,
-      "0"
-    )}/GATE/NPKG2/${monthRoman}/${year}`;
+
+    // Tentukan plant berdasarkan userPlant
+    const plant = userPlant === "NPK1" ? "NPK1" : "NPK2";
+
+    // Filter gate pass berdasarkan plant, bulan, dan tahun yang sama
+    const currentMonthYear = `${monthRoman}/${year}`;
+    const filteredGatePass = gatePassData.filter((item: GatePass) => {
+      const itemPlant = item._plant || "NPK2"; // default NPK2 untuk data lama
+      const itemNoFile = item.noFile || "";
+      const isMatchingPlant = itemPlant === plant;
+      const isMatchingMonth = itemNoFile.includes(currentMonthYear);
+      return isMatchingPlant && isMatchingMonth;
+    });
+
+    // Hitung nomor urut berikutnya
+    const count = filteredGatePass.length + 1;
+    const noFile = `${String(count).padStart(3, "0")}/GATE/${
+      plant === "NPK1" ? "NPKG1" : "NPKG2"
+    }/${monthRoman}/${year}`;
     setFormGatePass((prev) => ({ ...prev, noFile }));
   };
 
@@ -2091,7 +2105,7 @@ export default function ProduksiNPKApp() {
     if (activeTab === "gatepass" && !formGatePass.noFile) {
       generateGatePassNumber();
     }
-  }, [activeTab, gatePassData.length]);
+  }, [activeTab, gatePassData.length, userPlant]);
 
   // Generate Trouble Record number berdasarkan tanggal kejadian
   const generateTroubleRecordNumber = (tanggalKejadian?: string) => {
