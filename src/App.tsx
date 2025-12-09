@@ -2080,35 +2080,111 @@ export default function ProduksiNPKApp() {
     ][now.getMonth()];
     const year = now.getFullYear();
 
-    // Tentukan plant berdasarkan userPlant
-    const plant = userPlant === "NPK1" ? "NPK1" : "NPK2";
+    // Tentukan plant berdasarkan activeTab atau userPlant dengan logika yang jelas
+    let plant: "NPK1" | "NPK2";
+    let plantCode: string;
 
-    // Filter gate pass berdasarkan plant, bulan, dan tahun yang sama
-    const currentMonthYear = `${monthRoman}/${year}`;
-    const filteredGatePass = gatePassData.filter((item: GatePass) => {
-      const itemPlant = item._plant || "NPK2"; // default NPK2 untuk data lama
-      const itemNoFile = item.noFile || "";
-      const isMatchingPlant = itemPlant === plant;
-      const isMatchingMonth = itemNoFile.includes(currentMonthYear);
-      return isMatchingPlant && isMatchingMonth;
+    // Logika pemilihan plant yang eksplisit dan terpisah
+    if (activeTab === "gatepass_npk1") {
+      // Tab khusus NPK 1
+      plant = "NPK1";
+      plantCode = "NPKG1";
+    } else if (activeTab === "gatepass_npk2") {
+      // Tab khusus NPK 2
+      plant = "NPK2";
+      plantCode = "NPKG2";
+    } else if (activeTab === "gatepass" && userPlant === "NPK1") {
+      // Tab umum dengan user NPK 1
+      plant = "NPK1";
+      plantCode = "NPKG1";
+    } else {
+      // Tab umum dengan user NPK 2 atau default
+      plant = "NPK2";
+      plantCode = "NPKG2";
+    }
+
+    console.log("🔢 Generate Gate Pass Number:", {
+      activeTab,
+      userPlant,
+      plant,
+      plantCode,
     });
 
-    // Hitung nomor urut berikutnya
-    const count = filteredGatePass.length + 1;
-    const noFile = `${String(count).padStart(3, "0")}/GATE/${
-      plant === "NPK1" ? "NPKG1" : "NPKG2"
-    }/${monthRoman}/${year}`;
+    // Filter gate pass berdasarkan plant secara eksplisit
+    const filteredByPlant = gatePassData.filter((item: GatePass) => {
+      if (plant === "NPK1") {
+        // Untuk NPK1: hanya ambil data dengan _plant === "NPK1"
+        return item._plant === "NPK1";
+      } else {
+        // Untuk NPK2: ambil data dengan _plant === "NPK2" atau data lama tanpa _plant
+        return item._plant === "NPK2" || !item._plant;
+      }
+    });
+
+    // Cari nomor terakhir dari plant ini
+    let maxNumber = 0;
+
+    filteredByPlant.forEach((item: GatePass) => {
+      const itemNoFile = item.noFile || "";
+      // Format: 001/GATE/NPKG1/XII/2025 atau 010/GATE/NPKG2/XII/2025
+      const parts = itemNoFile.split("/");
+      if (parts.length >= 5) {
+        const number = parseInt(parts[0], 10);
+        const itemYear = parts[4]; // 2025
+
+        // Jika tahun sama, cari nomor terbesar (tidak peduli bulan)
+        if (itemYear === year.toString()) {
+          if (number > maxNumber) {
+            maxNumber = number;
+          }
+        }
+      }
+    });
+
+    // Nomor urut berikutnya (reset ke 001 hanya jika beda tahun)
+    const nextNumber = maxNumber + 1;
+    const noFile = `${String(nextNumber).padStart(
+      3,
+      "0"
+    )}/GATE/${plantCode}/${monthRoman}/${year}`;
     setFormGatePass((prev) => ({ ...prev, noFile }));
   };
 
   useEffect(() => {
-    if (activeTab === "gatepass" && !formGatePass.noFile) {
+    const isGatePassTab =
+      activeTab === "gatepass" ||
+      activeTab === "gatepass_npk1" ||
+      activeTab === "gatepass_npk2";
+    if (isGatePassTab) {
+      // Selalu regenerate nomor saat tab berubah untuk memastikan plant yang benar
       generateGatePassNumber();
     }
   }, [activeTab, gatePassData.length, userPlant]);
 
-  // Generate Trouble Record number berdasarkan tanggal kejadian
+  // Generate Trouble Record number berdasarkan tanggal kejadian dan plant
   const generateTroubleRecordNumber = (tanggalKejadian?: string) => {
+    // Tentukan plant berdasarkan activeTab atau userPlant
+    let plant: "NPK1" | "NPK2";
+    let plantCode: string;
+
+    if (activeTab === "troublerecord_npk1") {
+      plant = "NPK1";
+      plantCode = "NPKG1";
+    } else if (activeTab === "troublerecord_npk2") {
+      plant = "NPK2";
+      plantCode = "NPKG2";
+    } else if (activeTab === "troublerecord" && userPlant === "NPK1") {
+      plant = "NPK1";
+      plantCode = "NPKG1";
+    } else {
+      plant = "NPK2";
+      plantCode = "NPKG2";
+    }
+
+    console.log(
+      `🏭 Trouble Record - Active Tab: ${activeTab}, Plant: ${plant}, Code: ${plantCode}`
+    );
+
     // Gunakan tanggal kejadian dari form atau tanggal hari ini
     const dateToUse =
       tanggalKejadian ||
@@ -2131,39 +2207,62 @@ export default function ProduksiNPKApp() {
       "XII",
     ][date.getMonth()];
     const year = date.getFullYear();
-    const month = date.getMonth() + 1;
 
-    // Hitung nomor urut berdasarkan data yang ada di bulan & tahun yang sama
-    // Exclude current record saat edit (berdasarkan id yang sama)
+    // Filter data berdasarkan plant dan tahun yang sama (reset per tahun)
     const currentId =
       (formTroubleRecord as any).__original?.id || formTroubleRecord.id;
-    const existingRecordsInSameMonth = troubleRecordData.filter((record) => {
-      if (!record.tanggalKejadian) return false;
+
+    const filteredByPlant = troubleRecordData.filter((record) => {
       if (currentId && record.id === currentId) return false; // Skip current record saat edit
+
+      // Filter berdasarkan plant
+      const recordPlant = (record as any)._plant || "NPK2"; // Default NPK2 untuk backward compatibility
+      if (plant === "NPK1") {
+        // NPK1: hanya ambil yang _plant === "NPK1"
+        if (recordPlant !== "NPK1") return false;
+      } else {
+        // NPK2: ambil yang _plant === "NPK2" atau tidak ada _plant (data lama)
+        if (recordPlant === "NPK1") return false;
+      }
+
+      // Filter berdasarkan tahun
+      if (!record.tanggalKejadian) return false;
       const recordDate = new Date(record.tanggalKejadian);
-      return (
-        recordDate.getFullYear() === year && recordDate.getMonth() + 1 === month
-      );
+      return recordDate.getFullYear() === year;
     });
 
-    const count = existingRecordsInSameMonth.length + 1;
-    const nomorBerkas = `${String(count).padStart(
-      3,
-      "0"
-    )}/PNPKP-2/${monthRoman}/${year}`;
+    // Cari nomor tertinggi di tahun yang sama
+    let maxNumber = 0;
+    filteredByPlant.forEach((record) => {
+      const match = record.nomorBerkas?.match(/^(\d+)\//); // Match nomor di awal
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNumber) maxNumber = num;
+      }
+    });
+
+    const nextNumber = maxNumber + 1;
+    const nomorBerkas = `${String(nextNumber).padStart(3, "0")}/PNPKP-${
+      plant === "NPK1" ? "1" : "2"
+    }/${monthRoman}/${year}`;
 
     console.log(
-      `📋 Generate Nomor Berkas: ${nomorBerkas} (${existingRecordsInSameMonth.length} existing records in ${monthRoman}/${year})`
+      `📋 Generate Nomor Berkas: ${nomorBerkas} (${filteredByPlant.length} existing records for ${plant} in ${year}, max: ${maxNumber})`
     );
 
     setFormTroubleRecord((prev) => ({ ...prev, nomorBerkas }));
   };
 
   useEffect(() => {
-    if (activeTab === "troublerecord" && !formTroubleRecord.nomorBerkas) {
+    const isTroubleRecordTab =
+      activeTab === "troublerecord" ||
+      activeTab === "troublerecord_npk1" ||
+      activeTab === "troublerecord_npk2";
+    if (isTroubleRecordTab) {
+      // Selalu regenerate nomor saat tab berubah untuk memastikan plant yang benar
       generateTroubleRecordNumber();
     }
-  }, [activeTab, troubleRecordData.length]);
+  }, [activeTab, troubleRecordData.length, userPlant]);
 
   // Helper function: Normalize date to YYYY-MM-DD format
   const normalizeDateForInput = (date: string | Date | any): string => {
@@ -12010,11 +12109,10 @@ export default function ProduksiNPKApp() {
                   {canEditDelete() && (
                     <Button
                       onClick={() => {
-                        setShowForm(true);
-                        setEditingIndex(null);
-                        generateGatePassNumber();
+                        // Reset form tapi simpan noFile yang sudah di-generate
+                        const currentNoFile = formGatePass.noFile;
                         setFormGatePass({
-                          ...formGatePass,
+                          noFile: currentNoFile || "",
                           tanggal: new Date().toISOString().split("T")[0],
                           noPol: "",
                           pemilikBarang: "",
@@ -12023,6 +12121,12 @@ export default function ProduksiNPKApp() {
                           alasanMengeluarkan: "",
                           approver: "",
                         });
+                        setEditingIndex(null);
+                        setShowForm(true);
+                        // Generate nomor jika belum ada
+                        if (!currentNoFile) {
+                          generateGatePassNumber();
+                        }
                       }}
                       className="bg-[#00B4D8] hover:bg-[#0096C7]"
                     >
