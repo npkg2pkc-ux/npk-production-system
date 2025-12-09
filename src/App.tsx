@@ -5,32 +5,20 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Modal } from "@/components/ui/modal";
-import { Label } from "@/components/ui/label";
+} from "./components/ui/card";
+import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
+import { Label } from "./components/ui/label";
+import { Modal } from "./components/ui/modal";
 import {
   Select,
-  SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+  SelectContent,
+  SelectItem,
+} from "./components/ui/select";
 import {
-  BarChart,
-  Bar,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
-import {
-  Home,
+  BarChart3,
   Factory,
   FileText,
   Database,
@@ -58,7 +46,21 @@ import {
   UserPlus,
   Shield,
   Menu,
+  Home,
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts";
 
 const WEBHOOK_URL =
   "https://script.google.com/macros/s/AKfycbwURvYXyBD0-SrqomO4eNbE16-KtdD1g6e8G0LLIZA0_nb_jkz9FHDp_SPA1r57vkVE/exec";
@@ -602,39 +604,26 @@ function getBrowserName(): string {
   if (ua.indexOf("MSIE") > -1 || ua.indexOf("Trident") > -1) {
     return "Internet Explorer";
   }
-  // Opera
-  if (ua.indexOf("OPR") > -1 || ua.indexOf("Opera") > -1) {
-    return "Opera";
-  }
-
-  return "Browser: " + ua.substring(0, 50);
+  // Default
+  return "Unknown Browser";
 }
 
-// Get IP address with multiple fallback APIs
+// Get IP address from external API
 async function getIPAddress(): Promise<string> {
   const apis = [
     "https://api.ipify.org?format=json",
-    "https://api.bigdatacloud.net/data/client-ip",
+    "https://api.my-ip.io/ip.json",
     "https://ipapi.co/json/",
-    "https://api64.ipify.org?format=json",
   ];
 
   for (const api of apis) {
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-
-      const response = await fetch(api, {
-        signal: controller.signal,
-        mode: "cors",
-      });
-      clearTimeout(timeoutId);
-
+      const response = await fetch(api, { signal: AbortSignal.timeout(3000) });
       if (response.ok) {
         const data = await response.json();
-        const ip = data.ip || data.ipString || data.IPv4 || null;
+        // Different APIs return IP in different fields
+        const ip = data.ip || data.IPv4 || data.query;
         if (ip) {
-          console.log("IP detected from", api, ":", ip);
           return ip;
         }
       }
@@ -1223,24 +1212,40 @@ export default function ProduksiNPKApp() {
     }
   }, []);
 
+  const getActiveNotePlant = (): string | null => {
+    // Untuk admin (plant ALL), gunakan filter dashboard
+    if (userPlant === "ALL") {
+      // Jika admin pilih filter NPK1 atau NPK2, gunakan itu
+      if (dashboardPlantFilter === "NPK1" || dashboardPlantFilter === "NPK2") {
+        return dashboardPlantFilter;
+      }
+      // Jika admin pilih filter "ALL", kembalikan null (harus pilih plant dulu)
+      return null;
+    }
+    // User biasa, gunakan plant mereka
+    return userPlant;
+  };
+
   // Handle monthly note change - Save to Google Sheets
   const handleMonthlyNoteChange = async (bulan: string, note: string) => {
     try {
       const tahun = dashboardYear.toString();
-      // Find existing note for this month/year and plant
-      // ALL plant users can see all notes, others see their plant + ALL notes
+      const targetPlant = getActiveNotePlant();
+
+      if (!targetPlant) {
+        throw new Error("Plant tidak dipilih");
+      }
+
+      // Find existing note untuk plant aktif (spesifik plant saja)
       const existingNote = monthlyNotesData.find(
-        (n) =>
-          n.bulan === bulan &&
-          n.tahun === tahun &&
-          (userPlant === "ALL" || n._plant === userPlant || n._plant === "ALL")
+        (n) => n.bulan === bulan && n.tahun === tahun && n.plant === targetPlant
       );
 
       const noteData: MonthlyNote = {
         bulan,
         tahun,
         catatan: note,
-        plant: userPlant, // Send 'plant' field for Google Sheets
+        plant: targetPlant,
       };
 
       if (existingNote && existingNote.id) {
@@ -1295,27 +1300,39 @@ export default function ProduksiNPKApp() {
 
   // Open note modal
   const openNoteModal = (bulan: string) => {
+    const targetPlant = getActiveNotePlant();
+
+    // Jika admin belum memilih plant spesifik (masih di filter ALL)
+    if (!targetPlant) {
+      alert(
+        "⚠️ Silakan pilih plant terlebih dahulu (NPK 1 atau NPK 2) untuk menambah/melihat catatan bulanan."
+      );
+      return;
+    }
+
+    // Bulan sudah dalam format lengkap (Januari, Februari, etc)
     setCurrentNoteMonth(bulan);
     const tahun = dashboardYear.toString();
 
-    console.log("🔍 Opening note modal for:", { bulan, tahun, userPlant });
+    console.log("🔍 Opening note modal for:", {
+      bulan,
+      tahun,
+      userPlant,
+      targetPlant,
+    });
     console.log("🔍 Total notes in state:", monthlyNotesData.length);
     console.log("🔍 All notes:", monthlyNotesData);
 
-    // Find existing note for this month/year and plant
-    // ALL plant users can see all notes, others see their plant + ALL notes
+    // Find existing note for this month/year and specific plant
     const existingNote = monthlyNotesData.find((n) => {
       const match =
-        n.bulan === bulan &&
-        n.tahun === tahun &&
-        (userPlant === "ALL" || n._plant === userPlant || n._plant === "ALL");
+        n.bulan === bulan && n.tahun === tahun && n.plant === targetPlant;
 
       console.log("🔍 Checking note:", {
         note: n,
         bulanMatch: n.bulan === bulan,
         tahunMatch: n.tahun === tahun,
-        plantMatch:
-          userPlant === "ALL" || n._plant === userPlant || n._plant === "ALL",
+        plantMatch: n.plant === targetPlant,
         overallMatch: match,
       });
 
@@ -2609,7 +2626,7 @@ export default function ProduksiNPKApp() {
           fetchDataForPlant("trouble_record"),
           fetchData("users"), // Users is shared
           fetchData("approval_requests"), // Approval requests is shared
-          fetchDataForPlant("monthly_notes"), // Monthly notes per plant
+          fetchData("monthly_notes"), // Monthly notes is shared, filtered in frontend
         ]);
 
         const loadTime2 = Date.now() - startTime;
@@ -2740,11 +2757,35 @@ export default function ProduksiNPKApp() {
         console.log("👤 User plant:", userPlant);
 
         // Normalize: handle both 'plant' and '_plant' field names
-        const normalizedNotes = (monthlyNotes || []).map((note: any) => ({
-          ...note,
-          _plant: note._plant || note.plant || "NPK2", // Default to NPK2 if no plant specified
-        }));
+        console.log("📝 Raw monthly notes from sheet:", monthlyNotes);
+        const normalizedNotes = (monthlyNotes || []).map((note: any) => {
+          console.log("🔍 Processing note:", {
+            original: note,
+            plant: note.plant,
+            _plant: note._plant,
+            bulan: note.bulan,
+            tahun: note.tahun,
+            catatan: note.catatan,
+          });
+          return {
+            ...note,
+            plant: note.plant || note._plant || "NPK2", // Use 'plant' as primary field
+            _plant: note._plant || note.plant || "NPK2", // Keep _plant for backward compatibility
+            tahun: note.tahun?.toString() || note.tahun, // Ensure tahun is string
+          };
+        });
         console.log("📝 Normalized notes:", normalizedNotes);
+        console.log(
+          "📝 Setting monthly notes to state. Count:",
+          normalizedNotes.length
+        );
+        normalizedNotes.forEach((n: any, i: number) => {
+          console.log(
+            `   Note ${i + 1}: bulan=${n.bulan}, tahun=${n.tahun}, plant=${
+              n.plant
+            }, catatan=${n.catatan?.substring(0, 50)}...`
+          );
+        });
         setMonthlyNotesData(normalizedNotes);
       } catch (error) {
         console.error("❌ Error loading data:", error);
@@ -5981,7 +6022,7 @@ export default function ProduksiNPKApp() {
       const percentage = rkap > 0 ? (production / rkap) * 100 : 0;
 
       return {
-        bulan: month.substring(0, 3),
+        bulan: month, // Gunakan nama lengkap bulan
         produksi: production,
         rkap: rkap,
         percentage: percentage,
@@ -6040,6 +6081,34 @@ export default function ProduksiNPKApp() {
       "Desember",
     ];
 
+    const currentMonthName = monthNames[currentMonth];
+
+    // Filter RKAP based on plant
+    const filteredRKAPData = rkapData.filter((r: any) => {
+      return r.plant === plant || (!r.plant && plant === "NPK2");
+    });
+
+    const monthlyRKAP = Number(
+      filteredRKAPData.find(
+        (r: any) =>
+          r.bulan === currentMonthName &&
+          (Number((r as any).tahun) || currentYear) === currentYear
+      )?.targetRKAP || 0
+    );
+
+    // Total RKAP for year
+    const yearlyRKAP = filteredRKAPData
+      .filter(
+        (r: any) => (Number((r as any).tahun) || currentYear) === currentYear
+      )
+      .reduce((sum, item) => sum + (Number(item.targetRKAP) || 0), 0);
+
+    // Calculate percentages
+    const monthlyPercentage =
+      monthlyRKAP > 0 ? (monthlyProduction / monthlyRKAP) * 100 : 0;
+    const yearlyPercentage =
+      yearlyRKAP > 0 ? (yearlyProduction / yearlyRKAP) * 100 : 0;
+
     const monthlyBreakdown = monthNames.map((month, index) => {
       const monthData = plantData.filter((item) => {
         const itemDate = new Date(item.tanggal);
@@ -6053,7 +6122,7 @@ export default function ProduksiNPKApp() {
         0
       );
       return {
-        bulan: month.substring(0, 3),
+        bulan: month, // Gunakan nama lengkap bulan
         produksi: production,
       };
     });
@@ -6062,6 +6131,10 @@ export default function ProduksiNPKApp() {
       plant,
       monthlyProduction,
       yearlyProduction,
+      monthlyRKAP,
+      yearlyRKAP,
+      monthlyPercentage,
+      yearlyPercentage,
       monthlyBreakdown,
     };
   };
@@ -6623,6 +6696,257 @@ export default function ProduksiNPKApp() {
     }
   };
 
+  // Render Plant Dashboard - untuk single plant atau dalam mode gabungan
+  const renderPlantDashboard = (plant: "NPK1" | "NPK2") => {
+    const plantMetrics = calculatePlantMetrics(plant);
+    const plantColor =
+      plant === "NPK1"
+        ? {
+            primary: "blue",
+            gradient: "from-blue-500 to-blue-600",
+            light: "bg-blue-50",
+            border: "border-blue-300",
+            text: "text-blue-600",
+          }
+        : {
+            primary: "green",
+            gradient: "from-green-500 to-green-600",
+            light: "bg-green-50",
+            border: "border-green-300",
+            text: "text-green-600",
+          };
+
+    return (
+      <div
+        className={`space-y-6 ${
+          dashboardPlantFilter === "ALL"
+            ? `border-2 ${plantColor.border} rounded-xl p-6 ${plantColor.light}`
+            : ""
+        }`}
+      >
+        {/* Plant Header - hanya tampil di mode gabungan */}
+        {dashboardPlantFilter === "ALL" && (
+          <div
+            className={`bg-gradient-to-r ${plantColor.gradient} text-white rounded-lg p-4 shadow-lg`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Factory className="w-8 h-8" />
+                <div>
+                  <h3 className="text-xl font-bold">
+                    {plant === "NPK1" ? "🔵 Plant NPK 1" : "🟢 Plant NPK 2"}
+                  </h3>
+                  <p className="text-sm opacity-90">
+                    {plant === "NPK1"
+                      ? "Retail Production"
+                      : "Blending + Mini Production"}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-2xl font-bold">
+                  {formatNumber(plantMetrics.monthlyProduction, 0)} Ton
+                </div>
+                <p className="text-xs opacity-90">Produksi Bulan Ini</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Metrics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Card
+            className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-lg border-none transform hover:scale-105 transition-transform duration-200`}
+          >
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Target className="w-4 h-4" />
+                Pencapaian Bulanan
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatNumber(plantMetrics.monthlyPercentage, 1)}%
+              </div>
+              <p className="text-xs mt-2 opacity-90">Target RKAP Bulan Ini</p>
+            </CardContent>
+          </Card>
+
+          <Card
+            className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-lg border-none transform hover:scale-105 transition-transform duration-200`}
+          >
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                Produksi Tahun Ini
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-xl font-bold">
+                {formatNumber(plantMetrics.yearlyProduction, 0)} Ton
+              </div>
+              <p className="text-xs mt-2 opacity-90">
+                Total s/d{" "}
+                {new Date().toLocaleDateString("id-ID", {
+                  month: "long",
+                })}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card
+            className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-lg border-none transform hover:scale-105 transition-transform duration-200`}
+          >
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Target className="w-4 h-4" />
+                Pencapaian Tahunan
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {formatNumber(plantMetrics.yearlyPercentage, 1)}%
+              </div>
+              <p className="text-xs mt-2 opacity-90">
+                Target RKAP {dashboardYear}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Grafik untuk plant ini */}
+        <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <CardHeader
+            className={`bg-gradient-to-r ${plantColor.gradient} text-white`}
+          >
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5" />
+              Produksi vs RKAP {plant === "NPK1" ? "NPK 1" : "NPK 2"}
+            </CardTitle>
+            <CardDescription className="text-white/90">
+              Perbandingan produksi dengan target RKAP per bulan
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart
+                data={plantMetrics.monthlyBreakdown.map((item) => {
+                  const filteredRKAPData = rkapData.filter((r: any) => {
+                    return (
+                      (r.plant === plant || (!r.plant && plant === "NPK2")) &&
+                      r.bulan === item.bulan &&
+                      (Number((r as any).tahun) || dashboardYear) ===
+                        dashboardYear
+                    );
+                  });
+                  const rkap = Number(filteredRKAPData[0]?.targetRKAP || 0);
+                  return {
+                    bulan: item.bulan,
+                    produksi: item.produksi,
+                    rkap: rkap,
+                  };
+                })}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
+                <YAxis stroke="#666" fontSize={12} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#fff",
+                    border:
+                      "2px solid " + (plant === "NPK1" ? "#3b82f6" : "#10b981"),
+                    borderRadius: "8px",
+                  }}
+                  formatter={(value: number) => formatNumber(value, 2) + " Ton"}
+                />
+                <Legend />
+                <Bar
+                  dataKey="produksi"
+                  name="Produksi Aktual"
+                  fill={plant === "NPK1" ? "#7dd3fc" : "#6ee7b7"}
+                  radius={[8, 8, 0, 0]}
+                />
+                <Bar
+                  dataKey="rkap"
+                  name="Target RKAP"
+                  fill={plant === "NPK1" ? "#3b82f6" : "#10b981"}
+                  radius={[8, 8, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Grafik Persentase Pencapaian */}
+        <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+          <CardHeader
+            className={`bg-gradient-to-r ${plantColor.gradient} text-white`}
+          >
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Persentase Pencapaian Bulanan ({dashboardYear})
+            </CardTitle>
+            <CardDescription className="text-white/90">
+              Tracking pencapaian terhadap RKAP setiap bulan
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <ResponsiveContainer width="100%" height={320}>
+              <LineChart
+                data={plantMetrics.monthlyBreakdown.map((item) => {
+                  const filteredRKAPData = rkapData.filter((r: any) => {
+                    return (
+                      (r.plant === plant || (!r.plant && plant === "NPK2")) &&
+                      r.bulan === item.bulan &&
+                      (Number((r as any).tahun) || dashboardYear) ===
+                        dashboardYear
+                    );
+                  });
+                  const rkap = Number(filteredRKAPData[0]?.targetRKAP || 0);
+                  const percentage =
+                    rkap > 0 ? (item.produksi / rkap) * 100 : 0;
+                  return {
+                    bulan: item.bulan,
+                    percentage: percentage,
+                  };
+                })}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
+                <YAxis stroke="#666" fontSize={12} unit="%" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#fff",
+                    border:
+                      "2px solid " + (plant === "NPK1" ? "#3b82f6" : "#10b981"),
+                    borderRadius: "8px",
+                  }}
+                  formatter={(value: number) => [
+                    formatNumber(value, 1) + "%",
+                    "Pencapaian",
+                  ]}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="percentage"
+                  name="Pencapaian (%)"
+                  stroke={plant === "NPK1" ? "#3b82f6" : "#10b981"}
+                  strokeWidth={3}
+                  dot={{
+                    fill: plant === "NPK1" ? "#3b82f6" : "#10b981",
+                    r: 6,
+                  }}
+                  activeDot={{ r: 9 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   // Render Dashboard
   const renderDashboard = () => {
     return (
@@ -6732,7 +7056,36 @@ export default function ProduksiNPKApp() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Render berdasarkan mode filter */}
+        {dashboardPlantFilter === "ALL" ? (
+          // MODE GABUNGAN: Tampilkan NPK1 dan NPK2 side by side
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-bold text-[#001B44] mb-2">
+                📊 Perbandingan Produksi NPK 1 & NPK 2
+              </h2>
+              <p className="text-gray-600">
+                Data produksi dari kedua plant ditampilkan secara terpisah
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* NPK 1 Column */}
+              {renderPlantDashboard("NPK1")}
+
+              {/* NPK 2 Column */}
+              {renderPlantDashboard("NPK2")}
+            </div>
+          </div>
+        ) : (
+          // MODE SINGLE PLANT: Tampilkan hanya plant yang dipilih
+          <div className="space-y-6">
+            {renderPlantDashboard(dashboardPlantFilter)}
+          </div>
+        )}
+
+        {/* Hidden original cards for reference - will be removed */}
+        <div className="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="bg-gradient-to-br from-[#00B4D8] to-[#5FE9C5] text-white shadow-lg border-none">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -6974,90 +7327,93 @@ export default function ProduksiNPKApp() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="bg-gradient-to-r from-[#00B4D8] to-[#7FFFD4]">
-              <CardTitle className="text-white flex items-center gap-2">
-                <BarChart className="w-5 h-5" />
-                Grafik Produksi vs RKAP Tahunan ({dashboardYear})
-              </CardTitle>
-              <CardDescription className="text-white/90">
-                Perbandingan produksi dengan target RKAP per bulan
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <ResponsiveContainer width="100%" height={320}>
-                <BarChart data={metrics.monthlyBreakdown}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
-                  <YAxis stroke="#666" fontSize={12} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#fff",
-                      border: "1px solid #00B4D8",
-                    }}
-                    formatter={(value: number) => `${value.toFixed(2)} Ton`}
-                  />
-                  <Legend />
-                  <Bar
-                    dataKey="produksi"
-                    name="Produksi Aktual"
-                    fill="#7FFFD4"
-                    radius={[8, 8, 0, 0]}
-                  />
-                  <Bar
-                    dataKey="rkap"
-                    name="Target RKAP"
-                    fill="#00B4D8"
-                    radius={[8, 8, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+        {/* Grafik untuk mode single plant */}
+        {dashboardPlantFilter !== "ALL" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-[#00B4D8] to-[#7FFFD4]">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <BarChart className="w-5 h-5" />
+                  Grafik Produksi vs RKAP Tahunan ({dashboardYear})
+                </CardTitle>
+                <CardDescription className="text-white/90">
+                  Perbandingan produksi dengan target RKAP per bulan
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart data={metrics.monthlyBreakdown}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
+                    <YAxis stroke="#666" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#fff",
+                        border: "1px solid #00B4D8",
+                      }}
+                      formatter={(value: number) => `${value.toFixed(2)} Ton`}
+                    />
+                    <Legend />
+                    <Bar
+                      dataKey="produksi"
+                      name="Produksi Aktual"
+                      fill="#7FFFD4"
+                      radius={[8, 8, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="rkap"
+                      name="Target RKAP"
+                      fill="#00B4D8"
+                      radius={[8, 8, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
 
-          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-            <CardHeader className="bg-gradient-to-r from-[#001B44] via-[#003366] to-[#00B4D8]">
-              <CardTitle className="text-white flex items-center gap-2">
-                <TrendingUp className="w-5 h-5" />
-                Persentase Pencapaian Bulanan ({dashboardYear})
-              </CardTitle>
-              <CardDescription className="text-white/90">
-                Tracking pencapaian terhadap RKAP setiap bulan
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <ResponsiveContainer width="100%" height={320}>
-                <LineChart data={metrics.monthlyBreakdown}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
-                  <YAxis stroke="#666" unit="%" fontSize={12} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#fff",
-                      border: "2px solid #00B4D8",
-                      borderRadius: "8px",
-                    }}
-                    formatter={(value: number) => [
-                      formatNumber(value, 1) + "%",
-                      "Pencapaian",
-                    ]}
-                  />
-                  <Legend />
-                  <Line
-                    type="monotone"
-                    dataKey="percentage"
-                    name="Pencapaian (%)"
-                    stroke="#00B4D8"
-                    strokeWidth={3}
-                    dot={{ fill: "#00B4D8", r: 6 }}
-                    activeDot={{ r: 9, fill: "#7FFFD4" }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </div>
+            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader className="bg-gradient-to-r from-[#001B44] via-[#003366] to-[#00B4D8]">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  Persentase Pencapaian Bulanan ({dashboardYear})
+                </CardTitle>
+                <CardDescription className="text-white/90">
+                  Tracking pencapaian terhadap RKAP setiap bulan
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart data={metrics.monthlyBreakdown}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
+                    <YAxis stroke="#666" unit="%" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#fff",
+                        border: "2px solid #00B4D8",
+                        borderRadius: "8px",
+                      }}
+                      formatter={(value: number) => [
+                        formatNumber(value, 1) + "%",
+                        "Pencapaian",
+                      ]}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="percentage"
+                      name="Pencapaian (%)"
+                      stroke="#00B4D8"
+                      strokeWidth={3}
+                      dot={{ fill: "#00B4D8", r: 6 }}
+                      activeDot={{ r: 9, fill: "#7FFFD4" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="bg-gradient-to-r from-[#7FFFD4] to-[#00B4D8]">
@@ -7130,28 +7486,55 @@ export default function ProduksiNPKApp() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => openNoteModal(month.bulan)}
-                          className={`${
-                            monthlyNotesData.find(
+                          onClick={() => {
+                            console.log("🔘 Button clicked for month:", {
+                              bulan: month.bulan,
+                              tahun: dashboardYear.toString(),
+                              userPlant,
+                              dashboardPlantFilter,
+                              targetPlant:
+                                userPlant === "ALL"
+                                  ? dashboardPlantFilter
+                                  : userPlant,
+                              availableNotes: monthlyNotesData,
+                            });
+                            openNoteModal(month.bulan);
+                          }}
+                          className={`${(() => {
+                            const targetPlant =
+                              userPlant === "ALL"
+                                ? dashboardPlantFilter
+                                : userPlant;
+                            const found = monthlyNotesData.find(
                               (n) =>
                                 n.bulan === month.bulan &&
                                 n.tahun === dashboardYear.toString() &&
-                                (userPlant === "ALL" ||
-                                  n._plant === userPlant ||
-                                  n._plant === "ALL")
-                            )?.catatan
+                                n.plant === targetPlant
+                            );
+                            if (month.bulan === "Agustus") {
+                              console.log(`🔍 Button render for Agustus:`, {
+                                targetPlant,
+                                searchBulan: month.bulan,
+                                searchTahun: dashboardYear.toString(),
+                                found: !!found,
+                                foundNote: found,
+                                allNotes: monthlyNotesData,
+                              });
+                            }
+                            return found?.catatan
                               ? "border-[#00B4D8] bg-[#00B4D8]/10 text-[#00B4D8] hover:bg-[#00B4D8] hover:text-white"
-                              : "border-gray-300 text-gray-600 hover:border-[#00B4D8] hover:text-[#00B4D8]"
-                          }`}
+                              : "border-gray-300 text-gray-600 hover:border-[#00B4D8] hover:text-[#00B4D8]";
+                          })()}`}
                         >
                           <StickyNote className="w-4 h-4 mr-2" />
                           {monthlyNotesData.find(
                             (n) =>
                               n.bulan === month.bulan &&
                               n.tahun === dashboardYear.toString() &&
-                              (userPlant === "ALL" ||
-                                n._plant === userPlant ||
-                                n._plant === "ALL")
+                              n.plant ===
+                                (userPlant === "ALL"
+                                  ? dashboardPlantFilter
+                                  : userPlant)
                           )?.catatan
                             ? "Lihat Catatan"
                             : "Tambah Catatan"}
@@ -7165,153 +7548,455 @@ export default function ProduksiNPKApp() {
           </CardContent>
         </Card>
 
-        {/* Grafik Frekuensi Downtime Per Item */}
-        <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <CardTitle className="text-[#001B44] flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-[#00B4D8]" />
-                  Frekuensi Downtime Per Item
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  Jumlah kejadian downtime per equipment/item berdasarkan
-                  periode
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
-                  <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
-                    📆 Periode:
-                  </label>
-                  <select
-                    value={downtimeFreqPeriod}
-                    onChange={(e) =>
-                      setDowntimeFreqPeriod(
-                        e.target.value as "monthly" | "yearly"
-                      )
-                    }
-                    className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
-                  >
-                    <option value="monthly">Bulanan</option>
-                    <option value="yearly">Tahunan</option>
-                  </select>
+        {/* Grid 2 Kolom untuk Grafik Downtime */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Grafik Frekuensi Downtime Per Item */}
+          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-[#001B44] flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-[#00B4D8]" />
+                    Frekuensi Downtime Per Item
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Jumlah kejadian downtime per equipment/item berdasarkan
+                    periode
+                  </CardDescription>
                 </div>
-                {downtimeFreqPeriod === "monthly" ? (
-                  <input
-                    type="month"
-                    value={downtimeFreqMonth}
-                    onChange={(e) => setDowntimeFreqMonth(e.target.value)}
-                    className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
-                  />
-                ) : (
-                  <select
-                    value={downtimeFreqMonth.split("-")[0]}
-                    onChange={(e) =>
-                      setDowntimeFreqMonth(`${e.target.value}-01`)
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
+                    <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
+                      📆 Periode:
+                    </label>
+                    <select
+                      value={downtimeFreqPeriod}
+                      onChange={(e) =>
+                        setDowntimeFreqPeriod(
+                          e.target.value as "monthly" | "yearly"
+                        )
+                      }
+                      className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
+                    >
+                      <option value="monthly">Bulanan</option>
+                      <option value="yearly">Tahunan</option>
+                    </select>
+                  </div>
+                  {downtimeFreqPeriod === "monthly" ? (
+                    <input
+                      type="month"
+                      value={downtimeFreqMonth}
+                      onChange={(e) => setDowntimeFreqMonth(e.target.value)}
+                      className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
+                    />
+                  ) : (
+                    <select
+                      value={downtimeFreqMonth.split("-")[0]}
+                      onChange={(e) =>
+                        setDowntimeFreqMonth(`${e.target.value}-01`)
+                      }
+                      className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
+                    >
+                      {Array.from(
+                        { length: 10 },
+                        (_, i) => new Date().getFullYear() - i
+                      ).map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {calculateDowntimeFrequency().length > 0 ? (
+                <>
+                  <div className="mb-4 flex justify-between items-center">
+                    <div className="text-sm text-gray-600">
+                      Menampilkan{" "}
+                      <span className="font-semibold text-[#001B44]">
+                        {calculateDowntimeFrequency().length}
+                      </span>{" "}
+                      item
+                      {!showAllFreqItems &&
+                        downtimeData.length > 15 &&
+                        (() => {
+                          const totalUniqueItems = Array.from(
+                            new Set(
+                              downtimeData
+                                .filter((d) => {
+                                  if (downtimeFreqPeriod === "monthly") {
+                                    const [year, month] = downtimeFreqMonth
+                                      .split("-")
+                                      .map(Number);
+                                    const [itemYear, itemMonth] = String(
+                                      d.tanggal
+                                    )
+                                      .split("-")
+                                      .map(Number);
+                                    return (
+                                      itemYear === year && itemMonth === month
+                                    );
+                                  } else {
+                                    const year = parseInt(
+                                      downtimeFreqMonth.split("-")[0]
+                                    );
+                                    const itemYear = parseInt(
+                                      String(d.tanggal).split("-")[0]
+                                    );
+                                    return itemYear === year;
+                                  }
+                                })
+                                .map((d) => d.item)
+                            )
+                          ).length;
+                          return totalUniqueItems > 15 ? (
+                            <span className="ml-1">
+                              dari{" "}
+                              <span className="font-semibold text-[#001B44]">
+                                {totalUniqueItems}
+                              </span>{" "}
+                              total
+                            </span>
+                          ) : null;
+                        })()}
+                    </div>
+                    {(() => {
+                      const totalUniqueItems = Array.from(
+                        new Set(
+                          downtimeData
+                            .filter((d) => {
+                              if (downtimeFreqPeriod === "monthly") {
+                                const [year, month] = downtimeFreqMonth
+                                  .split("-")
+                                  .map(Number);
+                                const [itemYear, itemMonth] = String(d.tanggal)
+                                  .split("-")
+                                  .map(Number);
+                                return itemYear === year && itemMonth === month;
+                              } else {
+                                const year = parseInt(
+                                  downtimeFreqMonth.split("-")[0]
+                                );
+                                const itemYear = parseInt(
+                                  String(d.tanggal).split("-")[0]
+                                );
+                                return itemYear === year;
+                              }
+                            })
+                            .map((d) => d.item)
+                        )
+                      ).length;
+                      return totalUniqueItems > 15 ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowAllFreqItems(!showAllFreqItems)}
+                          className="text-[#00B4D8] border-[#00B4D8] hover:bg-[#00B4D8] hover:text-white transition-colors"
+                        >
+                          {showAllFreqItems ? (
+                            <>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Tampilkan Top 15
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="w-4 h-4 mr-2" />
+                              Tampilkan Semua
+                            </>
+                          )}
+                        </Button>
+                      ) : null;
+                    })()}
+                  </div>
+                  <ResponsiveContainer
+                    width="100%"
+                    height={
+                      showAllFreqItems
+                        ? Math.max(
+                            450,
+                            calculateDowntimeFrequency().length * 30
+                          )
+                        : 450
                     }
-                    className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
                   >
-                    {Array.from(
-                      { length: 10 },
-                      (_, i) => new Date().getFullYear() - i
-                    ).map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                    <BarChart
+                      data={calculateDowntimeFrequency()}
+                      layout="vertical"
+                      margin={{ top: 10, right: 40, left: 10, bottom: 10 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="frequencyGradient"
+                          x1="0"
+                          y1="0"
+                          x2="1"
+                          y2="0"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="#00B4D8"
+                            stopOpacity={0.9}
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="#0096C7"
+                            stopOpacity={1}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#e5e7eb"
+                        horizontal={true}
+                        vertical={false}
+                      />
+                      <XAxis
+                        type="number"
+                        stroke="#6b7280"
+                        tick={{ fill: "#6b7280", fontSize: 12 }}
+                        label={{
+                          value: "Frekuensi Kejadian",
+                          position: "insideBottom",
+                          offset: -5,
+                          style: {
+                            fill: "#001B44",
+                            fontWeight: 600,
+                            fontSize: 13,
+                          },
+                        }}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="item"
+                        stroke="#6b7280"
+                        width={70}
+                        tick={{
+                          fill: "#001B44",
+                          fontSize: 11,
+                          fontWeight: 500,
+                        }}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "rgba(0, 180, 216, 0.05)" }}
+                        contentStyle={{
+                          backgroundColor: "#fff",
+                          border: "2px solid #00B4D8",
+                          borderRadius: "12px",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                          padding: "12px",
+                        }}
+                        labelStyle={{
+                          color: "#001B44",
+                          fontWeight: 600,
+                          marginBottom: 4,
+                        }}
+                        formatter={(value: number) => [
+                          <span style={{ color: "#00B4D8", fontWeight: 600 }}>
+                            {value} kali
+                          </span>,
+                          "Frekuensi",
+                        ]}
+                      />
+                      <Bar
+                        dataKey="frequency"
+                        fill="url(#frequencyGradient)"
+                        radius={[0, 12, 12, 0]}
+                        animationDuration={1000}
+                        animationBegin={0}
+                        label={{
+                          position: "right",
+                          formatter: (value: number) => `${value}x`,
+                          fill: "#001B44",
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[450px] text-gray-400">
+                  <AlertCircle className="w-16 h-16 mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Tidak ada data downtime</p>
+                  <p className="text-sm">untuk periode yang dipilih</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Modal Catatan Bulanan */}
+          <Modal
+            isOpen={showNoteModal}
+            onClose={() => {
+              setShowNoteModal(false);
+              setTempNote("");
+              setCurrentNoteMonth("");
+            }}
+            title={`Catatan Bulan ${currentNoteMonth}`}
+            size="md"
+          >
+            <div className="space-y-4 relative">
+              {/* Loading Overlay */}
+              {savingNote && (
+                <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50 rounded-lg">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="relative">
+                      <div className="w-16 h-16 border-4 border-[#00B4D8]/20 rounded-full"></div>
+                      <div className="absolute top-0 left-0 w-16 h-16 border-4 border-[#00B4D8] border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[#001B44] font-semibold animate-pulse">
+                        Menyimpan catatan...
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Harap tunggu sebentar
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="monthNote">Catatan</Label>
+                <textarea
+                  id="monthNote"
+                  value={tempNote}
+                  onChange={(e) => setTempNote(e.target.value)}
+                  placeholder="Tulis catatan untuk bulan ini..."
+                  rows={5}
+                  disabled={savingNote}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowNoteModal(false);
+                    setTempNote("");
+                    setCurrentNoteMonth("");
+                  }}
+                  disabled={savingNote}
+                >
+                  Batal
+                </Button>
+                <Button
+                  onClick={saveNote}
+                  disabled={savingNote}
+                  className="bg-[#00B4D8] hover:bg-[#0096C7] min-w-[140px] relative"
+                >
+                  {savingNote ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Menyimpan...</span>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Simpan Catatan</span>
+                    </span>
+                  )}
+                </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {calculateDowntimeFrequency().length > 0 ? (
-              <>
-                <div className="mb-4 flex justify-between items-center">
-                  <div className="text-sm text-gray-600">
-                    Menampilkan{" "}
-                    <span className="font-semibold text-[#001B44]">
-                      {calculateDowntimeFrequency().length}
-                    </span>{" "}
-                    item
-                    {!showAllFreqItems &&
-                      downtimeData.length > 15 &&
-                      (() => {
-                        const totalUniqueItems = Array.from(
-                          new Set(
-                            downtimeData
-                              .filter((d) => {
-                                if (downtimeFreqPeriod === "monthly") {
-                                  const [year, month] = downtimeFreqMonth
-                                    .split("-")
-                                    .map(Number);
-                                  const [itemYear, itemMonth] = String(
-                                    d.tanggal
-                                  )
-                                    .split("-")
-                                    .map(Number);
-                                  return (
-                                    itemYear === year && itemMonth === month
-                                  );
-                                } else {
-                                  const year = parseInt(
-                                    downtimeFreqMonth.split("-")[0]
-                                  );
-                                  const itemYear = parseInt(
-                                    String(d.tanggal).split("-")[0]
-                                  );
-                                  return itemYear === year;
-                                }
-                              })
-                              .map((d) => d.item)
-                          )
-                        ).length;
-                        return totalUniqueItems > 15 ? (
-                          <span className="ml-1">
-                            dari{" "}
-                            <span className="font-semibold text-[#001B44]">
-                              {totalUniqueItems}
-                            </span>{" "}
-                            total
-                          </span>
-                        ) : null;
-                      })()}
+          </Modal>
+
+          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-[#001B44] flex items-center gap-2">
+                    <AlertCircle className="w-5 h-5 text-[#00B4D8]" />
+                    Analisis Downtime Per Item
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Monitoring waktu downtime equipment/item berdasarkan periode
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
+                    <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
+                      📆 Periode:
+                    </label>
+                    <select
+                      value={downtimeChartPeriod}
+                      onChange={(e) =>
+                        setDowntimeChartPeriod(
+                          e.target.value as "monthly" | "yearly"
+                        )
+                      }
+                      className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
+                    >
+                      <option value="monthly">Bulanan</option>
+                      <option value="yearly">Tahunan</option>
+                    </select>
                   </div>
-                  {(() => {
-                    const totalUniqueItems = Array.from(
-                      new Set(
-                        downtimeData
-                          .filter((d) => {
-                            if (downtimeFreqPeriod === "monthly") {
-                              const [year, month] = downtimeFreqMonth
-                                .split("-")
-                                .map(Number);
-                              const [itemYear, itemMonth] = String(d.tanggal)
-                                .split("-")
-                                .map(Number);
-                              return itemYear === year && itemMonth === month;
-                            } else {
-                              const year = parseInt(
-                                downtimeFreqMonth.split("-")[0]
-                              );
-                              const itemYear = parseInt(
-                                String(d.tanggal).split("-")[0]
-                              );
-                              return itemYear === year;
+                  {downtimeChartPeriod === "monthly" ? (
+                    <input
+                      type="month"
+                      value={downtimeChartMonth}
+                      onChange={(e) => setDowntimeChartMonth(e.target.value)}
+                      className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
+                    />
+                  ) : (
+                    <select
+                      value={downtimeChartMonth.split("-")[0]}
+                      onChange={(e) =>
+                        setDowntimeChartMonth(`${e.target.value}-01`)
+                      }
+                      className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
+                    >
+                      {Array.from(
+                        { length: 10 },
+                        (_, i) => new Date().getFullYear() - i
+                      ).map((year) => (
+                        <option key={year} value={year}>
+                          {year}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {calculateDowntimePerItem().length > 0 ? (
+                <>
+                  <div className="mb-4 flex justify-between items-center">
+                    <div className="text-sm text-gray-600">
+                      Menampilkan{" "}
+                      <span className="font-semibold text-[#001B44]">
+                        {calculateDowntimePerItem().length}
+                      </span>{" "}
+                      item
+                      {!showAllDowntimeItems && downtimeData.length > 15 && (
+                        <span className="ml-1">
+                          dari{" "}
+                          <span className="font-semibold text-[#001B44]">
+                            {
+                              Array.from(
+                                new Set(downtimeData.map((d) => d.item))
+                              ).length
                             }
-                          })
-                          .map((d) => d.item)
-                      )
-                    ).length;
-                    return totalUniqueItems > 15 ? (
+                          </span>{" "}
+                          total
+                        </span>
+                      )}
+                    </div>
+                    {Array.from(new Set(downtimeData.map((d) => d.item)))
+                      .length > 15 && (
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setShowAllFreqItems(!showAllFreqItems)}
+                        onClick={() =>
+                          setShowAllDowntimeItems(!showAllDowntimeItems)
+                        }
                         className="text-[#00B4D8] border-[#00B4D8] hover:bg-[#00B4D8] hover:text-white transition-colors"
                       >
-                        {showAllFreqItems ? (
+                        {showAllDowntimeItems ? (
                           <>
                             <Eye className="w-4 h-4 mr-2" />
                             Tampilkan Top 15
@@ -7323,408 +8008,123 @@ export default function ProduksiNPKApp() {
                           </>
                         )}
                       </Button>
-                    ) : null;
-                  })()}
-                </div>
-                <ResponsiveContainer
-                  width="100%"
-                  height={
-                    showAllFreqItems
-                      ? Math.max(450, calculateDowntimeFrequency().length * 30)
-                      : 450
-                  }
-                >
-                  <BarChart
-                    data={calculateDowntimeFrequency()}
-                    layout="vertical"
-                    margin={{ top: 10, right: 40, left: 120, bottom: 10 }}
-                  >
-                    <defs>
-                      <linearGradient
-                        id="frequencyGradient"
-                        x1="0"
-                        y1="0"
-                        x2="1"
-                        y2="0"
-                      >
-                        <stop
-                          offset="0%"
-                          stopColor="#00B4D8"
-                          stopOpacity={0.9}
-                        />
-                        <stop
-                          offset="100%"
-                          stopColor="#0096C7"
-                          stopOpacity={1}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="#e5e7eb"
-                      horizontal={true}
-                      vertical={false}
-                    />
-                    <XAxis
-                      type="number"
-                      stroke="#6b7280"
-                      tick={{ fill: "#6b7280", fontSize: 12 }}
-                      label={{
-                        value: "Frekuensi Kejadian",
-                        position: "insideBottom",
-                        offset: -5,
-                        style: {
-                          fill: "#001B44",
-                          fontWeight: 600,
-                          fontSize: 13,
-                        },
-                      }}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="item"
-                      stroke="#6b7280"
-                      width={130}
-                      tick={{ fill: "#001B44", fontSize: 12, fontWeight: 500 }}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "rgba(0, 180, 216, 0.05)" }}
-                      contentStyle={{
-                        backgroundColor: "#fff",
-                        border: "2px solid #00B4D8",
-                        borderRadius: "12px",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                        padding: "12px",
-                      }}
-                      labelStyle={{
-                        color: "#001B44",
-                        fontWeight: 600,
-                        marginBottom: 4,
-                      }}
-                      formatter={(value: number) => [
-                        <span style={{ color: "#00B4D8", fontWeight: 600 }}>
-                          {value} kali
-                        </span>,
-                        "Frekuensi",
-                      ]}
-                    />
-                    <Bar
-                      dataKey="frequency"
-                      fill="url(#frequencyGradient)"
-                      radius={[0, 12, 12, 0]}
-                      animationDuration={1000}
-                      animationBegin={0}
-                      label={{
-                        position: "right",
-                        formatter: (value: number) => `${value}x`,
-                        fill: "#001B44",
-                        fontSize: 11,
-                        fontWeight: 600,
-                      }}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-[450px] text-gray-400">
-                <AlertCircle className="w-16 h-16 mb-4 opacity-50" />
-                <p className="text-lg font-medium">Tidak ada data downtime</p>
-                <p className="text-sm">untuk periode yang dipilih</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Modal Catatan Bulanan */}
-        <Modal
-          isOpen={showNoteModal}
-          onClose={() => {
-            setShowNoteModal(false);
-            setTempNote("");
-            setCurrentNoteMonth("");
-          }}
-          title={`Catatan Bulan ${currentNoteMonth}`}
-          size="md"
-        >
-          <div className="space-y-4 relative">
-            {/* Loading Overlay */}
-            {savingNote && (
-              <div className="absolute inset-0 bg-white/80 backdrop-blur-sm flex items-center justify-center z-50 rounded-lg">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="relative">
-                    <div className="w-16 h-16 border-4 border-[#00B4D8]/20 rounded-full"></div>
-                    <div className="absolute top-0 left-0 w-16 h-16 border-4 border-[#00B4D8] border-t-transparent rounded-full animate-spin"></div>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-[#001B44] font-semibold animate-pulse">
-                      Menyimpan catatan...
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Harap tunggu sebentar
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <Label htmlFor="monthNote">Catatan</Label>
-              <textarea
-                id="monthNote"
-                value={tempNote}
-                onChange={(e) => setTempNote(e.target.value)}
-                placeholder="Tulis catatan untuk bulan ini..."
-                rows={5}
-                disabled={savingNote}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed"
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowNoteModal(false);
-                  setTempNote("");
-                  setCurrentNoteMonth("");
-                }}
-                disabled={savingNote}
-              >
-                Batal
-              </Button>
-              <Button
-                onClick={saveNote}
-                disabled={savingNote}
-                className="bg-[#00B4D8] hover:bg-[#0096C7] min-w-[140px] relative"
-              >
-                {savingNote ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Menyimpan...</span>
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Simpan Catatan</span>
-                  </span>
-                )}
-              </Button>
-            </div>
-          </div>
-        </Modal>
-
-        <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <CardTitle className="text-[#001B44] flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-[#00B4D8]" />
-                  Analisis Downtime Per Item
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  Monitoring waktu downtime equipment/item berdasarkan periode
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
-                  <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
-                    📆 Periode:
-                  </label>
-                  <select
-                    value={downtimeChartPeriod}
-                    onChange={(e) =>
-                      setDowntimeChartPeriod(
-                        e.target.value as "monthly" | "yearly"
-                      )
-                    }
-                    className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
-                  >
-                    <option value="monthly">Bulanan</option>
-                    <option value="yearly">Tahunan</option>
-                  </select>
-                </div>
-                {downtimeChartPeriod === "monthly" ? (
-                  <input
-                    type="month"
-                    value={downtimeChartMonth}
-                    onChange={(e) => setDowntimeChartMonth(e.target.value)}
-                    className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
-                  />
-                ) : (
-                  <select
-                    value={downtimeChartMonth.split("-")[0]}
-                    onChange={(e) =>
-                      setDowntimeChartMonth(`${e.target.value}-01`)
-                    }
-                    className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
-                  >
-                    {Array.from(
-                      { length: 10 },
-                      (_, i) => new Date().getFullYear() - i
-                    ).map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {calculateDowntimePerItem().length > 0 ? (
-              <>
-                <div className="mb-4 flex justify-between items-center">
-                  <div className="text-sm text-gray-600">
-                    Menampilkan{" "}
-                    <span className="font-semibold text-[#001B44]">
-                      {calculateDowntimePerItem().length}
-                    </span>{" "}
-                    item
-                    {!showAllDowntimeItems && downtimeData.length > 15 && (
-                      <span className="ml-1">
-                        dari{" "}
-                        <span className="font-semibold text-[#001B44]">
-                          {
-                            Array.from(new Set(downtimeData.map((d) => d.item)))
-                              .length
-                          }
-                        </span>{" "}
-                        total
-                      </span>
                     )}
                   </div>
-                  {Array.from(new Set(downtimeData.map((d) => d.item))).length >
-                    15 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setShowAllDowntimeItems(!showAllDowntimeItems)
-                      }
-                      className="text-[#00B4D8] border-[#00B4D8] hover:bg-[#00B4D8] hover:text-white transition-colors"
-                    >
-                      {showAllDowntimeItems ? (
-                        <>
-                          <Eye className="w-4 h-4 mr-2" />
-                          Tampilkan Top 15
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-4 h-4 mr-2" />
-                          Tampilkan Semua
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-                <ResponsiveContainer
-                  width="100%"
-                  height={
-                    showAllDowntimeItems
-                      ? Math.max(450, calculateDowntimePerItem().length * 30)
-                      : 450
-                  }
-                >
-                  <BarChart
-                    data={calculateDowntimePerItem()}
-                    layout="vertical"
-                    margin={{ top: 10, right: 40, left: 100, bottom: 10 }}
+                  <ResponsiveContainer
+                    width="100%"
+                    height={
+                      showAllDowntimeItems
+                        ? Math.max(450, calculateDowntimePerItem().length * 30)
+                        : 450
+                    }
                   >
-                    <defs>
-                      <linearGradient
-                        id="downtimeGradient"
-                        x1="0"
-                        y1="0"
-                        x2="1"
-                        y2="0"
-                      >
-                        <stop
-                          offset="0%"
-                          stopColor="#ef4444"
-                          stopOpacity={0.9}
-                        />
-                        <stop
-                          offset="100%"
-                          stopColor="#dc2626"
-                          stopOpacity={1}
-                        />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="#e5e7eb"
-                      horizontal={true}
-                      vertical={false}
-                    />
-                    <XAxis
-                      type="number"
-                      stroke="#6b7280"
-                      tick={{ fill: "#6b7280", fontSize: 12 }}
-                      label={{
-                        value: "Total Downtime (Jam)",
-                        position: "insideBottom",
-                        offset: -5,
-                        style: {
+                    <BarChart
+                      data={calculateDowntimePerItem()}
+                      layout="vertical"
+                      margin={{ top: 10, right: 40, left: 10, bottom: 10 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="downtimeGradient"
+                          x1="0"
+                          y1="0"
+                          x2="1"
+                          y2="0"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="#ef4444"
+                            stopOpacity={0.9}
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="#dc2626"
+                            stopOpacity={1}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#e5e7eb"
+                        horizontal={true}
+                        vertical={false}
+                      />
+                      <XAxis
+                        type="number"
+                        stroke="#6b7280"
+                        tick={{ fill: "#6b7280", fontSize: 12 }}
+                        label={{
+                          value: "Total Downtime (Jam)",
+                          position: "insideBottom",
+                          offset: -5,
+                          style: {
+                            fill: "#001B44",
+                            fontWeight: 600,
+                            fontSize: 13,
+                          },
+                        }}
+                      />
+                      <YAxis
+                        type="category"
+                        dataKey="item"
+                        stroke="#6b7280"
+                        width={70}
+                        tick={{
                           fill: "#001B44",
+                          fontSize: 11,
+                          fontWeight: 500,
+                        }}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "rgba(45, 106, 79, 0.05)" }}
+                        contentStyle={{
+                          backgroundColor: "#fff",
+                          border: "2px solid #00B4D8",
+                          borderRadius: "12px",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                          padding: "12px",
+                        }}
+                        labelStyle={{
+                          color: "#001B44",
                           fontWeight: 600,
-                          fontSize: 13,
-                        },
-                      }}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="item"
-                      stroke="#6b7280"
-                      width={120}
-                      tick={{ fill: "#001B44", fontSize: 12, fontWeight: 500 }}
-                    />
-                    <Tooltip
-                      cursor={{ fill: "rgba(45, 106, 79, 0.05)" }}
-                      contentStyle={{
-                        backgroundColor: "#fff",
-                        border: "2px solid #00B4D8",
-                        borderRadius: "12px",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                        padding: "12px",
-                      }}
-                      labelStyle={{
-                        color: "#001B44",
-                        fontWeight: 600,
-                        marginBottom: 4,
-                      }}
-                      formatter={(value: number) => [
-                        <span style={{ color: "#dc2626", fontWeight: 600 }}>
-                          {value.toFixed(2)} Jam
-                        </span>,
-                        "Total Downtime",
-                      ]}
-                    />
-                    <Bar
-                      dataKey="downtime"
-                      fill="url(#downtimeGradient)"
-                      radius={[0, 12, 12, 0]}
-                      animationDuration={1000}
-                      animationBegin={0}
-                      label={{
-                        position: "right",
-                        formatter: (value: number) => `${value.toFixed(1)} Jam`,
-                        fill: "#001B44",
-                        fontSize: 11,
-                        fontWeight: 600,
-                      }}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-[450px] text-gray-400">
-                <AlertCircle className="w-16 h-16 mb-4 opacity-50" />
-                <p className="text-lg font-medium">Tidak ada data downtime</p>
-                <p className="text-sm">untuk periode yang dipilih</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                          marginBottom: 4,
+                        }}
+                        formatter={(value: number) => [
+                          <span style={{ color: "#dc2626", fontWeight: 600 }}>
+                            {value.toFixed(2)} Jam
+                          </span>,
+                          "Total Downtime",
+                        ]}
+                      />
+                      <Bar
+                        dataKey="downtime"
+                        fill="url(#downtimeGradient)"
+                        radius={[0, 12, 12, 0]}
+                        animationDuration={1000}
+                        animationBegin={0}
+                        label={{
+                          position: "right",
+                          formatter: (value: number) =>
+                            `${value.toFixed(1)} Jam`,
+                          fill: "#001B44",
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[450px] text-gray-400">
+                  <AlertCircle className="w-16 h-16 mb-4 opacity-50" />
+                  <p className="text-lg font-medium">Tidak ada data downtime</p>
+                  <p className="text-sm">untuk periode yang dipilih</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+        {/* End Grid 2 Kolom Grafik Downtime */}
 
         <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
           <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
