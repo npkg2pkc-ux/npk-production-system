@@ -59,7 +59,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  ReferenceLine,
 } from "recharts";
 
 const WEBHOOK_URL =
