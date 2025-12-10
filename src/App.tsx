@@ -17360,7 +17360,7 @@ function ProduksiNPKApp() {
               autoFocus
             />
             <p className="text-xs text-gray-500 mt-1">
-              Alasan ini akan dikirim ke approver untuk review
+              Alasan ini akan dikirim ke approver untuk review.
             </p>
           </div>
 
