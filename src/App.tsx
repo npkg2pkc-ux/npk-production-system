@@ -15978,7 +15978,7 @@ export default function ProduksiNPKApp() {
                   onClick={() => handleNavClick("setting")}
                   className={`w-full flex items-center gap-3 ${
                     sidebarCollapsed ? "px-3 justify-center" : "px-6"
-                  } py-3 transition-all ${
+                  } py-3 transition-all relative ${
                     activeNav === "setting"
                       ? "bg-white/20 border-l-4 border-white"
                       : "hover:bg-white/10"
@@ -15989,6 +15989,25 @@ export default function ProduksiNPKApp() {
                   {!sidebarCollapsed && (
                     <span className="font-medium">Setting</span>
                   )}
+                  {/* Badge untuk pending approval requests */}
+                  {["admin", "supervisor", "avp"].includes(userRole) &&
+                    (() => {
+                      const pendingCount = approvalRequestsData.filter(
+                        (r) =>
+                          r.status === "pending" &&
+                          (userPlant === "ALL" ||
+                            r.requesterPlant === userPlant ||
+                            !r.requesterPlant)
+                      ).length;
+                      if (pendingCount > 0) {
+                        return (
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                            {pendingCount}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })()}
                 </button>
 
                 {!sidebarCollapsed &&
@@ -16000,13 +16019,33 @@ export default function ProduksiNPKApp() {
                         <button
                           key={tab.id}
                           onClick={() => setActiveTab(tab.id)}
-                          className={`w-full text-left px-12 py-2 text-sm transition-all ${
+                          className={`w-full text-left px-12 py-2 text-sm transition-all relative ${
                             activeTab === tab.id
                               ? "bg-white/20 font-semibold"
                               : "hover:bg-white/10 opacity-80"
                           }`}
                         >
                           {tab.label}
+                          {/* Badge untuk Approval Requests tab */}
+                          {tab.id === "approval" &&
+                            ["admin", "supervisor", "avp"].includes(userRole) &&
+                            (() => {
+                              const pendingCount = approvalRequestsData.filter(
+                                (r) =>
+                                  r.status === "pending" &&
+                                  (userPlant === "ALL" ||
+                                    r.requesterPlant === userPlant ||
+                                    !r.requesterPlant)
+                              ).length;
+                              if (pendingCount > 0) {
+                                return (
+                                  <span className="absolute right-4 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center font-bold">
+                                    {pendingCount}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
                         </button>
                       ))}
                     </div>
@@ -16138,10 +16177,25 @@ export default function ProduksiNPKApp() {
                     n.fromPlant === "ALL"
                   );
                 });
-                if (relevantNotifs.length > 0) {
+                
+                // Tambahkan pending approval requests untuk supervisor/avp/admin
+                let pendingApprovals = 0;
+                if (userRole === "admin" || userRole === "supervisor" || userRole === "avp") {
+                  pendingApprovals = approvalRequestsData.filter(
+                    (r) =>
+                      r.status === "pending" &&
+                      (userPlant === "ALL" ||
+                        r.requesterPlant === userPlant ||
+                        !r.requesterPlant)
+                  ).length;
+                }
+                
+                const totalCount = relevantNotifs.length + pendingApprovals;
+                
+                if (totalCount > 0) {
                   return (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                      {relevantNotifs.length}
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center font-bold">
+                      {totalCount}
                     </span>
                   );
                 }
@@ -16225,8 +16279,22 @@ export default function ProduksiNPKApp() {
                       n.fromPlant === "ALL"
                     );
                   });
+                  
+                  // Ambil pending approval requests untuk supervisor/avp/admin
+                  const pendingApprovals =
+                    userRole === "admin" ||
+                    userRole === "supervisor" ||
+                    userRole === "avp"
+                      ? approvalRequestsData.filter(
+                          (r) =>
+                            r.status === "pending" &&
+                            (userPlant === "ALL" ||
+                              r.requesterPlant === userPlant ||
+                              !r.requesterPlant)
+                        )
+                      : [];
 
-                  if (relevantNotifs.length === 0) {
+                  if (relevantNotifs.length === 0 && pendingApprovals.length === 0) {
                     return (
                       <div className="p-8 text-center text-gray-500">
                         <Bell className="w-12 h-12 mx-auto mb-2 opacity-30" />
@@ -16237,6 +16305,42 @@ export default function ProduksiNPKApp() {
 
                   return (
                     <div className="divide-y divide-gray-100">
+                      {/* Tampilkan Pending Approval Requests terlebih dahulu */}
+                      {pendingApprovals.map((req) => (
+                        <div
+                          key={`approval-${req.id}`}
+                          className="p-4 hover:bg-gray-50 transition-colors bg-orange-50 cursor-pointer"
+                          onClick={() => {
+                            setActiveNav("setting");
+                            setActiveTab("approval");
+                            setShowNotifications(false);
+                          }}
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-gray-800 break-words">
+                                <span className="font-semibold text-orange-600">Approval Request:</span>{" "}
+                                {req.requestByName} mengajukan {req.action === "edit" ? "edit" : "hapus"} data di{" "}
+                                {req.sheetType.replace(/_/g, " ")}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {new Date(req.requestDate).toLocaleString("id-ID", {
+                                  timeZone: "Asia/Jakarta",
+                                  day: "2-digit",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      {/* Tampilkan Notifikasi biasa */}
                       {relevantNotifs
                         .slice()
                         .reverse()
