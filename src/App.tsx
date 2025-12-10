@@ -6898,7 +6898,29 @@ export default function ProduksiNPKApp() {
         )}
 
         {/* Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className={`grid grid-cols-1 md:grid-cols-2 ${dashboardPlantFilter === "ALL" ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-4`}>
+          {/* Produksi Bulan Ini - hanya untuk single plant view */}
+          {dashboardPlantFilter !== "ALL" && (
+            <Card
+              className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-lg border-none transform hover:scale-105 transition-transform duration-200`}
+            >
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Factory className="w-4 h-4" />
+                  Produksi Bulan Ini
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatNumber(plantMetrics.monthlyProduction, 0)} Ton
+                </div>
+                <p className="text-xs mt-2 opacity-90">
+                  Total {new Date().toLocaleDateString("id-ID", { month: "long" })}
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           <Card
             className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-lg border-none transform hover:scale-105 transition-transform duration-200`}
           >
@@ -7867,7 +7889,8 @@ export default function ProduksiNPKApp() {
                     Frekuensi Downtime Per Item
                   </CardTitle>
                   <CardDescription className="mt-1">
-                    Jumlah kejadian downtime per equipment/item berdasarkan periode
+                    Jumlah kejadian downtime per equipment/item berdasarkan
+                    periode
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
