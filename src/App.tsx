@@ -16317,10 +16317,17 @@ function ProduksiNPKApp() {
                                 read: true,
                               });
                             }
-                            // Update state lokal
-                            setNotifications(
-                              notifications.map((n) => ({ ...n, read: true }))
+                            // Refresh notifikasi dari server untuk update badge
+                            const notificationsData = await fetchData(
+                              "notifications"
                             );
+                            const loadedNotifs = (notificationsData || []).map(
+                              (n: any) => ({
+                                ...n,
+                                timestamp: new Date(n.timestamp),
+                              })
+                            );
+                            setNotifications(loadedNotifs);
                           } catch (error) {
                             console.error("Failed to mark all as read:", error);
                           }
@@ -16458,11 +16465,18 @@ function ProduksiNPKApp() {
                                     ...notif,
                                     read: true,
                                   });
+                                  // Refresh notifikasi dari server untuk update badge
+                                  const notificationsData = await fetchData(
+                                    "notifications"
+                                  );
+                                  const loadedNotifs = (
+                                    notificationsData || []
+                                  ).map((n: any) => ({
+                                    ...n,
+                                    timestamp: new Date(n.timestamp),
+                                  }));
+                                  setNotifications(loadedNotifs);
                                 }
-                                const updatedNotifs = notifications.map((n) =>
-                                  n.id === notif.id ? { ...n, read: true } : n
-                                );
-                                setNotifications(updatedNotifs);
                               } catch (error) {
                                 console.error("Failed to mark as read:", error);
                               }
