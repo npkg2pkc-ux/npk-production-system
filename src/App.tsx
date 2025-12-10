@@ -1511,18 +1511,20 @@ export default function ProduksiNPKApp() {
         fromPlant: userPlant, // Plant dari user yang input
       };
 
+      console.log("🔔 Creating notification:", newNotif);
+      
       // Simpan ke Google Sheets agar bisa dilihat semua user
-      await saveData("notifications", newNotif);
-
+      const saved = await saveData("notifications", newNotif);
+      console.log("✅ Notification saved:", saved);
+      
       // Update state lokal
       const updatedNotifs = [...notifications, newNotif];
       setNotifications(updatedNotifs);
     } catch (error) {
-      console.error("Failed to save notification:", error);
+      console.error("❌ Failed to save notification:", error);
+      alert("Gagal mengirim notifikasi: " + error);
     }
-  };
-
-  // Helper function to add notification for approval result
+  };  // Helper function to add notification for approval result
   // Notifikasi ini ditargetkan ke user yang mengajukan request
   const addApprovalNotification = async (toUser: string, message: string) => {
     try {
@@ -3084,7 +3086,7 @@ export default function ProduksiNPKApp() {
       setApprovalRequestsData(refreshed || []);
 
       // Notify AVP/Admin
-      addNotification(
+      await addNotification(
         "approval_request",
         `${displayName || loginUsername} mengajukan ${
           action === "edit" ? "edit" : "hapus"
@@ -3171,7 +3173,7 @@ export default function ProduksiNPKApp() {
         const refreshed = await fetchDataForPlant("produksi_npk");
         setProduksiNPKData(refreshed || []);
 
-        addNotification(
+        await await addNotification(
           "produksi_npk",
           `Produksi NPK tanggal ${new Date(
             formProduksiNPK.tanggal
@@ -3264,7 +3266,7 @@ export default function ProduksiNPKApp() {
         const refreshed = await fetchDataForPlant("produksi_blending");
         setProduksiBlendingData(refreshed || []);
 
-        addNotification(
+        await addNotification(
           "produksi_blending",
           `Produksi Blending (${
             formProduksiBlending.formula
@@ -3354,7 +3356,7 @@ export default function ProduksiNPKApp() {
         // Refresh data dari server untuk mendapatkan ID yang di-generate
         const refreshed = await fetchDataForPlant("produksi_npk_mini");
         setProduksiNPKMiniData(refreshed || []);
-        addNotification(
+        await addNotification(
           "produksi_npk_mini",
           `Produksi NPK Mini tanggal ${new Date(
             formProduksiNPKMini.tanggal
@@ -3454,7 +3456,7 @@ export default function ProduksiNPKApp() {
           const refreshed = await fetchDataForPlant("timesheet_forklift");
           setTimesheetForkliftData(refreshed || []);
 
-          addNotification(
+          await addNotification(
             "timesheet_forklift",
             `Timesheet Forklift (All Units: ${forkliftUnitsToSave.join(
               ", "
@@ -3477,7 +3479,7 @@ export default function ProduksiNPKApp() {
           // Refresh data dari server untuk mendapatkan ID yang di-generate
           const refreshed = await fetchDataForPlant("timesheet_forklift");
           setTimesheetForkliftData(refreshed || []);
-          addNotification(
+          await addNotification(
             "timesheet_forklift",
             `Timesheet Forklift (${
               formTimesheetForklift.forklift
@@ -3595,7 +3597,7 @@ export default function ProduksiNPKApp() {
           const refreshed = await fetchDataForPlant("timesheet_loader");
           setTimesheetLoaderData(refreshed || []);
 
-          addNotification(
+          await addNotification(
             "timesheet_loader",
             `Timesheet Loader (All Shifts: Malam, Pagi, Sore) tanggal ${new Date(
               formTimesheetLoader.tanggal
@@ -3614,7 +3616,7 @@ export default function ProduksiNPKApp() {
           // Refresh data dari server untuk mendapatkan ID yang di-generate
           const refreshed = await fetchDataForPlant("timesheet_loader");
           setTimesheetLoaderData(refreshed || []);
-          addNotification(
+          await addNotification(
             "timesheet_loader",
             `Timesheet Loader tanggal ${new Date(
               formTimesheetLoader.tanggal
@@ -3738,7 +3740,7 @@ export default function ProduksiNPKApp() {
         // Refresh data dari server untuk mendapatkan ID yang di-generate
         const refreshed = await fetchDataForPlant("downtime");
         setDowntimeData(refreshed || []);
-        addNotification(
+        await addNotification(
           "downtime",
           `Downtime ${formDowntime.item} tanggal ${new Date(
             formDowntime.tanggal
@@ -3859,7 +3861,7 @@ export default function ProduksiNPKApp() {
           return { ...item, tanggal };
         });
         setWorkRequestData(normalizedWR);
-        addNotification(
+        await addNotification(
           "work_request",
           `Work Request ${formWorkRequest.nomorWR} (${formWorkRequest.item})`
         );
@@ -3951,7 +3953,7 @@ export default function ProduksiNPKApp() {
         const refreshed = await fetchDataForPlant("bahan_baku");
         setBahanBakuData(refreshed || []);
 
-        addNotification(
+        await addNotification(
           "bahan_baku",
           `Bahan Baku ${formBahanBaku.jenisBahanBaku} (${
             formBahanBaku.tonase
@@ -4028,7 +4030,7 @@ export default function ProduksiNPKApp() {
         const refreshed = await fetchDataForPlant("vibrasi");
         setVibrasiData(refreshed || []);
 
-        addNotification(
+        await addNotification(
           "vibrasi",
           `Vibrasi ${formVibrasi.equipment} (${
             formVibrasi.position
@@ -4107,7 +4109,7 @@ export default function ProduksiNPKApp() {
         const refreshed = await fetchDataForPlant("gate_pass");
         setGatePassData(refreshed || []);
 
-        addNotification(
+        await addNotification(
           "gate_pass",
           `Gate Pass ${formGatePass.noFile} - ${formGatePass.namaBarang}`
         );
@@ -4204,7 +4206,7 @@ export default function ProduksiNPKApp() {
         showSuccess("Data berhasil diupdate!");
       } else {
         await saveDataForPlant("akun", formAkun);
-        addNotification("akun", `Akun ${formAkun.noBadge} - ${formAkun.nama}`);
+        await addNotification("akun", `Akun ${formAkun.noBadge} - ${formAkun.nama}`);
         const refreshed = await fetchData("akun");
         setAkunData(refreshed || []);
         showSuccess("Data berhasil disimpan!");
@@ -4251,7 +4253,7 @@ export default function ProduksiNPKApp() {
         showSuccess("Data berhasil diupdate!");
       } else {
         await saveDataForPlant("rkap", formRKAP);
-        addNotification(
+        await addNotification(
           "rkap",
           `RKAP ${formRKAP.bulan} (Target: ${formRKAP.targetRKAP} ton)`
         );
@@ -4338,7 +4340,7 @@ export default function ProduksiNPKApp() {
       const updatedRequest: ApprovalRequest = {
         ...request,
         status: action === "approve" ? "approved" : "rejected",
-        reviewBy: loginUsername,
+        reviewBy: displayName || loginUsername,
         reviewDate: new Date().toISOString(),
         reviewNotes: notes || "",
       };
@@ -4489,7 +4491,7 @@ export default function ProduksiNPKApp() {
           createdAt: new Date().toISOString(),
         };
         await saveData("users", newUser);
-        addNotification(
+        await addNotification(
           "users",
           `User baru: ${formUser.username} (${formUser.role})`
         );
@@ -4595,7 +4597,7 @@ export default function ProduksiNPKApp() {
         };
 
         await saveDataForPlant("perta", dataToSave);
-        addNotification(
+        await addNotification(
           "perta",
           `Perta ${new Date(formPerta.tanggalMulai).toLocaleDateString(
             "id-ID"
@@ -4719,7 +4721,7 @@ export default function ProduksiNPKApp() {
         };
 
         await saveDataForPlant("trouble_record", dataToSave);
-        addNotification(
+        await addNotification(
           "trouble_record",
           `Trouble Record ${formTroubleRecord.nomorBerkas}`
         );
@@ -16177,10 +16179,14 @@ export default function ProduksiNPKApp() {
                     n.fromPlant === "ALL"
                   );
                 });
-                
+
                 // Tambahkan pending approval requests untuk supervisor/avp/admin
                 let pendingApprovals = 0;
-                if (userRole === "admin" || userRole === "supervisor" || userRole === "avp") {
+                if (
+                  userRole === "admin" ||
+                  userRole === "supervisor" ||
+                  userRole === "avp"
+                ) {
                   pendingApprovals = approvalRequestsData.filter(
                     (r) =>
                       r.status === "pending" &&
@@ -16189,9 +16195,9 @@ export default function ProduksiNPKApp() {
                         !r.requesterPlant)
                   ).length;
                 }
-                
+
                 const totalCount = relevantNotifs.length + pendingApprovals;
-                
+
                 if (totalCount > 0) {
                   return (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center font-bold">
@@ -16279,7 +16285,7 @@ export default function ProduksiNPKApp() {
                       n.fromPlant === "ALL"
                     );
                   });
-                  
+
                   // Ambil pending approval requests untuk supervisor/avp/admin
                   const pendingApprovals =
                     userRole === "admin" ||
@@ -16294,7 +16300,10 @@ export default function ProduksiNPKApp() {
                         )
                       : [];
 
-                  if (relevantNotifs.length === 0 && pendingApprovals.length === 0) {
+                  if (
+                    relevantNotifs.length === 0 &&
+                    pendingApprovals.length === 0
+                  ) {
                     return (
                       <div className="p-8 text-center text-gray-500">
                         <Bell className="w-12 h-12 mx-auto mb-2 opacity-30" />
@@ -16320,26 +16329,32 @@ export default function ProduksiNPKApp() {
                             <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm text-gray-800 break-words">
-                                <span className="font-semibold text-orange-600">Approval Request:</span>{" "}
-                                {req.requestByName} mengajukan {req.action === "edit" ? "edit" : "hapus"} data di{" "}
-                                {req.sheetType.replace(/_/g, " ")}
+                                <span className="font-semibold text-orange-600">
+                                  Approval Request:
+                                </span>{" "}
+                                {req.requestByName} mengajukan{" "}
+                                {req.action === "edit" ? "edit" : "hapus"} data
+                                di {req.sheetType.replace(/_/g, " ")}
                               </p>
                               <p className="text-xs text-gray-500 mt-1">
-                                {new Date(req.requestDate).toLocaleString("id-ID", {
-                                  timeZone: "Asia/Jakarta",
-                                  day: "2-digit",
-                                  month: "short",
-                                  year: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: false,
-                                })}
+                                {new Date(req.requestDate).toLocaleString(
+                                  "id-ID",
+                                  {
+                                    timeZone: "Asia/Jakarta",
+                                    day: "2-digit",
+                                    month: "short",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    hour12: false,
+                                  }
+                                )}
                               </p>
                             </div>
                           </div>
                         </div>
                       ))}
-                      
+
                       {/* Tampilkan Notifikasi biasa */}
                       {relevantNotifs
                         .slice()
