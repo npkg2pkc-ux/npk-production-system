@@ -1201,6 +1201,11 @@ export default function ProduksiNPKApp() {
       setUserRole(savedUserRole || "admin");
       setUserPlant(savedUserPlant || "ALL");
       console.log("🔍 Setting userPlant to:", savedUserPlant || "ALL");
+      // Set dashboard filter to match user's plant
+      if (savedUserPlant && savedUserPlant !== "ALL") {
+        setDashboardPlantFilter(savedUserPlant);
+        console.log("🎯 Setting dashboardPlantFilter to:", savedUserPlant);
+      }
       const savedDisplayName = localStorage.getItem("displayName");
       if (savedDisplayName) {
         setDisplayName(savedDisplayName);
@@ -1698,6 +1703,11 @@ export default function ProduksiNPKApp() {
             console.log("[LOGIN] 🏭 Normalized plant:", userPlantValue);
             localStorage.setItem("userPlant", userPlantValue);
             setUserPlant(userPlantValue);
+            // Set dashboard filter to match user's plant
+            if (userPlantValue !== "ALL") {
+              setDashboardPlantFilter(userPlantValue);
+              console.log("[LOGIN] 🎯 Setting dashboardPlantFilter to:", userPlantValue);
+            }
 
             if (data.sessionId) {
               // Align local session id with server-created one
@@ -1827,6 +1837,11 @@ export default function ProduksiNPKApp() {
               const userPlantValue = normalizePlant(user.plant);
               localStorage.setItem("userPlant", userPlantValue);
               setUserPlant(userPlantValue);
+              // Set dashboard filter to match user's plant
+              if (userPlantValue !== "ALL") {
+                setDashboardPlantFilter(userPlantValue);
+                console.log("[LOGIN] 🎯 Setting dashboardPlantFilter to:", userPlantValue);
+              }
 
               console.log(
                 "[LOGIN] ✅ Valid credentials! Role:",
@@ -8933,19 +8948,30 @@ export default function ProduksiNPKApp() {
           </Card>
         )}
 
-        <div className={`grid grid-cols-1 gap-4 ${(() => {
-          const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
-          if (activePlant === "ALL") return "md:grid-cols-4";
-          if (activePlant === "NPK1") return "md:grid-cols-2";
-          return "md:grid-cols-3";
-        })()}`}>
+        <div
+          className={`grid grid-cols-1 gap-4 ${(() => {
+            const activePlant =
+              userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+            if (activePlant === "ALL") return "md:grid-cols-4";
+            if (activePlant === "NPK1") return "md:grid-cols-2";
+            return "md:grid-cols-3";
+          })()}`}
+        >
           {/* Card Retail - Tampil untuk ALL dan NPK1 */}
           {(() => {
-            const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+            const activePlant =
+              userPlant === "ALL" ? dashboardPlantFilter : userPlant;
             if (activePlant === "ALL" || activePlant === "NPK1") {
-              const filteredData = activePlant === "ALL"
-                ? produksiBlendingData.filter((item: any) => (item._plant || "NPK2").toUpperCase() === "NPK1")
-                : produksiBlendingData.filter((item: any) => (item._plant || "NPK2").toUpperCase() === "NPK1");
+              const filteredData =
+                activePlant === "ALL"
+                  ? produksiBlendingData.filter(
+                      (item: any) =>
+                        (item._plant || "NPK2").toUpperCase() === "NPK1"
+                    )
+                  : produksiBlendingData.filter(
+                      (item: any) =>
+                        (item._plant || "NPK2").toUpperCase() === "NPK1"
+                    );
               return (
                 <Card className="border-gray-200 shadow-md hover:shadow-lg transition-shadow">
                   <CardHeader className="bg-white border-b-2 border-blue-400">
@@ -8955,7 +8981,14 @@ export default function ProduksiNPKApp() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-[#001B44]">
-                      {formatNumber(filteredData.reduce((sum, item) => sum + (Number(item.tonase) || 0), 0), 2)} Ton
+                      {formatNumber(
+                        filteredData.reduce(
+                          (sum, item) => sum + (Number(item.tonase) || 0),
+                          0
+                        ),
+                        2
+                      )}{" "}
+                      Ton
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
                       {filteredData.length} transaksi
@@ -8969,17 +9002,19 @@ export default function ProduksiNPKApp() {
 
           {/* Card Blending - Tampil untuk ALL dan NPK2 */}
           {(() => {
-            const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+            const activePlant =
+              userPlant === "ALL" ? dashboardPlantFilter : userPlant;
             if (activePlant === "ALL" || activePlant === "NPK2") {
-              const filteredData = activePlant === "ALL"
-                ? produksiBlendingData.filter((item: any) => {
-                    const itemPlant = (item._plant || "NPK2").toUpperCase();
-                    return itemPlant === "NPK2" || !item._plant;
-                  })
-                : produksiBlendingData.filter((item: any) => {
-                    const itemPlant = (item._plant || "NPK2").toUpperCase();
-                    return itemPlant === "NPK2" || !item._plant;
-                  });
+              const filteredData =
+                activePlant === "ALL"
+                  ? produksiBlendingData.filter((item: any) => {
+                      const itemPlant = (item._plant || "NPK2").toUpperCase();
+                      return itemPlant === "NPK2" || !item._plant;
+                    })
+                  : produksiBlendingData.filter((item: any) => {
+                      const itemPlant = (item._plant || "NPK2").toUpperCase();
+                      return itemPlant === "NPK2" || !item._plant;
+                    });
               return (
                 <Card className="border-gray-200 shadow-md hover:shadow-lg transition-shadow">
                   <CardHeader className="bg-white border-b-2 border-green-400">
@@ -8989,7 +9024,14 @@ export default function ProduksiNPKApp() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold text-[#001B44]">
-                      {formatNumber(filteredData.reduce((sum, item) => sum + (Number(item.tonase) || 0), 0), 2)} Ton
+                      {formatNumber(
+                        filteredData.reduce(
+                          (sum, item) => sum + (Number(item.tonase) || 0),
+                          0
+                        ),
+                        2
+                      )}{" "}
+                      Ton
                     </div>
                     <p className="text-xs text-gray-500 mt-1">
                       {filteredData.length} transaksi
@@ -9003,15 +9045,17 @@ export default function ProduksiNPKApp() {
 
           {/* Card Mini - Hanya tampil untuk ALL dan NPK2, TIDAK untuk NPK1 */}
           {(() => {
-            const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+            const activePlant =
+              userPlant === "ALL" ? dashboardPlantFilter : userPlant;
             if (activePlant === "NPK1") return null; // Sembunyikan untuk NPK1
-            
-            const filteredData = activePlant === "ALL"
-              ? produksiNPKMiniData
-              : produksiNPKMiniData.filter((item: any) => {
-                  const itemPlant = (item._plant || "NPK2").toUpperCase();
-                  return itemPlant === activePlant;
-                });
+
+            const filteredData =
+              activePlant === "ALL"
+                ? produksiNPKMiniData
+                : produksiNPKMiniData.filter((item: any) => {
+                    const itemPlant = (item._plant || "NPK2").toUpperCase();
+                    return itemPlant === activePlant;
+                  });
             return (
               <Card className="border-gray-200 shadow-md hover:shadow-lg transition-shadow">
                 <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
@@ -9021,7 +9065,14 @@ export default function ProduksiNPKApp() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-[#001B44]">
-                    {formatNumber(filteredData.reduce((sum, item) => sum + (Number(item.tonase) || 0), 0), 2)} Ton
+                    {formatNumber(
+                      filteredData.reduce(
+                        (sum, item) => sum + (Number(item.tonase) || 0),
+                        0
+                      ),
+                      2
+                    )}{" "}
+                    Ton
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
                     {filteredData.length} transaksi
