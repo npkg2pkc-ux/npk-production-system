@@ -6898,7 +6898,11 @@ export default function ProduksiNPKApp() {
         )}
 
         {/* Metrics Cards */}
-        <div className={`grid grid-cols-1 md:grid-cols-2 ${dashboardPlantFilter === "ALL" ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-4`}>
+        <div
+          className={`grid grid-cols-1 md:grid-cols-2 ${
+            dashboardPlantFilter === "ALL" ? "lg:grid-cols-3" : "lg:grid-cols-4"
+          } gap-4`}
+        >
           {/* Produksi Bulan Ini - hanya untuk single plant view */}
           {dashboardPlantFilter !== "ALL" && (
             <Card
@@ -6915,7 +6919,8 @@ export default function ProduksiNPKApp() {
                   {formatNumber(plantMetrics.monthlyProduction, 0)} Ton
                 </div>
                 <p className="text-xs mt-2 opacity-90">
-                  Total {new Date().toLocaleDateString("id-ID", { month: "long" })}
+                  Total{" "}
+                  {new Date().toLocaleDateString("id-ID", { month: "long" })}
                 </p>
               </CardContent>
             </Card>
@@ -6980,135 +6985,139 @@ export default function ProduksiNPKApp() {
           </Card>
         </div>
 
-        {/* Grafik untuk plant ini */}
-        <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader
-            className={`bg-gradient-to-r ${plantColor.gradient} text-white`}
-          >
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5" />
-              Produksi vs RKAP {plant === "NPK1" ? "NPK 1" : "NPK 2"}
-            </CardTitle>
-            <CardDescription className="text-white/90">
-              Perbandingan produksi dengan target RKAP per bulan
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart
-                data={plantMetrics.monthlyBreakdown.map((item) => {
-                  const filteredRKAPData = rkapData.filter((r: any) => {
-                    return (
-                      (r.plant === plant || (!r.plant && plant === "NPK2")) &&
-                      r.bulan === item.bulan &&
-                      (Number((r as any).tahun) || dashboardYear) ===
-                        dashboardYear
-                    );
-                  });
-                  const rkap = Number(filteredRKAPData[0]?.targetRKAP || 0);
-                  return {
-                    bulan: item.bulan,
-                    produksi: item.produksi,
-                    rkap: rkap,
-                  };
-                })}
+        {/* Grafik untuk plant ini - hanya tampil di mode ALL */}
+        {dashboardPlantFilter === "ALL" && (
+          <>
+            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader
+                className={`bg-gradient-to-r ${plantColor.gradient} text-white`}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
-                <YAxis stroke="#666" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    border:
-                      "2px solid " + (plant === "NPK1" ? "#3b82f6" : "#10b981"),
-                    borderRadius: "8px",
-                  }}
-                  formatter={(value: number) => formatNumber(value, 2) + " Ton"}
-                />
-                <Legend />
-                <Bar
-                  dataKey="produksi"
-                  name="Produksi Aktual"
-                  fill={plant === "NPK1" ? "#7dd3fc" : "#6ee7b7"}
-                  radius={[8, 8, 0, 0]}
-                />
-                <Bar
-                  dataKey="rkap"
-                  name="Target RKAP"
-                  fill={plant === "NPK1" ? "#3b82f6" : "#10b981"}
-                  radius={[8, 8, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5" />
+                  Produksi vs RKAP {plant === "NPK1" ? "NPK 1" : "NPK 2"}
+                </CardTitle>
+                <CardDescription className="text-white/90">
+                  Perbandingan produksi dengan target RKAP per bulan
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <ResponsiveContainer width="100%" height={320}>
+                  <BarChart
+                    data={plantMetrics.monthlyBreakdown.map((item) => {
+                      const filteredRKAPData = rkapData.filter((r: any) => {
+                        return (
+                          (r.plant === plant || (!r.plant && plant === "NPK2")) &&
+                          r.bulan === item.bulan &&
+                          (Number((r as any).tahun) || dashboardYear) ===
+                            dashboardYear
+                        );
+                      });
+                      const rkap = Number(filteredRKAPData[0]?.targetRKAP || 0);
+                      return {
+                        bulan: item.bulan,
+                        produksi: item.produksi,
+                        rkap: rkap,
+                      };
+                    })}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
+                    <YAxis stroke="#666" fontSize={12} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#fff",
+                        border:
+                          "2px solid " + (plant === "NPK1" ? "#3b82f6" : "#10b981"),
+                        borderRadius: "8px",
+                      }}
+                      formatter={(value: number) => formatNumber(value, 2) + " Ton"}
+                    />
+                    <Legend />
+                    <Bar
+                      dataKey="produksi"
+                      name="Produksi Aktual"
+                      fill={plant === "NPK1" ? "#7dd3fc" : "#6ee7b7"}
+                      radius={[8, 8, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="rkap"
+                      name="Target RKAP"
+                      fill={plant === "NPK1" ? "#3b82f6" : "#10b981"}
+                      radius={[8, 8, 0, 0]}
+                    />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
 
-        {/* Grafik Persentase Pencapaian */}
-        <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-          <CardHeader
-            className={`bg-gradient-to-r ${plantColor.gradient} text-white`}
-          >
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
-              Persentase Pencapaian Bulanan ({dashboardYear})
-            </CardTitle>
-            <CardDescription className="text-white/90">
-              Tracking pencapaian terhadap RKAP setiap bulan
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <ResponsiveContainer width="100%" height={320}>
-              <LineChart
-                data={plantMetrics.monthlyBreakdown.map((item) => {
-                  const filteredRKAPData = rkapData.filter((r: any) => {
-                    return (
-                      (r.plant === plant || (!r.plant && plant === "NPK2")) &&
-                      r.bulan === item.bulan &&
-                      (Number((r as any).tahun) || dashboardYear) ===
-                        dashboardYear
-                    );
-                  });
-                  const rkap = Number(filteredRKAPData[0]?.targetRKAP || 0);
-                  const percentage =
-                    rkap > 0 ? (item.produksi / rkap) * 100 : 0;
-                  return {
-                    bulan: item.bulan,
-                    percentage: percentage,
-                  };
-                })}
+            {/* Grafik Persentase Pencapaian */}
+            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+              <CardHeader
+                className={`bg-gradient-to-r ${plantColor.gradient} text-white`}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
-                <YAxis stroke="#666" fontSize={12} unit="%" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    border:
-                      "2px solid " + (plant === "NPK1" ? "#3b82f6" : "#10b981"),
-                    borderRadius: "8px",
-                  }}
-                  formatter={(value: number) => [
-                    formatNumber(value, 1) + "%",
-                    "Pencapaian",
-                  ]}
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="percentage"
-                  name="Pencapaian (%)"
-                  stroke={plant === "NPK1" ? "#3b82f6" : "#10b981"}
-                  strokeWidth={3}
-                  dot={{
-                    fill: plant === "NPK1" ? "#3b82f6" : "#10b981",
-                    r: 6,
-                  }}
-                  activeDot={{ r: 9 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  Persentase Pencapaian Bulanan ({dashboardYear})
+                </CardTitle>
+                <CardDescription className="text-white/90">
+                  Tracking pencapaian terhadap RKAP setiap bulan
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <ResponsiveContainer width="100%" height={320}>
+                  <LineChart
+                    data={plantMetrics.monthlyBreakdown.map((item) => {
+                      const filteredRKAPData = rkapData.filter((r: any) => {
+                        return (
+                          (r.plant === plant || (!r.plant && plant === "NPK2")) &&
+                          r.bulan === item.bulan &&
+                          (Number((r as any).tahun) || dashboardYear) ===
+                            dashboardYear
+                        );
+                      });
+                      const rkap = Number(filteredRKAPData[0]?.targetRKAP || 0);
+                      const percentage =
+                        rkap > 0 ? (item.produksi / rkap) * 100 : 0;
+                      return {
+                        bulan: item.bulan,
+                        percentage: percentage,
+                      };
+                    })}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis dataKey="bulan" stroke="#666" fontSize={12} />
+                    <YAxis stroke="#666" fontSize={12} unit="%" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#fff",
+                        border:
+                          "2px solid " + (plant === "NPK1" ? "#3b82f6" : "#10b981"),
+                        borderRadius: "8px",
+                      }}
+                      formatter={(value: number) => [
+                        formatNumber(value, 1) + "%",
+                        "Pencapaian",
+                      ]}
+                    />
+                    <Legend />
+                    <Line
+                      type="monotone"
+                      dataKey="percentage"
+                      name="Pencapaian (%)"
+                      stroke={plant === "NPK1" ? "#3b82f6" : "#10b981"}
+                      strokeWidth={3}
+                      dot={{
+                        fill: plant === "NPK1" ? "#3b82f6" : "#10b981",
+                        r: 6,
+                      }}
+                      activeDot={{ r: 9 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
     );
   };
