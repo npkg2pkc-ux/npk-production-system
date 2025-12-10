@@ -748,7 +748,7 @@ async function deleteSessionAPI(username: string): Promise<boolean> {
   }
 }
 
-export default function ProduksiNPKApp() {
+function ProduksiNPKApp() {
   const [activeNav, setActiveNav] = useState("home");
   const [activeTab, setActiveTab] = useState("");
   const [loading, setLoading] = useState(false);
@@ -762,6 +762,14 @@ export default function ProduksiNPKApp() {
     dataType: string;
     item: any;
     preview: string;
+  } | null>(null);
+  const [deleteReason, setDeleteReason] = useState("");
+  const [editReason, setEditReason] = useState("");
+  const [showEditReasonModal, setShowEditReasonModal] = useState(false);
+  const [pendingEditSubmit, setPendingEditSubmit] = useState<{
+    formData: any;
+    dataType: string;
+    editingItem: any;
   } | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [printDateRange, setPrintDateRange] = useState({
@@ -1021,6 +1029,109 @@ export default function ProduksiNPKApp() {
       jamOff: "",
       jamStart: "",
     });
+
+  // Helper functions to get displayed data based on plant and active tab
+  const getPlantFromTab = (tab: string): "NPK1" | "NPK2" | "ALL" => {
+    if (tab.endsWith("_npk1")) return "NPK1";
+    if (tab.endsWith("_npk2")) return "NPK2";
+    return userPlant;
+  };
+
+  const getDisplayedDataByTab = (dataArray: any[], activeTabName: string) => {
+    if (userPlant === "ALL") {
+      const plantFilter = getPlantFromTab(activeTabName);
+      if (plantFilter === "NPK1") {
+        return dataArray.filter((d) => d._plant === "NPK1");
+      } else if (plantFilter === "NPK2") {
+        return dataArray.filter((d) => d._plant === "NPK2" || !d._plant);
+      }
+      return dataArray;
+    }
+    // Filter berdasarkan userPlant untuk user dengan plant spesifik
+    if (userPlant === "NPK1") {
+      return dataArray.filter((d) => d._plant === "NPK1");
+    }
+    if (userPlant === "NPK2") {
+      return dataArray.filter((d) => d._plant === "NPK2" || !d._plant);
+    }
+    return dataArray;
+  };
+
+  // Helper function to sort data by date descending
+  const sortByDateDesc = <T extends { tanggal: string | Date }>(
+    data: T[]
+  ): T[] => {
+    return [...data].sort((a, b) => {
+      const dateA = new Date(a.tanggal).getTime();
+      const dateB = new Date(b.tanggal).getTime();
+      return dateB - dateA; // Sort descending (newest first)
+    });
+  };
+
+  const sortByUpdateDateDesc = <T extends { tanggalUpdate: string | Date }>(
+    data: T[]
+  ): T[] => {
+    return [...data].sort((a, b) => {
+      const dateA = new Date(a.tanggalUpdate).getTime();
+      const dateB = new Date(b.tanggalUpdate).getTime();
+      return dateB - dateA; // Sort descending (newest first)
+    });
+  };
+
+  const sortPertaByDateDesc = (data: Perta[]): Perta[] => {
+    return [...data].sort((a, b) => {
+      const dateA = new Date(a.tanggalMulai).getTime();
+      const dateB = new Date(b.tanggalMulai).getTime();
+      return dateB - dateA; // Sort descending (newest first)
+    });
+  };
+
+  // Helper function to normalize date to YYYY-MM-DD format
+  const normalizeDateForInput = (date: string | Date | any): string => {
+    if (!date) {
+      return "";
+    }
+
+    try {
+      // Jika sudah string format YYYY-MM-DD, return as is
+      if (typeof date === "string" && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return date;
+      }
+
+      // Jika string format DD/MM/YYYY (dari Google Sheets display)
+      if (typeof date === "string" && date.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
+        const parts = date.split("/");
+        const day = parts[0].padStart(2, "0");
+        const month = parts[1].padStart(2, "0");
+        const year = parts[2];
+        return `${year}-${month}-${day}`;
+      }
+
+      // Jika Date object
+      if (date instanceof Date && !isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      }
+
+      // Jika string yang bisa di-parse sebagai tanggal
+      if (typeof date === "string") {
+        const dateObj = new Date(date);
+        if (!isNaN(dateObj.getTime())) {
+          const year = dateObj.getFullYear();
+          const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+          const day = String(dateObj.getDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
+        }
+      }
+
+      return "";
+    } catch (error) {
+      console.error("Error normalizing date:", error);
+      return "";
+    }
+  };
 
   // Forklift options depend on plant
   const forkliftOptions = useMemo(
@@ -1512,11 +1623,11 @@ export default function ProduksiNPKApp() {
       };
 
       console.log("🔔 Creating notification:", newNotif);
-      
+
       // Simpan ke Google Sheets agar bisa dilihat semua user
       const saved = await saveData("notifications", newNotif);
       console.log("✅ Notification saved:", saved);
-      
+
       // Update state lokal
       const updatedNotifs = [...notifications, newNotif];
       setNotifications(updatedNotifs);
@@ -1524,7 +1635,7 @@ export default function ProduksiNPKApp() {
       console.error("❌ Failed to save notification:", error);
       alert("Gagal mengirim notifikasi: " + error);
     }
-  };  // Helper function to add notification for approval result
+  }; // Helper function to add notification for approval result
   // Notifikasi ini ditargetkan ke user yang mengajukan request
   const addApprovalNotification = async (toUser: string, message: string) => {
     try {
@@ -2320,75 +2431,6 @@ export default function ProduksiNPKApp() {
     }
   }, [activeTab, troubleRecordData.length, userPlant]);
 
-  // Helper function: Normalize date to YYYY-MM-DD format
-  const normalizeDateForInput = (date: string | Date | any): string => {
-    if (!date) {
-      // Jangan fallback ke hari ini di sini untuk edit; biarkan kosong
-      return "";
-    }
-
-    try {
-      console.log(
-        "?? normalizeDateForInput input:",
-        date,
-        "Type:",
-        typeof date
-      );
-
-      // Jika sudah string format YYYY-MM-DD, return as is
-      if (typeof date === "string" && date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        console.log("? Already YYYY-MM-DD format:", date);
-        return date;
-      }
-
-      // Jika string format DD/MM/YYYY (dari Google Sheets display)
-      if (typeof date === "string" && date.match(/^\d{1,2}\/\d{1,2}\/\d{4}$/)) {
-        const parts = date.split("/");
-        const day = parts[0].padStart(2, "0");
-        const month = parts[1].padStart(2, "0");
-        const year = parts[2];
-        const result = `${year}-${month}-${day}`;
-        console.log("? Converted DD/MM/YYYY to:", result);
-        return result;
-      }
-
-      // Jika Date object - JANGAN gunakan Date object karena timezone issue!
-      // Backend seharusnya sudah mengirim string YYYY-MM-DD
-      if (date instanceof Date && !isNaN(date.getTime())) {
-        console.warn(
-          "?? Received Date object instead of string! This may cause timezone issues."
-        );
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-        const result = `${year}-${month}-${day}`;
-        console.log("? Converted Date object to:", result);
-        return result;
-      }
-
-      // Jika string yang bisa di-parse sebagai tanggal
-      if (typeof date === "string") {
-        // Coba parse sebagai string ISO atau lainnya
-        const dateObj = new Date(date);
-        if (!isNaN(dateObj.getTime())) {
-          const year = dateObj.getFullYear();
-          const month = String(dateObj.getMonth() + 1).padStart(2, "0");
-          const day = String(dateObj.getDate()).padStart(2, "0");
-          const result = `${year}-${month}-${day}`;
-          console.log("? Converted parseable string to:", result);
-          return result;
-        }
-      }
-
-      console.error("? Failed to normalize date:", date);
-      // Jangan paksa fallback ke hari ini; biarkan kosong supaya tidak misleading
-      return "";
-    } catch (error) {
-      console.error("? Error normalizing date:", error);
-      return "";
-    }
-  };
-
   // Fetch data from Google Sheets
   const fetchData = async (sheetName: string) => {
     try {
@@ -3054,6 +3096,163 @@ export default function ProduksiNPKApp() {
     }
   };
 
+  // Handle submit edit reason
+  const handleSubmitEditReason = async () => {
+    if (!editReason.trim()) {
+      alert("Mohon isi alasan edit");
+      return;
+    }
+
+    if (!pendingEditSubmit) return;
+
+    setShowEditReasonModal(false);
+    setShowLoadingOverlay(true);
+
+    try {
+      const { formData, dataType, editingItem } = pendingEditSubmit;
+      const dataId = editingItem.id || JSON.stringify(editingItem);
+      const dataPreview = generateDataPreview(dataType, editingItem);
+      const newDataPreview = generateDataPreview(dataType, formData);
+
+      await saveApprovalRequest(
+        "edit",
+        dataType,
+        dataId,
+        `Old: ${dataPreview} → New: ${newDataPreview}`,
+        editReason,
+        editingItem,
+        formData
+      );
+
+      showSuccess(
+        "Permintaan edit telah dikirim ke Supervisor/Admin untuk approval!"
+      );
+
+      // Reset form dan state
+      setEditReason("");
+      setPendingEditSubmit(null);
+      setEditingIndex(null);
+      setEditingItem(null);
+
+      // Reset form and close form view
+      setShowForm(false);
+
+      // Reset form based on dataType
+      switch (dataType) {
+        case "produksi_npk":
+          setFormProduksiNPK({
+            tanggal: new Date().toISOString().split("T")[0],
+            shiftMalamOnspek: 0,
+            shiftMalamOffspek: 0,
+            shiftPagiOnspek: 0,
+            shiftPagiOffspek: 0,
+            shiftSoreOnspek: 0,
+            shiftSoreOffspek: 0,
+            totalOnspek: 0,
+            totalOffspek: 0,
+            total: 0,
+          });
+          break;
+        case "produksi_blending":
+          setFormProduksiBlending({
+            tanggal: new Date().toISOString().split("T")[0],
+            formula: "",
+            kategori: "ONSPEK",
+            tonase: 0,
+          });
+          break;
+        case "produksi_npk_mini":
+          setFormProduksiNPKMini({
+            tanggal: new Date().toISOString().split("T")[0],
+            formulasi: "",
+            tonase: 0,
+          });
+          break;
+        case "timesheet_forklift":
+          setFormTimesheetForklift({
+            tanggal: new Date().toISOString().split("T")[0],
+            forklift: "",
+            deskripsiTemuan: "",
+            jamOff: "",
+            jamStart: "",
+            jamGrounded: 0,
+            jamOperasi: 0,
+            keterangan: "",
+          });
+          break;
+        case "timesheet_loader":
+          setFormTimesheetLoader({
+            tanggal: new Date().toISOString().split("T")[0],
+            shift: "",
+            deskripsiTemuan: "",
+            jamOff: "",
+            jamStart: "",
+            jamGrounded: 0,
+            jamOperasi: 0,
+            keterangan: "",
+          });
+          break;
+        case "downtime":
+          setFormDowntime({
+            tanggal: new Date().toISOString().split("T")[0],
+            item: "",
+            deskripsi: "",
+            jamOff: "",
+            jamStart: "",
+            downtime: 0,
+          });
+          break;
+        case "work_request":
+          setFormWorkRequest({
+            tanggal: new Date().toISOString().split("T")[0],
+            nomorWR: "",
+            item: "",
+            area: "",
+            eksekutor: "",
+            include: "",
+            deskripsiPekerjaan: "",
+          });
+          break;
+        case "bahan_baku":
+          setFormBahanBaku({
+            tanggal: new Date().toISOString().split("T")[0],
+            jenisBahanBaku: "Urea",
+            tonase: 0,
+            keterangan: "",
+          });
+          break;
+        case "vibrasi":
+          setFormVibrasi({
+            tanggal: new Date().toISOString().split("T")[0],
+            equipment: "",
+            position: "",
+            point: "",
+            nilai: 0,
+            keterangan: "",
+          });
+          break;
+        case "gate_pass":
+          generateGatePassNumber();
+          setFormGatePass({
+            noFile: "",
+            noPol: "",
+            pemilikBarang: "",
+            namaPembawa: "",
+            namaBarang: "",
+            alasanMengeluarkan: "",
+            tanggal: new Date().toISOString().split("T")[0],
+            approver: "",
+          });
+          break;
+      }
+    } catch (error) {
+      console.error("Error submitting edit reason:", error);
+      alert("Terjadi kesalahan saat mengirim request approval");
+    } finally {
+      setShowLoadingOverlay(false);
+    }
+  };
+
   // Helper to save approval request with old/new data
   const saveApprovalRequest = async (
     action: "edit" | "delete",
@@ -3116,26 +3315,17 @@ export default function ProduksiNPKApp() {
             item.shiftPagiOffspek === editingItem.shiftPagiOffspek
         );
 
-        // User role → send approval request instead of direct update
+        // User role → show reason modal first before sending approval request
         if (userRole === "user") {
-          const dataId = editingItem.id || JSON.stringify(editingItem);
-          const dataPreview = generateDataPreview("produksi_npk", editingItem);
-          const newDataPreview = generateDataPreview(
-            "produksi_npk",
-            formProduksiNPK
-          );
-          await saveApprovalRequest(
-            "edit",
-            "produksi_npk",
-            dataId,
-            `Old: ${dataPreview} → New: ${newDataPreview}`,
-            "User ingin mengedit data produksi NPK",
-            editingItem,
-            formProduksiNPK
-          );
-          showSuccess(
-            "Permintaan edit telah dikirim ke AVP/Admin untuk approval!"
-          );
+          // Show modal untuk input reason
+          setPendingEditSubmit({
+            formData: formProduksiNPK,
+            dataType: "produksi_npk",
+            editingItem: editingItem,
+          });
+          setShowEditReasonModal(true);
+          setShowLoadingOverlay(false);
+          return; // Exit here, will continue after reason submitted
         } else if (actualIndex !== -1) {
           // PENTING: Pastikan ID dari editingItem tetap ada
           const dataToUpdate = {
@@ -3204,29 +3394,16 @@ export default function ProduksiNPKApp() {
     setShowLoadingOverlay(true);
     try {
       if (editingIndex !== null && editingItem) {
-        // User role → send approval request
+        // User role → show reason modal first
         if (userRole === "user") {
-          const dataId = editingItem.id || JSON.stringify(editingItem);
-          const dataPreview = generateDataPreview(
-            "produksi_blending",
-            editingItem
-          );
-          const newDataPreview = generateDataPreview(
-            "produksi_blending",
-            formProduksiBlending
-          );
-          await saveApprovalRequest(
-            "edit",
-            "produksi_blending",
-            dataId,
-            `Old: ${dataPreview} → New: ${newDataPreview}`,
-            "User ingin mengedit data produksi blending",
-            editingItem,
-            formProduksiBlending
-          );
-          showSuccess(
-            "Permintaan edit telah dikirim ke AVP/Admin untuk approval!"
-          );
+          setShowLoadingOverlay(false);
+          setPendingEditSubmit({
+            formData: formProduksiBlending,
+            dataType: "produksi_blending",
+            editingItem: editingItem,
+          });
+          setShowEditReasonModal(true);
+          return;
         } else {
           const actualIndex = produksiBlendingData.findIndex(
             (item) =>
@@ -3296,29 +3473,16 @@ export default function ProduksiNPKApp() {
     setShowLoadingOverlay(true);
     try {
       if (editingIndex !== null && editingItem) {
-        // User role → send approval request
+        // User role → show reason modal first
         if (userRole === "user") {
-          const dataId = editingItem.id || JSON.stringify(editingItem);
-          const dataPreview = generateDataPreview(
-            "produksi_npk_mini",
-            editingItem
-          );
-          const newDataPreview = generateDataPreview(
-            "produksi_npk_mini",
-            formProduksiNPKMini
-          );
-          await saveApprovalRequest(
-            "edit",
-            "produksi_npk_mini",
-            dataId,
-            `Old: ${dataPreview} → New: ${newDataPreview}`,
-            "User ingin mengedit data produksi NPK Mini",
-            editingItem,
-            formProduksiNPKMini
-          );
-          showSuccess(
-            "Permintaan edit telah dikirim ke AVP/Admin untuk approval!"
-          );
+          setShowLoadingOverlay(false);
+          setPendingEditSubmit({
+            formData: formProduksiNPKMini,
+            dataType: "produksi_npk_mini",
+            editingItem: editingItem,
+          });
+          setShowEditReasonModal(true);
+          return;
         } else {
           const actualIndex = produksiNPKMiniData.findIndex(
             (item) =>
@@ -3383,29 +3547,16 @@ export default function ProduksiNPKApp() {
     setShowLoadingOverlay(true);
     try {
       if (editingIndex !== null && editingItem) {
-        // User role → send approval request
+        // User role → show reason modal first
         if (userRole === "user") {
-          const dataId = editingItem.id || JSON.stringify(editingItem);
-          const dataPreview = generateDataPreview(
-            "timesheet_forklift",
-            editingItem
-          );
-          const newDataPreview = generateDataPreview(
-            "timesheet_forklift",
-            formTimesheetForklift
-          );
-          await saveApprovalRequest(
-            "edit",
-            "timesheet_forklift",
-            dataId,
-            `Old: ${dataPreview} → New: ${newDataPreview}`,
-            "User ingin mengedit data timesheet forklift",
-            editingItem,
-            formTimesheetForklift
-          );
-          showSuccess(
-            "Permintaan edit telah dikirim ke AVP/Admin untuk approval!"
-          );
+          setShowLoadingOverlay(false);
+          setPendingEditSubmit({
+            formData: formTimesheetForklift,
+            dataType: "timesheet_forklift",
+            editingItem: editingItem,
+          });
+          setShowEditReasonModal(true);
+          return;
         } else {
           // Find the correct index in the original array by comparing with editingItem
           const actualIndex = timesheetForkliftData.findIndex(
@@ -3511,29 +3662,16 @@ export default function ProduksiNPKApp() {
     setShowLoadingOverlay(true);
     try {
       if (editingIndex !== null && editingItem) {
-        // User role → send approval request
+        // User role → show reason modal first
         if (userRole === "user") {
-          const dataId = editingItem.id || JSON.stringify(editingItem);
-          const dataPreview = generateDataPreview(
-            "timesheet_loader",
-            editingItem
-          );
-          const newDataPreview = generateDataPreview(
-            "timesheet_loader",
-            formTimesheetLoader
-          );
-          await saveApprovalRequest(
-            "edit",
-            "timesheet_loader",
-            dataId,
-            `Old: ${dataPreview} → New: ${newDataPreview}`,
-            "User ingin mengedit data timesheet loader",
-            editingItem,
-            formTimesheetLoader
-          );
-          showSuccess(
-            "Permintaan edit telah dikirim ke AVP/Admin untuk approval!"
-          );
+          setShowLoadingOverlay(false);
+          setPendingEditSubmit({
+            formData: formTimesheetLoader,
+            dataType: "timesheet_loader",
+            editingItem: editingItem,
+          });
+          setShowEditReasonModal(true);
+          return;
         } else {
           const actualIndex = timesheetLoaderData.findIndex(
             (item) =>
@@ -3646,23 +3784,16 @@ export default function ProduksiNPKApp() {
     setShowLoadingOverlay(true);
     try {
       if (editingIndex !== null && editingItem) {
-        // User role → send approval request
+        // User role → show reason modal first
         if (userRole === "user") {
-          const dataId = editingItem.id || JSON.stringify(editingItem);
-          const dataPreview = generateDataPreview("downtime", editingItem);
-          const newDataPreview = generateDataPreview("downtime", formDowntime);
-          await saveApprovalRequest(
-            "edit",
-            "downtime",
-            dataId,
-            `Old: ${dataPreview} → New: ${newDataPreview}`,
-            "User ingin mengedit data downtime",
-            editingItem,
-            formDowntime
-          );
-          showSuccess(
-            "Permintaan edit telah dikirim ke AVP/Admin untuk approval!"
-          );
+          setShowLoadingOverlay(false);
+          setPendingEditSubmit({
+            formData: formDowntime,
+            dataType: "downtime",
+            editingItem: editingItem,
+          });
+          setShowEditReasonModal(true);
+          return;
         } else {
           // Find the correct index in the original array by comparing with editingItem
           const actualIndex = downtimeData.findIndex(
@@ -3769,26 +3900,16 @@ export default function ProduksiNPKApp() {
     setShowLoadingOverlay(true);
     try {
       if (editingIndex !== null && editingItem) {
-        // User role → send approval request
+        // User role → show reason modal first
         if (userRole === "user") {
-          const dataId = editingItem.id || JSON.stringify(editingItem);
-          const dataPreview = generateDataPreview("work_request", editingItem);
-          const newDataPreview = generateDataPreview(
-            "work_request",
-            formWorkRequest
-          );
-          await saveApprovalRequest(
-            "edit",
-            "work_request",
-            dataId,
-            `Old: ${dataPreview} → New: ${newDataPreview}`,
-            "User ingin mengedit data work request",
-            editingItem,
-            formWorkRequest
-          );
-          showSuccess(
-            "Permintaan edit telah dikirim ke AVP/Admin untuk approval!"
-          );
+          setShowLoadingOverlay(false);
+          setPendingEditSubmit({
+            formData: formWorkRequest,
+            dataType: "work_request",
+            editingItem: editingItem,
+          });
+          setShowEditReasonModal(true);
+          return;
         } else {
           // Find the correct index in the original array by comparing with editingItem
           const actualIndex = workRequestData.findIndex(
@@ -3890,26 +4011,16 @@ export default function ProduksiNPKApp() {
     setShowLoadingOverlay(true);
     try {
       if (editingIndex !== null && editingItem) {
-        // User role → send approval request
+        // User role → show reason modal first
         if (userRole === "user") {
-          const dataId = editingItem.id || JSON.stringify(editingItem);
-          const dataPreview = generateDataPreview("bahan_baku", editingItem);
-          const newDataPreview = generateDataPreview(
-            "bahan_baku",
-            formBahanBaku
-          );
-          await saveApprovalRequest(
-            "edit",
-            "bahan_baku",
-            dataId,
-            `Old: ${dataPreview} → New: ${newDataPreview}`,
-            "User ingin mengedit data bahan baku",
-            editingItem,
-            formBahanBaku
-          );
-          showSuccess(
-            "Permintaan edit telah dikirim ke AVP/Admin untuk approval!"
-          );
+          setShowLoadingOverlay(false);
+          setPendingEditSubmit({
+            formData: formBahanBaku,
+            dataType: "bahan_baku",
+            editingItem: editingItem,
+          });
+          setShowEditReasonModal(true);
+          return;
         } else {
           // Cari item lama berdasarkan id yang ada di form (lebih stabil daripada index sort)
           const currentForm: any = formBahanBaku as any;
@@ -3983,23 +4094,16 @@ export default function ProduksiNPKApp() {
     setShowLoadingOverlay(true);
     try {
       if (editingIndex !== null && editingItem) {
-        // User role → send approval request
+        // User role → show reason modal first
         if (userRole === "user") {
-          const dataId = editingItem.id || JSON.stringify(editingItem);
-          const dataPreview = generateDataPreview("vibrasi", editingItem);
-          const newDataPreview = generateDataPreview("vibrasi", formVibrasi);
-          await saveApprovalRequest(
-            "edit",
-            "vibrasi",
-            dataId,
-            `Old: ${dataPreview} → New: ${newDataPreview}`,
-            "User ingin mengedit data vibrasi",
-            editingItem,
-            formVibrasi
-          );
-          showSuccess(
-            "Permintaan edit telah dikirim ke AVP/Admin untuk approval!"
-          );
+          setShowLoadingOverlay(false);
+          setPendingEditSubmit({
+            formData: formVibrasi,
+            dataType: "vibrasi",
+            editingItem: editingItem,
+          });
+          setShowEditReasonModal(true);
+          return;
         } else {
           const current: any = formVibrasi as any;
           const oldItem = vibrasiData.find((r) => r.id && r.id === current.id);
@@ -4062,23 +4166,16 @@ export default function ProduksiNPKApp() {
     setShowLoadingOverlay(true);
     try {
       if (editingIndex !== null && editingItem) {
-        // User role → send approval request
+        // User role → show reason modal first
         if (userRole === "user") {
-          const dataId = editingItem.id || JSON.stringify(editingItem);
-          const dataPreview = generateDataPreview("gate_pass", editingItem);
-          const newDataPreview = generateDataPreview("gate_pass", formGatePass);
-          await saveApprovalRequest(
-            "edit",
-            "gate_pass",
-            dataId,
-            `Old: ${dataPreview} → New: ${newDataPreview}`,
-            "User ingin mengedit data gate pass",
-            editingItem,
-            formGatePass
-          );
-          showSuccess(
-            "Permintaan edit telah dikirim ke AVP/Admin untuk approval!"
-          );
+          setShowLoadingOverlay(false);
+          setPendingEditSubmit({
+            formData: formGatePass,
+            dataType: "gate_pass",
+            editingItem: editingItem,
+          });
+          setShowEditReasonModal(true);
+          return;
         } else {
           const current: any = formGatePass as any;
           const oldItem = gatePassData.find((r) => r.id && r.id === current.id);
@@ -4206,7 +4303,10 @@ export default function ProduksiNPKApp() {
         showSuccess("Data berhasil diupdate!");
       } else {
         await saveDataForPlant("akun", formAkun);
-        await addNotification("akun", `Akun ${formAkun.noBadge} - ${formAkun.nama}`);
+        await addNotification(
+          "akun",
+          `Akun ${formAkun.noBadge} - ${formAkun.nama}`
+        );
         const refreshed = await fetchData("akun");
         setAkunData(refreshed || []);
         showSuccess("Data berhasil disimpan!");
@@ -4822,7 +4922,7 @@ export default function ProduksiNPKApp() {
     _handleEdit(index, dataType, item);
   };
 
-  // Wrapper for delete - check if user needs approval
+  // Wrapper for delete - show confirmation modal with reason input
   const handleDeleteClick = async (
     index: number,
     dataType: string,
@@ -4832,31 +4932,14 @@ export default function ProduksiNPKApp() {
     const itemToDelete = item || data[index];
     const dataPreview = generateDataPreview(dataType, itemToDelete);
 
-    // If user role is "user", send approval request
-    if (userRole === "user") {
-      const dataId = itemToDelete.id || JSON.stringify(itemToDelete);
-      await saveApprovalRequest(
-        "delete",
-        dataType,
-        dataId,
-        dataPreview,
-        "User ingin menghapus data ini",
-        itemToDelete,
-        null
-      );
-      showSuccess(
-        "Permintaan hapus telah dikirim ke AVP/Admin untuk approval!"
-      );
-    } else {
-      // For other roles (admin, avp, supervisor), show confirmation modal first
-      setDeleteConfirmData({
-        index,
-        dataType,
-        item: itemToDelete,
-        preview: dataPreview,
-      });
-      setShowDeleteConfirmModal(true);
-    }
+    // Show confirmation modal (with reason input for user role)
+    setDeleteConfirmData({
+      index,
+      dataType,
+      item: itemToDelete,
+      preview: dataPreview,
+    });
+    setShowDeleteConfirmModal(true);
   };
 
   // Execute delete after confirmation
@@ -4866,9 +4949,11 @@ export default function ProduksiNPKApp() {
       await _handleDelete(
         deleteConfirmData.index,
         deleteConfirmData.dataType,
-        deleteConfirmData.item
+        deleteConfirmData.item,
+        deleteReason
       );
       setDeleteConfirmData(null);
+      setDeleteReason(""); // Reset reason after use
     }
   };
 
@@ -4906,181 +4991,237 @@ export default function ProduksiNPKApp() {
     }
   };
 
-  const _handleDelete = async (index: number, dataType: string, item?: any) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus data ini?")) {
-      setShowLoadingOverlay(true);
-      try {
-        let dataToDelete;
+  const _handleDelete = async (
+    index: number,
+    dataType: string,
+    item?: any,
+    reason: string = ""
+  ) => {
+    setShowLoadingOverlay(true);
+    try {
+      let dataToDelete;
 
+      // User role → send approval request
+      if (userRole === "user") {
+        // Get the item to delete
         switch (dataType) {
           case "produksi_npk":
             dataToDelete = item || produksiNPKData[index];
-            await deleteDataFromSheetForPlant("produksi_npk", dataToDelete);
-            // Refresh dari server untuk memastikan data konsisten
-            {
-              const refreshed = await fetchDataForPlant("produksi_npk");
-              setProduksiNPKData(refreshed || []);
-            }
             break;
           case "produksi_blending":
             dataToDelete = item || produksiBlendingData[index];
-            await deleteDataFromSheetForPlant(
-              "produksi_blending",
-              dataToDelete
-            );
-            // Refresh dari server untuk memastikan data konsisten
-            {
-              const refreshed = await fetchDataForPlant("produksi_blending");
-              setProduksiBlendingData(refreshed || []);
-            }
             break;
           case "produksi_npk_mini":
             dataToDelete = item || produksiNPKMiniData[index];
-            await deleteDataFromSheetForPlant(
-              "produksi_npk_mini",
-              dataToDelete
-            );
-            // Refresh dari server untuk memastikan data konsisten
-            {
-              const refreshed = await fetchDataForPlant("produksi_npk_mini");
-              setProduksiNPKMiniData(refreshed || []);
-            }
             break;
           case "timesheet_forklift":
             dataToDelete = item || timesheetForkliftData[index];
-            await deleteDataFromSheetForPlant(
-              "timesheet_forklift",
-              dataToDelete
-            );
-            // Refresh dari server untuk memastikan data konsisten
-            {
-              const refreshed = await fetchDataForPlant("timesheet_forklift");
-              setTimesheetForkliftData(refreshed || []);
-            }
             break;
           case "timesheet_loader":
             dataToDelete = item || timesheetLoaderData[index];
-            await deleteDataFromSheetForPlant("timesheet_loader", dataToDelete);
-            // Refresh dari server untuk memastikan data konsisten
-            {
-              const refreshed = await fetchDataForPlant("timesheet_loader");
-              setTimesheetLoaderData(refreshed || []);
-            }
             break;
           case "downtime":
-            // Untuk downtime, gunakan langsung item yang dikirim dari tabel
-            // sehingga tidak ada salah mapping index setelah sort & paginate.
-            const downtimeItemToDelete = item || downtimeData[index];
-            dataToDelete = downtimeItemToDelete;
-            await deleteDataFromSheetForPlant("downtime", dataToDelete);
-            const newDowntimeData = downtimeData.filter(
-              (row) =>
-                (downtimeItemToDelete.id &&
-                  row.id !== downtimeItemToDelete.id) ||
-                (!downtimeItemToDelete.id && row !== downtimeItemToDelete)
-            );
-            setDowntimeData(newDowntimeData);
+            dataToDelete = item || downtimeData[index];
             break;
           case "work_request":
-            // Untuk work_request, gunakan langsung item yang dikirim dari tabel
-            // sehingga tidak ada salah mapping index setelah sort & paginate.
-            const wrItemToDelete = item || workRequestData[index];
-            dataToDelete = wrItemToDelete;
-            await deleteDataFromSheetForPlant("work_request", dataToDelete);
-            // Refresh dari backend untuk memastikan baris yang terhapus sesuai
-            {
-              const refreshed = await fetchDataForPlant("work_request");
-              const normalizedWR = (refreshed || []).map((item: any) => {
-                let tanggal = item.tanggal;
-                if (tanggal instanceof Date) {
-                  const year = tanggal.getFullYear();
-                  const month = String(tanggal.getMonth() + 1).padStart(2, "0");
-                  const day = String(tanggal.getDate()).padStart(2, "0");
-                  tanggal = `${year}-${month}-${day}`;
-                } else if (
-                  typeof tanggal === "string" &&
-                  !tanggal.match(/^\d{4}-\d{2}-\d{2}$/)
-                ) {
-                  tanggal = normalizeDateForInput(tanggal);
-                }
-                return { ...item, tanggal };
-              });
-              setWorkRequestData(normalizedWR);
-            }
+            dataToDelete = item || workRequestData[index];
             break;
           case "bahan_baku":
-            // Untuk bahan_baku, gunakan langsung item yang dikirim dari tabel
-            // sehingga tidak ada salah mapping index setelah sort & paginate.
-            const bahanItemToDelete = item || bahanBakuData[index];
-            dataToDelete = bahanItemToDelete;
-            await deleteDataFromSheetForPlant("bahan_baku", dataToDelete);
-            // Refresh data dari backend setelah delete untuk memastikan konsistensi
-            const refreshedBahan = await fetchDataForPlant("bahan_baku");
-            setBahanBakuData(refreshedBahan);
+            dataToDelete = item || bahanBakuData[index];
             break;
           case "vibrasi":
             dataToDelete = item || vibrasiData[index];
-            await deleteDataFromSheetForPlant("vibrasi", dataToDelete);
-            {
-              const refreshed = await fetchDataForPlant("vibrasi");
-              setVibrasiData(refreshed || []);
-            }
             break;
           case "gate_pass":
             dataToDelete = item || gatePassData[index];
-            await deleteDataFromSheetForPlant("gate_pass", dataToDelete);
-            {
-              const refreshed = await fetchDataForPlant("gate_pass");
-              setGatePassData(refreshed || []);
-            }
-            break;
-          case "akun":
-            dataToDelete = item || akunData[index];
-            await deleteDataFromSheetForPlant("akun", dataToDelete);
-            {
-              const refreshed = await fetchDataForPlant("akun");
-              setAkunData(refreshed || []);
-            }
-            break;
-          case "rkap":
-            dataToDelete = item || rkapData[index];
-            await deleteDataFromSheetForPlant("rkap", dataToDelete);
-            {
-              const refreshed = await fetchDataForPlant("rkap");
-              setRkapData(refreshed || []);
-            }
-            break;
-          case "perta":
-            dataToDelete = item || pertaData[index];
-            await deleteDataFromSheetForPlant("perta", dataToDelete);
-            {
-              const refreshed = await fetchDataForPlant("perta");
-              setPertaData(refreshed || []);
-            }
             break;
           case "trouble_record":
             dataToDelete = item || troubleRecordData[index];
-            await deleteDataFromSheetForPlant("trouble_record", dataToDelete);
-            {
-              const refreshed = await fetchDataForPlant("trouble_record");
-              setTroubleRecordData(refreshed || []);
-            }
             break;
-          case "users":
-            dataToDelete = item || usersData[index];
-            await deleteDataFromSheetForPlant("users", dataToDelete);
-            {
-              const refreshed = await fetchDataForPlant("users");
-              setUsersData(refreshed || []);
-            }
-            break;
+          default:
+            throw new Error("Unknown data type");
         }
-        showSuccess("Data berhasil dihapus!");
-      } catch (error) {
+
+        const dataId = dataToDelete.id || JSON.stringify(dataToDelete);
+        const dataPreview = generateDataPreview(dataType, dataToDelete);
+
+        await saveApprovalRequest(
+          "delete",
+          dataType,
+          dataId,
+          dataPreview,
+          reason || "User ingin menghapus data",
+          dataToDelete,
+          null
+        );
+
         setShowLoadingOverlay(false);
-        console.error("Error deleting data:", error);
-        alert("Terjadi kesalahan saat menghapus data");
+        showSuccess(
+          "Permintaan hapus telah dikirim ke Supervisor/Admin untuk approval!"
+        );
+        return;
       }
+
+      // Admin/Supervisor/AVP dapat langsung delete
+
+      switch (dataType) {
+        case "produksi_npk":
+          dataToDelete = item || produksiNPKData[index];
+          await deleteDataFromSheetForPlant("produksi_npk", dataToDelete);
+          // Refresh dari server untuk memastikan data konsisten
+          {
+            const refreshed = await fetchDataForPlant("produksi_npk");
+            setProduksiNPKData(refreshed || []);
+          }
+          break;
+        case "produksi_blending":
+          dataToDelete = item || produksiBlendingData[index];
+          await deleteDataFromSheetForPlant("produksi_blending", dataToDelete);
+          // Refresh dari server untuk memastikan data konsisten
+          {
+            const refreshed = await fetchDataForPlant("produksi_blending");
+            setProduksiBlendingData(refreshed || []);
+          }
+          break;
+        case "produksi_npk_mini":
+          dataToDelete = item || produksiNPKMiniData[index];
+          await deleteDataFromSheetForPlant("produksi_npk_mini", dataToDelete);
+          // Refresh dari server untuk memastikan data konsisten
+          {
+            const refreshed = await fetchDataForPlant("produksi_npk_mini");
+            setProduksiNPKMiniData(refreshed || []);
+          }
+          break;
+        case "timesheet_forklift":
+          dataToDelete = item || timesheetForkliftData[index];
+          await deleteDataFromSheetForPlant("timesheet_forklift", dataToDelete);
+          // Refresh dari server untuk memastikan data konsisten
+          {
+            const refreshed = await fetchDataForPlant("timesheet_forklift");
+            setTimesheetForkliftData(refreshed || []);
+          }
+          break;
+        case "timesheet_loader":
+          dataToDelete = item || timesheetLoaderData[index];
+          await deleteDataFromSheetForPlant("timesheet_loader", dataToDelete);
+          // Refresh dari server untuk memastikan data konsisten
+          {
+            const refreshed = await fetchDataForPlant("timesheet_loader");
+            setTimesheetLoaderData(refreshed || []);
+          }
+          break;
+        case "downtime":
+          // Untuk downtime, gunakan langsung item yang dikirim dari tabel
+          // sehingga tidak ada salah mapping index setelah sort & paginate.
+          const downtimeItemToDelete = item || downtimeData[index];
+          dataToDelete = downtimeItemToDelete;
+          await deleteDataFromSheetForPlant("downtime", dataToDelete);
+          const newDowntimeData = downtimeData.filter(
+            (row) =>
+              (downtimeItemToDelete.id && row.id !== downtimeItemToDelete.id) ||
+              (!downtimeItemToDelete.id && row !== downtimeItemToDelete)
+          );
+          setDowntimeData(newDowntimeData);
+          break;
+        case "work_request":
+          // Untuk work_request, gunakan langsung item yang dikirim dari tabel
+          // sehingga tidak ada salah mapping index setelah sort & paginate.
+          const wrItemToDelete = item || workRequestData[index];
+          dataToDelete = wrItemToDelete;
+          await deleteDataFromSheetForPlant("work_request", dataToDelete);
+          // Refresh dari backend untuk memastikan baris yang terhapus sesuai
+          {
+            const refreshed = await fetchDataForPlant("work_request");
+            const normalizedWR = (refreshed || []).map((item: any) => {
+              let tanggal = item.tanggal;
+              if (tanggal instanceof Date) {
+                const year = tanggal.getFullYear();
+                const month = String(tanggal.getMonth() + 1).padStart(2, "0");
+                const day = String(tanggal.getDate()).padStart(2, "0");
+                tanggal = `${year}-${month}-${day}`;
+              } else if (
+                typeof tanggal === "string" &&
+                !tanggal.match(/^\d{4}-\d{2}-\d{2}$/)
+              ) {
+                tanggal = normalizeDateForInput(tanggal);
+              }
+              return { ...item, tanggal };
+            });
+            setWorkRequestData(normalizedWR);
+          }
+          break;
+        case "bahan_baku":
+          // Untuk bahan_baku, gunakan langsung item yang dikirim dari tabel
+          // sehingga tidak ada salah mapping index setelah sort & paginate.
+          const bahanItemToDelete = item || bahanBakuData[index];
+          dataToDelete = bahanItemToDelete;
+          await deleteDataFromSheetForPlant("bahan_baku", dataToDelete);
+          // Refresh data dari backend setelah delete untuk memastikan konsistensi
+          const refreshedBahan = await fetchDataForPlant("bahan_baku");
+          setBahanBakuData(refreshedBahan);
+          break;
+        case "vibrasi":
+          dataToDelete = item || vibrasiData[index];
+          await deleteDataFromSheetForPlant("vibrasi", dataToDelete);
+          {
+            const refreshed = await fetchDataForPlant("vibrasi");
+            setVibrasiData(refreshed || []);
+          }
+          break;
+        case "gate_pass":
+          dataToDelete = item || gatePassData[index];
+          await deleteDataFromSheetForPlant("gate_pass", dataToDelete);
+          {
+            const refreshed = await fetchDataForPlant("gate_pass");
+            setGatePassData(refreshed || []);
+          }
+          break;
+        case "akun":
+          dataToDelete = item || akunData[index];
+          await deleteDataFromSheetForPlant("akun", dataToDelete);
+          {
+            const refreshed = await fetchDataForPlant("akun");
+            setAkunData(refreshed || []);
+          }
+          break;
+        case "rkap":
+          dataToDelete = item || rkapData[index];
+          await deleteDataFromSheetForPlant("rkap", dataToDelete);
+          {
+            const refreshed = await fetchDataForPlant("rkap");
+            setRkapData(refreshed || []);
+          }
+          break;
+        case "perta":
+          dataToDelete = item || pertaData[index];
+          await deleteDataFromSheetForPlant("perta", dataToDelete);
+          {
+            const refreshed = await fetchDataForPlant("perta");
+            setPertaData(refreshed || []);
+          }
+          break;
+        case "trouble_record":
+          dataToDelete = item || troubleRecordData[index];
+          await deleteDataFromSheetForPlant("trouble_record", dataToDelete);
+          {
+            const refreshed = await fetchDataForPlant("trouble_record");
+            setTroubleRecordData(refreshed || []);
+          }
+          break;
+        case "users":
+          dataToDelete = item || usersData[index];
+          await deleteDataFromSheetForPlant("users", dataToDelete);
+          {
+            const refreshed = await fetchDataForPlant("users");
+            setUsersData(refreshed || []);
+          }
+          break;
+      }
+      showSuccess("Data berhasil dihapus!");
+    } catch (error) {
+      setShowLoadingOverlay(false);
+      console.error("Error deleting data:", error);
+      alert("Terjadi kesalahan saat menghapus data");
     }
   };
 
@@ -5234,34 +5375,6 @@ export default function ProduksiNPKApp() {
   };
 
   // Pagination helper function
-  const sortByDateDesc = <T extends { tanggal: string | Date }>(
-    data: T[]
-  ): T[] => {
-    return [...data].sort((a, b) => {
-      const dateA = new Date(a.tanggal).getTime();
-      const dateB = new Date(b.tanggal).getTime();
-      return dateB - dateA; // Sort descending (newest first)
-    });
-  };
-
-  const sortByUpdateDateDesc = <T extends { tanggalUpdate: string | Date }>(
-    data: T[]
-  ): T[] => {
-    return [...data].sort((a, b) => {
-      const dateA = new Date(a.tanggalUpdate).getTime();
-      const dateB = new Date(b.tanggalUpdate).getTime();
-      return dateB - dateA; // Sort descending (newest first)
-    });
-  };
-
-  const sortPertaByDateDesc = (data: Perta[]): Perta[] => {
-    return [...data].sort((a, b) => {
-      const dateA = new Date(a.tanggalMulai).getTime();
-      const dateB = new Date(b.tanggalMulai).getTime();
-      return dateB - dateA; // Sort descending (newest first)
-    });
-  };
-
   const paginateData = <T,>(data: T[], page: number, perPage: number): T[] => {
     const startIndex = (page - 1) * perPage;
     const endIndex = startIndex + perPage;
@@ -9209,33 +9322,6 @@ export default function ProduksiNPKApp() {
 
   const isRetailMode =
     userPlant === "NPK1" || (userPlant === "ALL" && activeTab === "retail");
-
-  // Helper functions to get displayed data based on plant and active tab
-  const getPlantFromTab = (tab: string): "NPK1" | "NPK2" | "ALL" => {
-    if (tab.endsWith("_npk1")) return "NPK1";
-    if (tab.endsWith("_npk2")) return "NPK2";
-    return userPlant;
-  };
-
-  const getDisplayedDataByTab = (dataArray: any[], activeTabName: string) => {
-    if (userPlant === "ALL") {
-      const plantFilter = getPlantFromTab(activeTabName);
-      if (plantFilter === "NPK1") {
-        return dataArray.filter((d) => d._plant === "NPK1");
-      } else if (plantFilter === "NPK2") {
-        return dataArray.filter((d) => d._plant === "NPK2" || !d._plant);
-      }
-      return dataArray;
-    }
-    // Filter berdasarkan userPlant untuk user dengan plant spesifik
-    if (userPlant === "NPK1") {
-      return dataArray.filter((d) => d._plant === "NPK1");
-    }
-    if (userPlant === "NPK2") {
-      return dataArray.filter((d) => d._plant === "NPK2" || !d._plant);
-    }
-    return dataArray;
-  };
 
   const getDisplayedNpkData = () => {
     console.log(
@@ -17189,6 +17275,26 @@ export default function ProduksiNPKApp() {
                   {deleteConfirmData.preview}
                 </div>
               </div>
+
+              {/* Input alasan untuk user role */}
+              {userRole === "user" && (
+                <div>
+                  <Label className="text-sm font-semibold text-gray-700">
+                    Alasan Hapus Data <span className="text-red-500">*</span>
+                  </Label>
+                  <textarea
+                    value={deleteReason}
+                    onChange={(e) => setDeleteReason(e.target.value)}
+                    className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows={3}
+                    placeholder="Tuliskan alasan mengapa data ini perlu dihapus..."
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Alasan ini akan dikirim ke approver untuk review
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -17196,15 +17302,83 @@ export default function ProduksiNPKApp() {
             <Button
               onClick={handleConfirmDelete}
               className="bg-red-600 hover:bg-red-700 text-white"
+              disabled={userRole === "user" && !deleteReason.trim()}
             >
               <Trash2 className="w-4 h-4 mr-2" />
-              Ya, Hapus Data
+              {userRole === "user" ? "Kirim Request Hapus" : "Ya, Hapus Data"}
             </Button>
             <Button
               variant="outline"
               onClick={() => {
                 setShowDeleteConfirmModal(false);
                 setDeleteConfirmData(null);
+              }}
+            >
+              Batal
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Reason Modal for User Role */}
+      <Modal
+        isOpen={showEditReasonModal}
+        onClose={() => {
+          setShowEditReasonModal(false);
+          setEditReason("");
+          setPendingEditSubmit(null);
+        }}
+        title="Alasan Edit Data"
+        size="md"
+      >
+        <div className="space-y-4">
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4">
+            <div className="flex items-start">
+              <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm text-blue-800 font-semibold">
+                  Request Edit Data
+                </p>
+                <p className="text-xs text-blue-700 mt-1">
+                  Anda akan mengirim permintaan edit data ke Supervisor/Admin
+                  untuk approval. Mohon berikan alasan yang jelas.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-sm font-semibold text-gray-700">
+              Alasan Edit Data <span className="text-red-500">*</span>
+            </Label>
+            <textarea
+              value={editReason}
+              onChange={(e) => setEditReason(e.target.value)}
+              className="w-full mt-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              rows={4}
+              placeholder="Contoh: Data salah input, perlu update angka produksi dari 100 ke 120 ton..."
+              autoFocus
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Alasan ini akan dikirim ke approver untuk review
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              onClick={handleSubmitEditReason}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={!editReason.trim()}
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Kirim Request Edit
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditReasonModal(false);
+                setEditReason("");
+                setPendingEditSubmit(null);
               }}
             >
               Batal
@@ -17329,3 +17503,5 @@ export default function ProduksiNPKApp() {
     </div>
   );
 }
+
+export default ProduksiNPKApp;
