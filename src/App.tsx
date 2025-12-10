@@ -8933,13 +8933,16 @@ export default function ProduksiNPKApp() {
           </Card>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={`grid grid-cols-1 gap-4 ${(() => {
+          const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+          return activePlant === "NPK1" ? "md:grid-cols-2" : "md:grid-cols-3";
+        })()}`}>
           <Card className="border-gray-200 shadow-md hover:shadow-lg transition-shadow">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
               <CardTitle className="text-sm text-[#001B44]">
                 {(() => {
-                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
-                  if (activePlant === "ALL") return "Total Produksi Blending";
+                  const activePlant =
+                    userPlant === "ALL" ? dashboardPlantFilter : userPlant;
                   if (activePlant === "NPK1") return "Total Produksi Retail";
                   return "Total Produksi Blending";
                 })()}
@@ -8948,15 +8951,22 @@ export default function ProduksiNPKApp() {
             <CardContent>
               <div className="text-2xl font-bold text-[#001B44]">
                 {(() => {
-                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
-                  const filteredData = activePlant === "ALL" 
-                    ? produksiBlendingData 
-                    : produksiBlendingData.filter((item: any) => {
-                        const itemPlant = (item._plant || "NPK2").toUpperCase();
-                        return itemPlant === activePlant;
-                      });
+                  const activePlant =
+                    userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+                  const filteredData =
+                    activePlant === "ALL"
+                      ? produksiBlendingData
+                      : produksiBlendingData.filter((item: any) => {
+                          const itemPlant = (
+                            item._plant || "NPK2"
+                          ).toUpperCase();
+                          return itemPlant === activePlant;
+                        });
                   return formatNumber(
-                    filteredData.reduce((sum, item) => sum + (Number(item.tonase) || 0), 0),
+                    filteredData.reduce(
+                      (sum, item) => sum + (Number(item.tonase) || 0),
+                      0
+                    ),
                     2
                   );
                 })()}{" "}
@@ -8964,56 +8974,76 @@ export default function ProduksiNPKApp() {
               </div>
               <p className="text-xs text-gray-500 mt-1">
                 {(() => {
-                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
-                  const filteredData = activePlant === "ALL" 
-                    ? produksiBlendingData 
-                    : produksiBlendingData.filter((item: any) => {
-                        const itemPlant = (item._plant || "NPK2").toUpperCase();
-                        return itemPlant === activePlant;
-                      });
+                  const activePlant =
+                    userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+                  const filteredData =
+                    activePlant === "ALL"
+                      ? produksiBlendingData
+                      : produksiBlendingData.filter((item: any) => {
+                          const itemPlant = (
+                            item._plant || "NPK2"
+                          ).toUpperCase();
+                          return itemPlant === activePlant;
+                        });
                   return filteredData.length;
-                })()} transaksi
+                })()}{" "}
+                transaksi
               </p>
             </CardContent>
           </Card>
 
-          <Card className="border-gray-200 shadow-md hover:shadow-lg transition-shadow">
-            <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <CardTitle className="text-sm text-[#001B44]">
-                Total Produksi NPK Mini
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-[#001B44]">
-                {(() => {
-                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
-                  const filteredData = activePlant === "ALL" 
-                    ? produksiNPKMiniData 
-                    : produksiNPKMiniData.filter((item: any) => {
-                        const itemPlant = (item._plant || "NPK2").toUpperCase();
-                        return itemPlant === activePlant;
-                      });
-                  return formatNumber(
-                    filteredData.reduce((sum, item) => sum + (Number(item.tonase) || 0), 0),
-                    2
-                  );
-                })()}{" "}
-                Ton
-              </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {(() => {
-                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
-                  const filteredData = activePlant === "ALL" 
-                    ? produksiNPKMiniData 
-                    : produksiNPKMiniData.filter((item: any) => {
-                        const itemPlant = (item._plant || "NPK2").toUpperCase();
-                        return itemPlant === activePlant;
-                      });
-                  return filteredData.length;
-                })()} transaksi
-              </p>
-            </CardContent>
-          </Card>
+          {/* Card NPK Mini - hanya tampil untuk ALL dan NPK2 */}
+          {(() => {
+            const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+            if (activePlant === "NPK1") return null;
+            return (
+              <Card className="border-gray-200 shadow-md hover:shadow-lg transition-shadow">
+                <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
+                  <CardTitle className="text-sm text-[#001B44]">
+                    Total Produksi NPK Mini
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-[#001B44]">
+                    {(() => {
+                      const filteredData =
+                        activePlant === "ALL"
+                          ? produksiNPKMiniData
+                          : produksiNPKMiniData.filter((item: any) => {
+                              const itemPlant = (
+                                item._plant || "NPK2"
+                              ).toUpperCase();
+                              return itemPlant === activePlant;
+                            });
+                      return formatNumber(
+                        filteredData.reduce(
+                          (sum, item) => sum + (Number(item.tonase) || 0),
+                          0
+                        ),
+                        2
+                      );
+                    })()}{" "}
+                    Ton
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {(() => {
+                      const filteredData =
+                        activePlant === "ALL"
+                          ? produksiNPKMiniData
+                          : produksiNPKMiniData.filter((item: any) => {
+                              const itemPlant = (
+                                item._plant || "NPK2"
+                              ).toUpperCase();
+                              return itemPlant === activePlant;
+                            });
+                      return filteredData.length;
+                    })()}{" "}
+                    transaksi
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })()}
 
           <Card className="border-gray-200 shadow-md hover:shadow-lg transition-shadow">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
@@ -9024,15 +9054,22 @@ export default function ProduksiNPKApp() {
             <CardContent>
               <div className="text-2xl font-bold text-[#001B44]">
                 {(() => {
-                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
-                  const filteredData = activePlant === "ALL" 
-                    ? downtimeData 
-                    : downtimeData.filter((item: any) => {
-                        const itemPlant = (item._plant || "NPK2").toUpperCase();
-                        return itemPlant === activePlant;
-                      });
+                  const activePlant =
+                    userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+                  const filteredData =
+                    activePlant === "ALL"
+                      ? downtimeData
+                      : downtimeData.filter((item: any) => {
+                          const itemPlant = (
+                            item._plant || "NPK2"
+                          ).toUpperCase();
+                          return itemPlant === activePlant;
+                        });
                   return formatNumber(
-                    filteredData.reduce((sum, item) => sum + (item.downtime || 0), 0),
+                    filteredData.reduce(
+                      (sum, item) => sum + (item.downtime || 0),
+                      0
+                    ),
                     1
                   );
                 })()}{" "}
@@ -9040,15 +9077,20 @@ export default function ProduksiNPKApp() {
               </div>
               <p className="text-xs text-gray-500 mt-1">
                 {(() => {
-                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
-                  const filteredData = activePlant === "ALL" 
-                    ? downtimeData 
-                    : downtimeData.filter((item: any) => {
-                        const itemPlant = (item._plant || "NPK2").toUpperCase();
-                        return itemPlant === activePlant;
-                      });
+                  const activePlant =
+                    userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+                  const filteredData =
+                    activePlant === "ALL"
+                      ? downtimeData
+                      : downtimeData.filter((item: any) => {
+                          const itemPlant = (
+                            item._plant || "NPK2"
+                          ).toUpperCase();
+                          return itemPlant === activePlant;
+                        });
                   return filteredData.length;
-                })()} kejadian
+                })()}{" "}
+                kejadian
               </p>
             </CardContent>
           </Card>
