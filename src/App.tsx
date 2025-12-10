@@ -6233,9 +6233,19 @@ export default function ProduksiNPKApp() {
         (sum, item) => sum + (item.total || 0),
         0
       );
+      const rkap = Number(
+        filteredRKAPData.find(
+          (r: any) =>
+            r.bulan === month &&
+            (Number((r as any).tahun) || currentYear) === currentYear
+        )?.targetRKAP || 0
+      );
+      const percentage = rkap > 0 ? (production / rkap) * 100 : 0;
       return {
         bulan: month, // Gunakan nama lengkap bulan
         produksi: production,
+        rkap: rkap,
+        percentage: percentage,
       };
     });
 
