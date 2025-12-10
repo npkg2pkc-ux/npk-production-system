@@ -540,7 +540,12 @@ function getSheetName(
   plant: "NPK1" | "NPK2" | "ALL"
 ): string {
   // Sheets that are shared across plants (no suffix)
-  const sharedSheets = ["users", "sessions", "approval_requests", "notifications"];
+  const sharedSheets = [
+    "users",
+    "sessions",
+    "approval_requests",
+    "notifications",
+  ];
 
   if (sharedSheets.includes(baseSheet)) {
     return baseSheet;
@@ -1508,7 +1513,7 @@ export default function ProduksiNPKApp() {
 
       // Simpan ke Google Sheets agar bisa dilihat semua user
       await saveData("notifications", newNotif);
-      
+
       // Update state lokal
       const updatedNotifs = [...notifications, newNotif];
       setNotifications(updatedNotifs);
@@ -1533,7 +1538,7 @@ export default function ProduksiNPKApp() {
 
       // Simpan ke Google Sheets agar bisa dilihat semua user
       await saveData("notifications", newNotif);
-      
+
       // Update state lokal
       const updatedNotifs = [...notifications, newNotif];
       setNotifications(updatedNotifs);
@@ -2989,7 +2994,7 @@ export default function ProduksiNPKApp() {
 
     // Refresh immediately, then every 30 seconds
     const interval = setInterval(refreshNotifications, 30000);
-    
+
     return () => clearInterval(interval);
   }, [isLoggedIn]);
 
@@ -16157,9 +16162,14 @@ export default function ProduksiNPKApp() {
                         onClick={async () => {
                           try {
                             // Update notifikasi yang belum dibaca
-                            const unreadNotifs = notifications.filter((n) => !n.read);
+                            const unreadNotifs = notifications.filter(
+                              (n) => !n.read
+                            );
                             for (const notif of unreadNotifs) {
-                              await updateData("notifications", { ...notif, read: true });
+                              await updateData("notifications", {
+                                ...notif,
+                                read: true,
+                              });
                             }
                             // Update state lokal
                             setNotifications(
@@ -16239,7 +16249,10 @@ export default function ProduksiNPKApp() {
                             onClick={async () => {
                               try {
                                 if (!notif.read) {
-                                  await updateData("notifications", { ...notif, read: true });
+                                  await updateData("notifications", {
+                                    ...notif,
+                                    read: true,
+                                  });
                                 }
                                 const updatedNotifs = notifications.map((n) =>
                                   n.id === notif.id ? { ...n, read: true } : n
@@ -16279,13 +16292,19 @@ export default function ProduksiNPKApp() {
                                 onClick={async (e) => {
                                   e.stopPropagation();
                                   try {
-                                    await deleteDataFromSheet("notifications", notif);
+                                    await deleteDataFromSheet(
+                                      "notifications",
+                                      notif
+                                    );
                                     const updatedNotifs = notifications.filter(
                                       (n) => n.id !== notif.id
                                     );
                                     setNotifications(updatedNotifs);
                                   } catch (error) {
-                                    console.error("Failed to delete notification:", error);
+                                    console.error(
+                                      "Failed to delete notification:",
+                                      error
+                                    );
                                   }
                                 }}
                                 className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
@@ -16319,7 +16338,10 @@ export default function ProduksiNPKApp() {
                           }
                           setNotifications([]);
                         } catch (error) {
-                          console.error("Failed to delete all notifications:", error);
+                          console.error(
+                            "Failed to delete all notifications:",
+                            error
+                          );
                         }
                       }}
                       className="w-full text-xs text-red-600 hover:text-red-700 hover:bg-red-50"

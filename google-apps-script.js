@@ -41,6 +41,7 @@
  *    - approval_requests (untuk approval system)
  *    - sessions (untuk multi-login detection)
  *    - monthly_notes (untuk catatan bulanan per plant) - add '_plant' column
+ *    - notifications (untuk notifikasi cross-browser)
  *
  * 3. Buka Extensions > Apps Script
  * 4. Copy paste script ini
@@ -976,6 +977,17 @@ function createSheet(sheetName) {
 
 // Helper function: Get headers untuk setiap sheet
 function getHeadersForSheet(sheetName) {
+  // Handle sheets dengan suffix _NPK1 (gunakan base name untuk lookup)
+  let baseName = sheetName;
+  if (sheetName.endsWith("_NPK1")) {
+    baseName = sheetName.replace("_NPK1", "");
+  }
+  
+  // Special case: produksi_retail_NPK1 menggunakan headers dari produksi_blending
+  if (sheetName === "produksi_retail_NPK1") {
+    baseName = "produksi_blending";
+  }
+  
   const headersMap = {
     produksi_npk: [
       "id",
@@ -1108,13 +1120,35 @@ function getHeadersForSheet(sheetName) {
       "newData",
     ],
     monthly_notes: ["id", "bulan", "tahun", "catatan", "plant"],
+    notifications: [
+      "id",
+      "message",
+      "timestamp",
+      "read",
+      "type",
+      "fromUser",
+      "fromPlant",
+      "toUser",
+    ],
   };
 
-  return headersMap[sheetName] || [];
+  // Gunakan baseName untuk lookup
+  return headersMap[baseName] || [];
 }
 
 // Helper function: Get ID field untuk setiap sheet
 function getIdField(sheetName) {
+  // Handle sheets dengan suffix _NPK1 (gunakan base name untuk lookup)
+  let baseName = sheetName;
+  if (sheetName.endsWith("_NPK1")) {
+    baseName = sheetName.replace("_NPK1", "");
+  }
+  
+  // Special case: produksi_retail_NPK1 menggunakan ID field dari produksi_blending
+  if (sheetName === "produksi_retail_NPK1") {
+    baseName = "produksi_blending";
+  }
+  
   const idFieldMap = {
     produksi_npk: "tanggal",
     produksi_blending: "tanggal",
@@ -1133,9 +1167,11 @@ function getIdField(sheetName) {
     users: "username",
     approval_requests: "id",
     monthly_notes: "id",
+    notifications: "id",
   };
 
-  return idFieldMap[sheetName] || "tanggal";
+  // Gunakan baseName untuk lookup
+  return idFieldMap[baseName] || "tanggal";
 }
 
 // Test function untuk memastikan script berjalan dengan baik
