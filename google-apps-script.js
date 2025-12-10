@@ -982,12 +982,12 @@ function getHeadersForSheet(sheetName) {
   if (sheetName.endsWith("_NPK1")) {
     baseName = sheetName.replace("_NPK1", "");
   }
-  
+
   // Special case: produksi_retail_NPK1 menggunakan headers dari produksi_blending
   if (sheetName === "produksi_retail_NPK1") {
     baseName = "produksi_blending";
   }
-  
+
   const headersMap = {
     produksi_npk: [
       "id",
@@ -1143,12 +1143,12 @@ function getIdField(sheetName) {
   if (sheetName.endsWith("_NPK1")) {
     baseName = sheetName.replace("_NPK1", "");
   }
-  
+
   // Special case: produksi_retail_NPK1 menggunakan ID field dari produksi_blending
   if (sheetName === "produksi_retail_NPK1") {
     baseName = "produksi_blending";
   }
-  
+
   const idFieldMap = {
     produksi_npk: "tanggal",
     produksi_blending: "tanggal",
