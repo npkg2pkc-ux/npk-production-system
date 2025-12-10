@@ -540,7 +540,7 @@ function getSheetName(
   plant: "NPK1" | "NPK2" | "ALL"
 ): string {
   // Sheets that are shared across plants (no suffix)
-  const sharedSheets = ["users", "sessions", "approval_requests"];
+  const sharedSheets = ["users", "sessions", "approval_requests", "notifications"];
 
   if (sharedSheets.includes(baseSheet)) {
     return baseSheet;
@@ -1491,42 +1491,55 @@ export default function ProduksiNPKApp() {
   // Helper function to add notification for new data
   // Notifikasi hanya untuk supervisor/avp/admin sesuai plant
   // User yang input TIDAK mendapat notifikasi
-  const addNotification = (type: string, message: string) => {
-    // Buat notifikasi untuk ditampilkan ke admin/supervisor/avp
-    // Sistem akan filter berdasarkan plant saat render
-    const newNotif: Notification = {
-      id: Date.now().toString(),
-      message: `${
-        displayName || loginUsername
-      } (${userPlant}) menambahkan data: ${message}`,
-      timestamp: new Date(),
-      read: false,
-      type,
-      fromUser: loginUsername,
-      fromPlant: userPlant, // Plant dari user yang input
-    };
+  const addNotification = async (type: string, message: string) => {
+    try {
+      // Buat notifikasi untuk ditampilkan ke admin/supervisor/avp
+      const newNotif: Notification = {
+        id: Date.now().toString(),
+        message: `${
+          displayName || loginUsername
+        } (${userPlant}) menambahkan data: ${message}`,
+        timestamp: new Date(),
+        read: false,
+        type,
+        fromUser: loginUsername,
+        fromPlant: userPlant, // Plant dari user yang input
+      };
 
-    const updatedNotifs = [...notifications, newNotif];
-    setNotifications(updatedNotifs);
-    localStorage.setItem("notifications", JSON.stringify(updatedNotifs));
+      // Simpan ke Google Sheets agar bisa dilihat semua user
+      await saveData("notifications", newNotif);
+      
+      // Update state lokal
+      const updatedNotifs = [...notifications, newNotif];
+      setNotifications(updatedNotifs);
+    } catch (error) {
+      console.error("Failed to save notification:", error);
+    }
   };
 
   // Helper function to add notification for approval result
   // Notifikasi ini ditargetkan ke user yang mengajukan request
-  const addApprovalNotification = (toUser: string, message: string) => {
-    const newNotif: Notification = {
-      id: Date.now().toString(),
-      message: message,
-      timestamp: new Date(),
-      read: false,
-      type: "approval_result",
-      fromUser: loginUsername, // Approver
-      toUser: toUser, // Target user yang mengajukan
-    };
+  const addApprovalNotification = async (toUser: string, message: string) => {
+    try {
+      const newNotif: Notification = {
+        id: Date.now().toString(),
+        message: message,
+        timestamp: new Date(),
+        read: false,
+        type: "approval_result",
+        fromUser: loginUsername, // Approver
+        toUser: toUser, // Target user yang mengajukan
+      };
 
-    const updatedNotifs = [...notifications, newNotif];
-    setNotifications(updatedNotifs);
-    localStorage.setItem("notifications", JSON.stringify(updatedNotifs));
+      // Simpan ke Google Sheets agar bisa dilihat semua user
+      await saveData("notifications", newNotif);
+      
+      // Update state lokal
+      const updatedNotifs = [...notifications, newNotif];
+      setNotifications(updatedNotifs);
+    } catch (error) {
+      console.error("Failed to save approval notification:", error);
+    }
   };
 
   // Close notification dropdown when clicking outside
@@ -2600,6 +2613,7 @@ export default function ProduksiNPKApp() {
         "sessions",
         "approval_requests",
         "monthly_notes",
+        "notifications",
       ];
       if (sharedSheets.includes(baseSheet)) {
         return await fetchData(baseSheet);
@@ -2763,6 +2777,7 @@ export default function ProduksiNPKApp() {
           users,
           approvalRequests,
           monthlyNotes,
+          notificationsData,
         ] = await Promise.all([
           fetchDataForPlant("timesheet_forklift"),
           fetchDataForPlant("timesheet_loader"),
@@ -2776,6 +2791,7 @@ export default function ProduksiNPKApp() {
           fetchData("users"), // Users is shared
           fetchData("approval_requests"), // Approval requests is shared
           fetchData("monthly_notes"), // Monthly notes is shared, filtered in frontend
+          fetchData("notifications"), // Notifications is shared
         ]);
 
         const loadTime2 = Date.now() - startTime;
@@ -2896,6 +2912,14 @@ export default function ProduksiNPKApp() {
         // Set approval requests data (accessible by admin and avp)
         setApprovalRequestsData(approvalRequests || []);
 
+        // Set notifications data
+        const loadedNotifs = (notificationsData || []).map((n: any) => ({
+          ...n,
+          timestamp: new Date(n.timestamp),
+        }));
+        setNotifications(loadedNotifs);
+        console.log("🔔 Loaded notifications:", loadedNotifs.length);
+
         // Set monthly notes data - normalize plant field
         console.log("📝 Monthly notes loaded:", monthlyNotes);
         console.log("📝 Monthly notes count:", monthlyNotes?.length);
@@ -2944,6 +2968,29 @@ export default function ProduksiNPKApp() {
     };
 
     loadAllData();
+  }, [isLoggedIn]);
+
+  // Auto-refresh notifications every 30 seconds
+  useEffect(() => {
+    if (!isLoggedIn) return;
+
+    const refreshNotifications = async () => {
+      try {
+        const notificationsData = await fetchData("notifications");
+        const loadedNotifs = (notificationsData || []).map((n: any) => ({
+          ...n,
+          timestamp: new Date(n.timestamp),
+        }));
+        setNotifications(loadedNotifs);
+      } catch (error) {
+        console.error("Failed to refresh notifications:", error);
+      }
+    };
+
+    // Refresh immediately, then every 30 seconds
+    const interval = setInterval(refreshNotifications, 30000);
+    
+    return () => clearInterval(interval);
   }, [isLoggedIn]);
 
   // Helper to generate data preview string
@@ -16058,21 +16105,25 @@ export default function ProduksiNPKApp() {
                 // Filter notifikasi berdasarkan plant untuk admin/supervisor/avp
                 const relevantNotifs = notifications.filter((n) => {
                   if (n.read) return false;
-                  
+
                   // Jika notifikasi ditargetkan ke user tertentu (approval result)
                   if (n.toUser) {
                     return n.toUser === loginUsername;
                   }
-                  
+
                   // Untuk notifikasi tambah data:
                   // User yang input tidak melihat notifikasi mereka sendiri
                   if (n.fromUser === loginUsername) return false;
-                  
+
                   // Hanya supervisor/avp/admin yang melihat notifikasi tambah data
-                  if (userRole !== "supervisor" && userRole !== "avp" && userRole !== "admin") {
+                  if (
+                    userRole !== "supervisor" &&
+                    userRole !== "avp" &&
+                    userRole !== "admin"
+                  ) {
                     return false;
                   }
-                  
+
                   // Admin dengan plant ALL melihat semua notifikasi
                   if (userPlant === "ALL") return true;
                   // Supervisor/AVP hanya melihat notifikasi dari plant mereka
@@ -16103,19 +16154,20 @@ export default function ProduksiNPKApp() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={() => {
-                          setNotifications(
-                            notifications.map((n) => ({ ...n, read: true }))
-                          );
-                          localStorage.setItem(
-                            "notifications",
-                            JSON.stringify(
-                              notifications.map((n) => ({
-                                ...n,
-                                read: true,
-                              }))
-                            )
-                          );
+                        onClick={async () => {
+                          try {
+                            // Update notifikasi yang belum dibaca
+                            const unreadNotifs = notifications.filter((n) => !n.read);
+                            for (const notif of unreadNotifs) {
+                              await updateData("notifications", { ...notif, read: true });
+                            }
+                            // Update state lokal
+                            setNotifications(
+                              notifications.map((n) => ({ ...n, read: true }))
+                            );
+                          } catch (error) {
+                            console.error("Failed to mark all as read:", error);
+                          }
                         }}
                         className="text-xs text-[#00B4D8] hover:text-[#001B44]"
                       >
@@ -16140,16 +16192,20 @@ export default function ProduksiNPKApp() {
                     if (n.toUser) {
                       return n.toUser === loginUsername;
                     }
-                    
+
                     // Untuk notifikasi tambah data:
                     // User yang input tidak melihat notifikasi mereka sendiri
                     if (n.fromUser === loginUsername) return false;
-                    
+
                     // Hanya supervisor/avp/admin yang melihat notifikasi tambah data
-                    if (userRole !== "supervisor" && userRole !== "avp" && userRole !== "admin") {
+                    if (
+                      userRole !== "supervisor" &&
+                      userRole !== "avp" &&
+                      userRole !== "admin"
+                    ) {
                       return false;
                     }
-                    
+
                     // Admin dengan plant ALL melihat semua notifikasi
                     if (userPlant === "ALL") return true;
                     // Supervisor/AVP hanya melihat notifikasi dari plant mereka
@@ -16180,15 +16236,18 @@ export default function ProduksiNPKApp() {
                             className={`p-4 hover:bg-gray-50 transition-colors ${
                               !notif.read ? "bg-blue-50" : ""
                             }`}
-                            onClick={() => {
-                              const updatedNotifs = notifications.map((n) =>
-                                n.id === notif.id ? { ...n, read: true } : n
-                              );
-                              setNotifications(updatedNotifs);
-                              localStorage.setItem(
-                                "notifications",
-                                JSON.stringify(updatedNotifs)
-                              );
+                            onClick={async () => {
+                              try {
+                                if (!notif.read) {
+                                  await updateData("notifications", { ...notif, read: true });
+                                }
+                                const updatedNotifs = notifications.map((n) =>
+                                  n.id === notif.id ? { ...n, read: true } : n
+                                );
+                                setNotifications(updatedNotifs);
+                              } catch (error) {
+                                console.error("Failed to mark as read:", error);
+                              }
                             }}
                           >
                             <div className="flex items-start gap-2">
@@ -16217,16 +16276,17 @@ export default function ProduksiNPKApp() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={(e) => {
+                                onClick={async (e) => {
                                   e.stopPropagation();
-                                  const updatedNotifs = notifications.filter(
-                                    (n) => n.id !== notif.id
-                                  );
-                                  setNotifications(updatedNotifs);
-                                  localStorage.setItem(
-                                    "notifications",
-                                    JSON.stringify(updatedNotifs)
-                                  );
+                                  try {
+                                    await deleteDataFromSheet("notifications", notif);
+                                    const updatedNotifs = notifications.filter(
+                                      (n) => n.id !== notif.id
+                                    );
+                                    setNotifications(updatedNotifs);
+                                  } catch (error) {
+                                    console.error("Failed to delete notification:", error);
+                                  }
                                 }}
                                 className="h-6 w-6 p-0 text-gray-400 hover:text-red-600"
                               >
@@ -16251,9 +16311,16 @@ export default function ProduksiNPKApp() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={() => {
-                        setNotifications([]);
-                        localStorage.removeItem("notifications");
+                      onClick={async () => {
+                        try {
+                          // Hapus semua notifikasi dari Google Sheets
+                          for (const notif of notifications) {
+                            await deleteDataFromSheet("notifications", notif);
+                          }
+                          setNotifications([]);
+                        } catch (error) {
+                          console.error("Failed to delete all notifications:", error);
+                        }
                       }}
                       className="w-full text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
