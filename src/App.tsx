@@ -796,6 +796,7 @@ export default function ProduksiNPKApp() {
     "monthly" | "yearly"
   >("monthly");
   const [showAllDowntimeItems, setShowAllDowntimeItems] = useState(false);
+  const [downtimeChartPlantFilter, setDowntimeChartPlantFilter] = useState<"ALL" | "NPK1" | "NPK2">("ALL");
 
   // Work Request chart filter
   const [wrChartMonth, setWrChartMonth] = useState(
@@ -813,6 +814,7 @@ export default function ProduksiNPKApp() {
     "monthly" | "yearly"
   >("monthly");
   const [showAllFreqItems, setShowAllFreqItems] = useState(false);
+  const [downtimeFreqPlantFilter, setDowntimeFreqPlantFilter] = useState<"ALL" | "NPK1" | "NPK2">("ALL");
 
   // Helper: normalize plant string
   const normalizePlant = (plant?: string | null) => {
@@ -5907,9 +5909,17 @@ export default function ProduksiNPKApp() {
   const calculateDowntimeFrequency = () => {
     let filteredData = downtimeData;
 
+    // Filter by plant
+    if (downtimeFreqPlantFilter !== "ALL") {
+      filteredData = filteredData.filter((item: any) => {
+        const itemPlant = (item._plant || "NPK2").toUpperCase();
+        return itemPlant === downtimeFreqPlantFilter;
+      });
+    }
+
     if (downtimeFreqPeriod === "monthly") {
       const [year, month] = downtimeFreqMonth.split("-").map(Number);
-      filteredData = downtimeData.filter((item) => {
+      filteredData = filteredData.filter((item) => {
         const [itemYear, itemMonth] = String(item.tanggal)
           .split("-")
           .map(Number);
@@ -5917,7 +5927,7 @@ export default function ProduksiNPKApp() {
       });
     } else if (downtimeFreqPeriod === "yearly") {
       const year = parseInt(downtimeFreqMonth.split("-")[0]);
-      filteredData = downtimeData.filter((item) => {
+      filteredData = filteredData.filter((item) => {
         const itemYear = parseInt(String(item.tanggal).split("-")[0]);
         return itemYear === year;
       });
@@ -5947,9 +5957,17 @@ export default function ProduksiNPKApp() {
   const calculateDowntimePerItem = () => {
     let filteredData = downtimeData;
 
+    // Filter by plant
+    if (downtimeChartPlantFilter !== "ALL") {
+      filteredData = filteredData.filter((item: any) => {
+        const itemPlant = (item._plant || "NPK2").toUpperCase();
+        return itemPlant === downtimeChartPlantFilter;
+      });
+    }
+
     if (downtimeChartPeriod === "monthly") {
       const [year, month] = downtimeChartMonth.split("-").map(Number);
-      filteredData = downtimeData.filter((item) => {
+      filteredData = filteredData.filter((item) => {
         const [itemYear, itemMonth] = String(item.tanggal)
           .split("-")
           .map(Number);
@@ -5957,7 +5975,7 @@ export default function ProduksiNPKApp() {
       });
     } else if (downtimeChartPeriod === "yearly") {
       const year = parseInt(downtimeChartMonth.split("-")[0]);
-      filteredData = downtimeData.filter((item) => {
+      filteredData = filteredData.filter((item) => {
         const itemYear = parseInt(String(item.tanggal).split("-")[0]);
         return itemYear === year;
       });
@@ -7573,7 +7591,8 @@ export default function ProduksiNPKApp() {
                     <tbody className="bg-white">
                       {(() => {
                         const npk1Metrics = calculatePlantMetrics("NPK1");
-                        if (!npk1Metrics || !npk1Metrics.monthlyBreakdown) return null;
+                        if (!npk1Metrics || !npk1Metrics.monthlyBreakdown)
+                          return null;
                         return npk1Metrics.monthlyBreakdown.map(
                           (month: any, idx: number) => (
                             <tr
@@ -7650,7 +7669,8 @@ export default function ProduksiNPKApp() {
                     <tbody className="bg-white">
                       {(() => {
                         const npk2Metrics = calculatePlantMetrics("NPK2");
-                        if (!npk2Metrics || !npk2Metrics.monthlyBreakdown) return null;
+                        if (!npk2Metrics || !npk2Metrics.monthlyBreakdown)
+                          return null;
                         return npk2Metrics.monthlyBreakdown.map(
                           (month: any, idx: number) => (
                             <tr
@@ -7848,6 +7868,24 @@ export default function ProduksiNPKApp() {
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
+                    <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
+                      🏭 Plant:
+                    </label>
+                    <select
+                      value={downtimeFreqPlantFilter}
+                      onChange={(e) =>
+                        setDowntimeFreqPlantFilter(
+                          e.target.value as "ALL" | "NPK1" | "NPK2"
+                        )
+                      }
+                      className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
+                    >
+                      <option value="ALL">Semua</option>
+                      <option value="NPK1">NPK 1</option>
+                      <option value="NPK2">NPK 2</option>
+                    </select>
+                  </div>
                   <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
                     <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
                       📆 Periode:
@@ -8200,6 +8238,24 @@ export default function ProduksiNPKApp() {
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
+                    <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
+                      🏭 Plant:
+                    </label>
+                    <select
+                      value={downtimeChartPlantFilter}
+                      onChange={(e) =>
+                        setDowntimeChartPlantFilter(
+                          e.target.value as "ALL" | "NPK1" | "NPK2"
+                        )
+                      }
+                      className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
+                    >
+                      <option value="ALL">Semua</option>
+                      <option value="NPK1">NPK 1</option>
+                      <option value="NPK2">NPK 2</option>
+                    </select>
+                  </div>
                   <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
                     <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
                       📆 Periode:
