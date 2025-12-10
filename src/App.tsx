@@ -6009,22 +6009,34 @@ export default function ProduksiNPKApp() {
   // Calculate Work Request per Eksekutor for selected period
   const calculateWRPerEksekutor = (
     period: "monthly" | "yearly",
-    selectedMonth?: string
+    selectedMonth?: string,
+    plantFilter?: "ALL" | "NPK1" | "NPK2"
   ) => {
     const currentYear = new Date().getFullYear();
+    
+    // Determine which plant filter to use
+    const activePlantFilter = plantFilter || (userPlant === "ALL" ? dashboardPlantFilter : userPlant);
 
     let filteredData = workRequestData;
 
+    // Filter by plant first
+    if (activePlantFilter !== "ALL") {
+      filteredData = filteredData.filter((item: any) => {
+        const itemPlant = (item._plant || "NPK2").toUpperCase();
+        return itemPlant === activePlantFilter;
+      });
+    }
+
     if (period === "monthly" && selectedMonth) {
       const [year, month] = selectedMonth.split("-").map(Number);
-      filteredData = workRequestData.filter((item) => {
+      filteredData = filteredData.filter((item) => {
         const [itemYear, itemMonth] = String(item.tanggal)
           .split("-")
           .map(Number);
         return itemYear === year && itemMonth === month;
       });
     } else if (period === "yearly") {
-      filteredData = workRequestData.filter((item) => {
+      filteredData = filteredData.filter((item) => {
         const itemDate = new Date(item.tanggal);
         return itemDate.getFullYear() === currentYear;
       });
@@ -7006,7 +7018,8 @@ export default function ProduksiNPKApp() {
                     data={plantMetrics.monthlyBreakdown.map((item) => {
                       const filteredRKAPData = rkapData.filter((r: any) => {
                         return (
-                          (r.plant === plant || (!r.plant && plant === "NPK2")) &&
+                          (r.plant === plant ||
+                            (!r.plant && plant === "NPK2")) &&
                           r.bulan === item.bulan &&
                           (Number((r as any).tahun) || dashboardYear) ===
                             dashboardYear
@@ -7027,10 +7040,13 @@ export default function ProduksiNPKApp() {
                       contentStyle={{
                         backgroundColor: "#fff",
                         border:
-                          "2px solid " + (plant === "NPK1" ? "#3b82f6" : "#10b981"),
+                          "2px solid " +
+                          (plant === "NPK1" ? "#3b82f6" : "#10b981"),
                         borderRadius: "8px",
                       }}
-                      formatter={(value: number) => formatNumber(value, 2) + " Ton"}
+                      formatter={(value: number) =>
+                        formatNumber(value, 2) + " Ton"
+                      }
                     />
                     <Legend />
                     <Bar
@@ -7069,7 +7085,8 @@ export default function ProduksiNPKApp() {
                     data={plantMetrics.monthlyBreakdown.map((item) => {
                       const filteredRKAPData = rkapData.filter((r: any) => {
                         return (
-                          (r.plant === plant || (!r.plant && plant === "NPK2")) &&
+                          (r.plant === plant ||
+                            (!r.plant && plant === "NPK2")) &&
                           r.bulan === item.bulan &&
                           (Number((r as any).tahun) || dashboardYear) ===
                             dashboardYear
@@ -7091,7 +7108,8 @@ export default function ProduksiNPKApp() {
                       contentStyle={{
                         backgroundColor: "#fff",
                         border:
-                          "2px solid " + (plant === "NPK1" ? "#3b82f6" : "#10b981"),
+                          "2px solid " +
+                          (plant === "NPK1" ? "#3b82f6" : "#10b981"),
                         borderRadius: "8px",
                       }}
                       formatter={(value: number) => [
@@ -8500,86 +8518,190 @@ export default function ProduksiNPKApp() {
         </div>
         {/* End Grid 2 Kolom Grafik Downtime */}
 
-        <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-          <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div>
-                <CardTitle className="text-[#001B44] flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-[#00B4D8]" />
-                  Work Request Per Eksekutor
-                </CardTitle>
-                <CardDescription className="mt-1">
-                  Total Work Request berdasarkan eksekutor
-                </CardDescription>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
-                  <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
-                    📆 Periode:
-                  </label>
-                  <select
-                    value={wrChartPeriod}
-                    onChange={(e) =>
-                      setWrChartPeriod(e.target.value as "monthly" | "yearly")
-                    }
-                    className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
-                  >
-                    <option value="monthly">Bulanan</option>
-                    <option value="yearly">Tahunan</option>
-                  </select>
+        {/* Work Request Chart - Side by Side untuk ALL plant */}
+        {dashboardPlantFilter === "ALL" ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* NPK1 Work Request */}
+            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="bg-white border-b-2 border-blue-400">
+                <div className="space-y-3">
+                  <div>
+                    <CardTitle className="text-[#001B44] flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-blue-500" />
+                      Work Request NPK 1
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      Total WR berdasarkan eksekutor
+                    </CardDescription>
+                  </div>
                 </div>
-                {wrChartPeriod === "monthly" && (
-                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
-                    <input
-                      type="month"
-                      value={wrChartMonth}
-                      onChange={(e) => setWrChartMonth(e.target.value)}
-                      className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
-                    />
+              </CardHeader>
+              <CardContent className="pt-6">
+                {calculateWRPerEksekutor(wrChartPeriod, wrChartMonth, "NPK1").length > 0 ? (
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart
+                      data={calculateWRPerEksekutor(wrChartPeriod, wrChartMonth, "NPK1")}
+                      layout="vertical"
+                      margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
+                    >
+                      <defs>
+                        <linearGradient id="wrGradientNPK1" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.9} />
+                          <stop offset="100%" stopColor="#60a5fa" stopOpacity={1} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={true} vertical={false} />
+                      <XAxis type="number" stroke="#6b7280" tick={{ fill: "#6b7280", fontSize: 11 }} />
+                      <YAxis type="category" dataKey="eksekutor" stroke="#6b7280" width={70} tick={{ fill: "#001B44", fontSize: 10, fontWeight: 500 }} />
+                      <Tooltip
+                        cursor={{ fill: "rgba(59, 130, 246, 0.05)" }}
+                        contentStyle={{ backgroundColor: "#fff", border: "2px solid #3b82f6", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", padding: "12px" }}
+                        labelStyle={{ color: "#001B44", fontWeight: 600, marginBottom: 4 }}
+                        formatter={(value: number) => [<span style={{ color: "#3b82f6", fontWeight: 600 }}>{value} WR</span>, "Total"]}
+                      />
+                      <Bar dataKey="count" fill="url(#wrGradientNPK1)" radius={[0, 12, 12, 0]} animationDuration={1000} label={{ position: "right", formatter: (value: number) => `${value} WR`, fill: "#001B44", fontSize: 10, fontWeight: 600 }} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-[400px] text-gray-400">
+                    <AlertCircle className="w-12 h-12 mb-3 opacity-50" />
+                    <p className="text-sm font-medium">Tidak ada data WR NPK 1</p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* NPK2 Work Request */}
+            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+              <CardHeader className="bg-white border-b-2 border-green-400">
+                <div className="space-y-3">
+                  <div>
+                    <CardTitle className="text-[#001B44] flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-green-500" />
+                      Work Request NPK 2
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      Total WR berdasarkan eksekutor
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                {calculateWRPerEksekutor(wrChartPeriod, wrChartMonth, "NPK2").length > 0 ? (
+                  <ResponsiveContainer width="100%" height={400}>
+                    <BarChart
+                      data={calculateWRPerEksekutor(wrChartPeriod, wrChartMonth, "NPK2")}
+                      layout="vertical"
+                      margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
+                    >
+                      <defs>
+                        <linearGradient id="wrGradientNPK2" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#10b981" stopOpacity={0.9} />
+                          <stop offset="100%" stopColor="#34d399" stopOpacity={1} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={true} vertical={false} />
+                      <XAxis type="number" stroke="#6b7280" tick={{ fill: "#6b7280", fontSize: 11 }} />
+                      <YAxis type="category" dataKey="eksekutor" stroke="#6b7280" width={70} tick={{ fill: "#001B44", fontSize: 10, fontWeight: 500 }} />
+                      <Tooltip
+                        cursor={{ fill: "rgba(16, 185, 129, 0.05)" }}
+                        contentStyle={{ backgroundColor: "#fff", border: "2px solid #10b981", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0,0,0,0.15)", padding: "12px" }}
+                        labelStyle={{ color: "#001B44", fontWeight: 600, marginBottom: 4 }}
+                        formatter={(value: number) => [<span style={{ color: "#10b981", fontWeight: 600 }}>{value} WR</span>, "Total"]}
+                      />
+                      <Bar dataKey="count" fill="url(#wrGradientNPK2)" radius={[0, 12, 12, 0]} animationDuration={1000} label={{ position: "right", formatter: (value: number) => `${value} WR`, fill: "#001B44", fontSize: 10, fontWeight: 600 }} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-[400px] text-gray-400">
+                    <AlertCircle className="w-12 h-12 mb-3 opacity-50" />
+                    <p className="text-sm font-medium">Tidak ada data WR NPK 2</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+            <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-[#001B44] flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-[#00B4D8]" />
+                    Work Request Per Eksekutor
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Total Work Request berdasarkan eksekutor
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
+                    <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
+                      📆 Periode:
+                    </label>
+                    <select
+                      value={wrChartPeriod}
+                      onChange={(e) =>
+                        setWrChartPeriod(e.target.value as "monthly" | "yearly")
+                      }
+                      className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
+                    >
+                      <option value="monthly">Bulanan</option>
+                      <option value="yearly">Tahunan</option>
+                    </select>
+                  </div>
+                  {wrChartPeriod === "monthly" && (
+                    <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
+                      <input
+                        type="month"
+                        value={wrChartMonth}
+                        onChange={(e) => setWrChartMonth(e.target.value)}
+                        className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {calculateWRPerEksekutor(wrChartPeriod, wrChartMonth).length > 0 ? (
-              <ResponsiveContainer width="100%" height={450}>
-                <BarChart
-                  data={calculateWRPerEksekutor(wrChartPeriod, wrChartMonth)}
-                  layout="vertical"
-                  margin={{ top: 10, right: 40, left: 50, bottom: 10 }}
-                >
-                  <defs>
-                    <linearGradient id="wrGradient" x1="0" y1="0" x2="1" y2="0">
-                      <stop offset="0%" stopColor="#00B4D8" stopOpacity={0.9} />
-                      <stop offset="100%" stopColor="#5FE9C5" stopOpacity={1} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#e5e7eb"
-                    horizontal={true}
-                    vertical={false}
-                  />
-                  <XAxis
-                    type="number"
-                    stroke="#6b7280"
-                    tick={{ fill: "#6b7280", fontSize: 12 }}
-                    label={{
-                      value: "Total Work Request",
-                      position: "insideBottom",
-                      offset: -5,
-                      style: { fill: "#001B44", fontWeight: 600, fontSize: 13 },
-                    }}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="eksekutor"
-                    stroke="#6b7280"
-                    width={140}
-                    tick={{ fill: "#001B44", fontSize: 12, fontWeight: 500 }}
-                  />
-                  <Tooltip
+            </CardHeader>
+            <CardContent className="pt-6">
+              {calculateWRPerEksekutor(wrChartPeriod, wrChartMonth).length > 0 ? (
+                <ResponsiveContainer width="100%" height={450}>
+                  <BarChart
+                    data={calculateWRPerEksekutor(wrChartPeriod, wrChartMonth)}
+                    layout="vertical"
+                    margin={{ top: 10, right: 40, left: 50, bottom: 10 }}
+                  >
+                    <defs>
+                      <linearGradient id="wrGradient" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#00B4D8" stopOpacity={0.9} />
+                        <stop offset="100%" stopColor="#5FE9C5" stopOpacity={1} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#e5e7eb"
+                      horizontal={true}
+                      vertical={false}
+                    />
+                    <XAxis
+                      type="number"
+                      stroke="#6b7280"
+                      tick={{ fill: "#6b7280", fontSize: 12 }}
+                      label={{
+                        value: "Total Work Request",
+                        position: "insideBottom",
+                        offset: -5,
+                        style: { fill: "#001B44", fontWeight: 600, fontSize: 13 },
+                      }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="eksekutor"
+                      stroke="#6b7280"
+                      width={140}
+                      tick={{ fill: "#001B44", fontSize: 12, fontWeight: 500 }}
+                    />
+                    <Tooltip
                     cursor={{ fill: "rgba(45, 106, 79, 0.05)" }}
                     contentStyle={{
                       backgroundColor: "#fff",
@@ -8627,6 +8749,7 @@ export default function ProduksiNPKApp() {
             )}
           </CardContent>
         </Card>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="border-gray-200 shadow-md hover:shadow-lg transition-shadow">
