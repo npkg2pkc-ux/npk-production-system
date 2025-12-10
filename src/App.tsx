@@ -854,6 +854,7 @@ export default function ProduksiNPKApp() {
     type: string;
     fromUser?: string;
     fromPlant?: string;
+    toUser?: string; // Target user untuk notifikasi (untuk approval result)
   }
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -1487,21 +1488,12 @@ export default function ProduksiNPKApp() {
     }
   }, [showChat]);
 
-  // Helper function to add notification (only for user role)
+  // Helper function to add notification for new data
+  // Notifikasi hanya untuk supervisor/avp/admin sesuai plant
+  // User yang input TIDAK mendapat notifikasi
   const addNotification = (type: string, message: string) => {
-    // User yang melakukan aksi TIDAK mendapat notifikasi
-    // Hanya kirim notifikasi ke admin, supervisor, dan avp yang sesuai plant
-
-    // Skip jika user adalah admin/supervisor/avp (mereka tidak perlu notif dari diri sendiri)
-    if (
-      userRole === "admin" ||
-      userRole === "supervisor" ||
-      userRole === "avp"
-    ) {
-      return;
-    }
-
-    // Buat notifikasi untuk admin/supervisor/avp
+    // Buat notifikasi untuk ditampilkan ke admin/supervisor/avp
+    // Sistem akan filter berdasarkan plant saat render
     const newNotif: Notification = {
       id: Date.now().toString(),
       message: `${
@@ -1511,7 +1503,25 @@ export default function ProduksiNPKApp() {
       read: false,
       type,
       fromUser: loginUsername,
-      fromPlant: userPlant,
+      fromPlant: userPlant, // Plant dari user yang input
+    };
+
+    const updatedNotifs = [...notifications, newNotif];
+    setNotifications(updatedNotifs);
+    localStorage.setItem("notifications", JSON.stringify(updatedNotifs));
+  };
+
+  // Helper function to add notification for approval result
+  // Notifikasi ini ditargetkan ke user yang mengajukan request
+  const addApprovalNotification = (toUser: string, message: string) => {
+    const newNotif: Notification = {
+      id: Date.now().toString(),
+      message: message,
+      timestamp: new Date(),
+      read: false,
+      type: "approval_result",
+      fromUser: loginUsername, // Approver
+      toUser: toUser, // Target user yang mengajukan
     };
 
     const updatedNotifs = [...notifications, newNotif];
@@ -1706,7 +1716,10 @@ export default function ProduksiNPKApp() {
             // Set dashboard filter to match user's plant
             if (userPlantValue !== "ALL") {
               setDashboardPlantFilter(userPlantValue);
-              console.log("[LOGIN] 🎯 Setting dashboardPlantFilter to:", userPlantValue);
+              console.log(
+                "[LOGIN] 🎯 Setting dashboardPlantFilter to:",
+                userPlantValue
+              );
             }
 
             if (data.sessionId) {
@@ -1840,7 +1853,10 @@ export default function ProduksiNPKApp() {
               // Set dashboard filter to match user's plant
               if (userPlantValue !== "ALL") {
                 setDashboardPlantFilter(userPlantValue);
-                console.log("[LOGIN] 🎯 Setting dashboardPlantFilter to:", userPlantValue);
+                console.log(
+                  "[LOGIN] 🎯 Setting dashboardPlantFilter to:",
+                  userPlantValue
+                );
               }
 
               console.log(
@@ -4308,8 +4324,8 @@ export default function ProduksiNPKApp() {
       }
 
       // Notify user of approval result
-      addNotification(
-        "approval_result",
+      addApprovalNotification(
+        request.requestBy,
         `Request ${request.action === "edit" ? "edit" : "hapus"} Anda untuk ${
           request.sheetType
         } telah ${
@@ -16042,6 +16058,21 @@ export default function ProduksiNPKApp() {
                 // Filter notifikasi berdasarkan plant untuk admin/supervisor/avp
                 const relevantNotifs = notifications.filter((n) => {
                   if (n.read) return false;
+                  
+                  // Jika notifikasi ditargetkan ke user tertentu (approval result)
+                  if (n.toUser) {
+                    return n.toUser === loginUsername;
+                  }
+                  
+                  // Untuk notifikasi tambah data:
+                  // User yang input tidak melihat notifikasi mereka sendiri
+                  if (n.fromUser === loginUsername) return false;
+                  
+                  // Hanya supervisor/avp/admin yang melihat notifikasi tambah data
+                  if (userRole !== "supervisor" && userRole !== "avp" && userRole !== "admin") {
+                    return false;
+                  }
+                  
                   // Admin dengan plant ALL melihat semua notifikasi
                   if (userPlant === "ALL") return true;
                   // Supervisor/AVP hanya melihat notifikasi dari plant mereka
@@ -16105,6 +16136,20 @@ export default function ProduksiNPKApp() {
                 {(() => {
                   // Filter notifikasi berdasarkan plant
                   const relevantNotifs = notifications.filter((n) => {
+                    // Jika notifikasi ditargetkan ke user tertentu (approval result)
+                    if (n.toUser) {
+                      return n.toUser === loginUsername;
+                    }
+                    
+                    // Untuk notifikasi tambah data:
+                    // User yang input tidak melihat notifikasi mereka sendiri
+                    if (n.fromUser === loginUsername) return false;
+                    
+                    // Hanya supervisor/avp/admin yang melihat notifikasi tambah data
+                    if (userRole !== "supervisor" && userRole !== "avp" && userRole !== "admin") {
+                      return false;
+                    }
+                    
                     // Admin dengan plant ALL melihat semua notifikasi
                     if (userPlant === "ALL") return true;
                     // Supervisor/AVP hanya melihat notifikasi dari plant mereka
