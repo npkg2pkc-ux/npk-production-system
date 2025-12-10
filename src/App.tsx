@@ -1570,7 +1570,7 @@ function ProduksiNPKApp() {
   useEffect(() => {
     if (isLoggedIn) {
       loadChatMessages();
-      const interval = setInterval(loadChatMessages, 10000); // Poll every 10 seconds
+      const interval = setInterval(loadChatMessages, 5000); // Poll every 5 seconds
       return () => clearInterval(interval);
     }
   }, [isLoggedIn]);
@@ -3036,8 +3036,8 @@ function ProduksiNPKApp() {
       }
     };
 
-    // Refresh immediately, then every 30 seconds
-    const interval = setInterval(refreshNotifications, 30000);
+    // Refresh immediately, then every 5 seconds
+    const interval = setInterval(refreshNotifications, 5000);
 
     return () => clearInterval(interval);
   }, [isLoggedIn]);
