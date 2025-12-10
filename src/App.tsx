@@ -8564,224 +8564,224 @@ export default function ProduksiNPKApp() {
                     </div>
                   </div>
                 </CardHeader>
-              <CardContent className="pt-6">
-                {calculateWRPerEksekutor(wrChartPeriod, wrChartMonth, "NPK1")
-                  .length > 0 ? (
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart
-                      data={calculateWRPerEksekutor(
-                        wrChartPeriod,
-                        wrChartMonth,
-                        "NPK1"
-                      )}
-                      layout="vertical"
-                      margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
-                    >
-                      <defs>
-                        <linearGradient
-                          id="wrGradientNPK1"
-                          x1="0"
-                          y1="0"
-                          x2="1"
-                          y2="0"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor="#3b82f6"
-                            stopOpacity={0.9}
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor="#60a5fa"
-                            stopOpacity={1}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="#e5e7eb"
-                        horizontal={true}
-                        vertical={false}
-                      />
-                      <XAxis
-                        type="number"
-                        stroke="#6b7280"
-                        tick={{ fill: "#6b7280", fontSize: 11 }}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="eksekutor"
-                        stroke="#6b7280"
-                        width={70}
-                        tick={{
-                          fill: "#001B44",
-                          fontSize: 10,
-                          fontWeight: 500,
-                        }}
-                      />
-                      <Tooltip
-                        cursor={{ fill: "rgba(59, 130, 246, 0.05)" }}
-                        contentStyle={{
-                          backgroundColor: "#fff",
-                          border: "2px solid #3b82f6",
-                          borderRadius: "12px",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                          padding: "12px",
-                        }}
-                        labelStyle={{
-                          color: "#001B44",
-                          fontWeight: 600,
-                          marginBottom: 4,
-                        }}
-                        formatter={(value: number) => [
-                          <span style={{ color: "#3b82f6", fontWeight: 600 }}>
-                            {value} WR
-                          </span>,
-                          "Total",
-                        ]}
-                      />
-                      <Bar
-                        dataKey="count"
-                        fill="url(#wrGradientNPK1)"
-                        radius={[0, 12, 12, 0]}
-                        animationDuration={1000}
-                        label={{
-                          position: "right",
-                          formatter: (value: number) => `${value} WR`,
-                          fill: "#001B44",
-                          fontSize: 10,
-                          fontWeight: 600,
-                        }}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-[400px] text-gray-400">
-                    <AlertCircle className="w-12 h-12 mb-3 opacity-50" />
-                    <p className="text-sm font-medium">
-                      Tidak ada data WR NPK 1
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                <CardContent className="pt-6">
+                  {calculateWRPerEksekutor(wrChartPeriod, wrChartMonth, "NPK1")
+                    .length > 0 ? (
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart
+                        data={calculateWRPerEksekutor(
+                          wrChartPeriod,
+                          wrChartMonth,
+                          "NPK1"
+                        )}
+                        layout="vertical"
+                        margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id="wrGradientNPK1"
+                            x1="0"
+                            y1="0"
+                            x2="1"
+                            y2="0"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="#3b82f6"
+                              stopOpacity={0.9}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="#60a5fa"
+                              stopOpacity={1}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#e5e7eb"
+                          horizontal={true}
+                          vertical={false}
+                        />
+                        <XAxis
+                          type="number"
+                          stroke="#6b7280"
+                          tick={{ fill: "#6b7280", fontSize: 11 }}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="eksekutor"
+                          stroke="#6b7280"
+                          width={70}
+                          tick={{
+                            fill: "#001B44",
+                            fontSize: 10,
+                            fontWeight: 500,
+                          }}
+                        />
+                        <Tooltip
+                          cursor={{ fill: "rgba(59, 130, 246, 0.05)" }}
+                          contentStyle={{
+                            backgroundColor: "#fff",
+                            border: "2px solid #3b82f6",
+                            borderRadius: "12px",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                            padding: "12px",
+                          }}
+                          labelStyle={{
+                            color: "#001B44",
+                            fontWeight: 600,
+                            marginBottom: 4,
+                          }}
+                          formatter={(value: number) => [
+                            <span style={{ color: "#3b82f6", fontWeight: 600 }}>
+                              {value} WR
+                            </span>,
+                            "Total",
+                          ]}
+                        />
+                        <Bar
+                          dataKey="count"
+                          fill="url(#wrGradientNPK1)"
+                          radius={[0, 12, 12, 0]}
+                          animationDuration={1000}
+                          label={{
+                            position: "right",
+                            formatter: (value: number) => `${value} WR`,
+                            fill: "#001B44",
+                            fontSize: 10,
+                            fontWeight: 600,
+                          }}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-[400px] text-gray-400">
+                      <AlertCircle className="w-12 h-12 mb-3 opacity-50" />
+                      <p className="text-sm font-medium">
+                        Tidak ada data WR NPK 1
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-            {/* NPK2 Work Request */}
-            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
-              <CardHeader className="bg-white border-b-2 border-green-400">
-                <div className="space-y-3">
-                  <div>
-                    <CardTitle className="text-[#001B44] flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-green-500" />
-                      Work Request NPK 2
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      Total WR berdasarkan eksekutor
-                    </CardDescription>
+              {/* NPK2 Work Request */}
+              <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
+                <CardHeader className="bg-white border-b-2 border-green-400">
+                  <div className="space-y-3">
+                    <div>
+                      <CardTitle className="text-[#001B44] flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-green-500" />
+                        Work Request NPK 2
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        Total WR berdasarkan eksekutor
+                      </CardDescription>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-6">
-                {calculateWRPerEksekutor(wrChartPeriod, wrChartMonth, "NPK2")
-                  .length > 0 ? (
-                  <ResponsiveContainer width="100%" height={400}>
-                    <BarChart
-                      data={calculateWRPerEksekutor(
-                        wrChartPeriod,
-                        wrChartMonth,
-                        "NPK2"
-                      )}
-                      layout="vertical"
-                      margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
-                    >
-                      <defs>
-                        <linearGradient
-                          id="wrGradientNPK2"
-                          x1="0"
-                          y1="0"
-                          x2="1"
-                          y2="0"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor="#10b981"
-                            stopOpacity={0.9}
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor="#34d399"
-                            stopOpacity={1}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="#e5e7eb"
-                        horizontal={true}
-                        vertical={false}
-                      />
-                      <XAxis
-                        type="number"
-                        stroke="#6b7280"
-                        tick={{ fill: "#6b7280", fontSize: 11 }}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="eksekutor"
-                        stroke="#6b7280"
-                        width={70}
-                        tick={{
-                          fill: "#001B44",
-                          fontSize: 10,
-                          fontWeight: 500,
-                        }}
-                      />
-                      <Tooltip
-                        cursor={{ fill: "rgba(16, 185, 129, 0.05)" }}
-                        contentStyle={{
-                          backgroundColor: "#fff",
-                          border: "2px solid #10b981",
-                          borderRadius: "12px",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                          padding: "12px",
-                        }}
-                        labelStyle={{
-                          color: "#001B44",
-                          fontWeight: 600,
-                          marginBottom: 4,
-                        }}
-                        formatter={(value: number) => [
-                          <span style={{ color: "#10b981", fontWeight: 600 }}>
-                            {value} WR
-                          </span>,
-                          "Total",
-                        ]}
-                      />
-                      <Bar
-                        dataKey="count"
-                        fill="url(#wrGradientNPK2)"
-                        radius={[0, 12, 12, 0]}
-                        animationDuration={1000}
-                        label={{
-                          position: "right",
-                          formatter: (value: number) => `${value} WR`,
-                          fill: "#001B44",
-                          fontSize: 10,
-                          fontWeight: 600,
-                        }}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-[400px] text-gray-400">
-                    <AlertCircle className="w-12 h-12 mb-3 opacity-50" />
-                    <p className="text-sm font-medium">
-                      Tidak ada data WR NPK 2
-                    </p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  {calculateWRPerEksekutor(wrChartPeriod, wrChartMonth, "NPK2")
+                    .length > 0 ? (
+                    <ResponsiveContainer width="100%" height={400}>
+                      <BarChart
+                        data={calculateWRPerEksekutor(
+                          wrChartPeriod,
+                          wrChartMonth,
+                          "NPK2"
+                        )}
+                        layout="vertical"
+                        margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id="wrGradientNPK2"
+                            x1="0"
+                            y1="0"
+                            x2="1"
+                            y2="0"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="#10b981"
+                              stopOpacity={0.9}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="#34d399"
+                              stopOpacity={1}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#e5e7eb"
+                          horizontal={true}
+                          vertical={false}
+                        />
+                        <XAxis
+                          type="number"
+                          stroke="#6b7280"
+                          tick={{ fill: "#6b7280", fontSize: 11 }}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="eksekutor"
+                          stroke="#6b7280"
+                          width={70}
+                          tick={{
+                            fill: "#001B44",
+                            fontSize: 10,
+                            fontWeight: 500,
+                          }}
+                        />
+                        <Tooltip
+                          cursor={{ fill: "rgba(16, 185, 129, 0.05)" }}
+                          contentStyle={{
+                            backgroundColor: "#fff",
+                            border: "2px solid #10b981",
+                            borderRadius: "12px",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                            padding: "12px",
+                          }}
+                          labelStyle={{
+                            color: "#001B44",
+                            fontWeight: 600,
+                            marginBottom: 4,
+                          }}
+                          formatter={(value: number) => [
+                            <span style={{ color: "#10b981", fontWeight: 600 }}>
+                              {value} WR
+                            </span>,
+                            "Total",
+                          ]}
+                        />
+                        <Bar
+                          dataKey="count"
+                          fill="url(#wrGradientNPK2)"
+                          radius={[0, 12, 12, 0]}
+                          animationDuration={1000}
+                          label={{
+                            position: "right",
+                            formatter: (value: number) => `${value} WR`,
+                            fill: "#001B44",
+                            fontSize: 10,
+                            fontWeight: 600,
+                          }}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-[400px] text-gray-400">
+                      <AlertCircle className="w-12 h-12 mb-3 opacity-50" />
+                      <p className="text-sm font-medium">
+                        Tidak ada data WR NPK 2
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </>
         ) : (
@@ -8937,22 +8937,42 @@ export default function ProduksiNPKApp() {
           <Card className="border-gray-200 shadow-md hover:shadow-lg transition-shadow">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
               <CardTitle className="text-sm text-[#001B44]">
-                Total Produksi Blending
+                {(() => {
+                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+                  if (activePlant === "ALL") return "Total Produksi Blending";
+                  if (activePlant === "NPK1") return "Total Produksi Retail";
+                  return "Total Produksi Blending";
+                })()}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#001B44]">
-                {formatNumber(
-                  produksiBlendingData.reduce(
-                    (sum, item) => sum + (Number(item.tonase) || 0),
-                    0
-                  ),
-                  2
-                )}{" "}
+                {(() => {
+                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+                  const filteredData = activePlant === "ALL" 
+                    ? produksiBlendingData 
+                    : produksiBlendingData.filter((item: any) => {
+                        const itemPlant = (item._plant || "NPK2").toUpperCase();
+                        return itemPlant === activePlant;
+                      });
+                  return formatNumber(
+                    filteredData.reduce((sum, item) => sum + (Number(item.tonase) || 0), 0),
+                    2
+                  );
+                })()}{" "}
                 Ton
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                {produksiBlendingData.length} transaksi
+                {(() => {
+                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+                  const filteredData = activePlant === "ALL" 
+                    ? produksiBlendingData 
+                    : produksiBlendingData.filter((item: any) => {
+                        const itemPlant = (item._plant || "NPK2").toUpperCase();
+                        return itemPlant === activePlant;
+                      });
+                  return filteredData.length;
+                })()} transaksi
               </p>
             </CardContent>
           </Card>
@@ -8965,17 +8985,32 @@ export default function ProduksiNPKApp() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#001B44]">
-                {formatNumber(
-                  produksiNPKMiniData.reduce(
-                    (sum, item) => sum + (Number(item.tonase) || 0),
-                    0
-                  ),
-                  2
-                )}{" "}
+                {(() => {
+                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+                  const filteredData = activePlant === "ALL" 
+                    ? produksiNPKMiniData 
+                    : produksiNPKMiniData.filter((item: any) => {
+                        const itemPlant = (item._plant || "NPK2").toUpperCase();
+                        return itemPlant === activePlant;
+                      });
+                  return formatNumber(
+                    filteredData.reduce((sum, item) => sum + (Number(item.tonase) || 0), 0),
+                    2
+                  );
+                })()}{" "}
                 Ton
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                {produksiNPKMiniData.length} transaksi
+                {(() => {
+                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+                  const filteredData = activePlant === "ALL" 
+                    ? produksiNPKMiniData 
+                    : produksiNPKMiniData.filter((item: any) => {
+                        const itemPlant = (item._plant || "NPK2").toUpperCase();
+                        return itemPlant === activePlant;
+                      });
+                  return filteredData.length;
+                })()} transaksi
               </p>
             </CardContent>
           </Card>
@@ -8988,17 +9023,32 @@ export default function ProduksiNPKApp() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-[#001B44]">
-                {formatNumber(
-                  downtimeData.reduce(
-                    (sum, item) => sum + (item.downtime || 0),
-                    0
-                  ),
-                  1
-                )}{" "}
+                {(() => {
+                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+                  const filteredData = activePlant === "ALL" 
+                    ? downtimeData 
+                    : downtimeData.filter((item: any) => {
+                        const itemPlant = (item._plant || "NPK2").toUpperCase();
+                        return itemPlant === activePlant;
+                      });
+                  return formatNumber(
+                    filteredData.reduce((sum, item) => sum + (item.downtime || 0), 0),
+                    1
+                  );
+                })()}{" "}
                 Jam
               </div>
               <p className="text-xs text-gray-500 mt-1">
-                {downtimeData.length} kejadian
+                {(() => {
+                  const activePlant = userPlant === "ALL" ? dashboardPlantFilter : userPlant;
+                  const filteredData = activePlant === "ALL" 
+                    ? downtimeData 
+                    : downtimeData.filter((item: any) => {
+                        const itemPlant = (item._plant || "NPK2").toUpperCase();
+                        return itemPlant === activePlant;
+                      });
+                  return filteredData.length;
+                })()} kejadian
               </p>
             </CardContent>
           </Card>
