@@ -7563,6 +7563,7 @@ export default function ProduksiNPKApp() {
                     <tbody className="bg-white">
                       {(() => {
                         const npk1Metrics = calculatePlantMetrics("NPK1");
+                        if (!npk1Metrics || !npk1Metrics.monthlyBreakdown) return null;
                         return npk1Metrics.monthlyBreakdown.map(
                           (month: any, idx: number) => (
                             <tr
@@ -7639,6 +7640,7 @@ export default function ProduksiNPKApp() {
                     <tbody className="bg-white">
                       {(() => {
                         const npk2Metrics = calculatePlantMetrics("NPK2");
+                        if (!npk2Metrics || !npk2Metrics.monthlyBreakdown) return null;
                         return npk2Metrics.monthlyBreakdown.map(
                           (month: any, idx: number) => (
                             <tr
