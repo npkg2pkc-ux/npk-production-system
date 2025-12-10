@@ -796,7 +796,9 @@ export default function ProduksiNPKApp() {
     "monthly" | "yearly"
   >("monthly");
   const [showAllDowntimeItems, setShowAllDowntimeItems] = useState(false);
-  const [downtimeChartPlantFilter, setDowntimeChartPlantFilter] = useState<"ALL" | "NPK1" | "NPK2">("ALL");
+  const [downtimeChartPlantFilter, setDowntimeChartPlantFilter] = useState<
+    "ALL" | "NPK1" | "NPK2"
+  >("ALL");
 
   // Work Request chart filter
   const [wrChartMonth, setWrChartMonth] = useState(
@@ -814,7 +816,9 @@ export default function ProduksiNPKApp() {
     "monthly" | "yearly"
   >("monthly");
   const [showAllFreqItems, setShowAllFreqItems] = useState(false);
-  const [downtimeFreqPlantFilter, setDowntimeFreqPlantFilter] = useState<"ALL" | "NPK1" | "NPK2">("ALL");
+  const [downtimeFreqPlantFilter, setDowntimeFreqPlantFilter] = useState<
+    "ALL" | "NPK1" | "NPK2"
+  >("ALL");
 
   // Helper: normalize plant string
   const normalizePlant = (plant?: string | null) => {
@@ -7856,20 +7860,19 @@ export default function ProduksiNPKApp() {
           {/* Grafik Frekuensi Downtime Per Item */}
           <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-3">
                 <div>
                   <CardTitle className="text-[#001B44] flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-[#00B4D8]" />
                     Frekuensi Downtime Per Item
                   </CardTitle>
                   <CardDescription className="mt-1">
-                    Jumlah kejadian downtime per equipment/item berdasarkan
-                    periode
+                    Jumlah kejadian downtime per equipment/item berdasarkan periode
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
-                    <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 border border-[#00B4D8]/20 shadow-sm">
+                    <label className="text-xs font-semibold text-[#001B44] whitespace-nowrap">
                       🏭 Plant:
                     </label>
                     <select
@@ -7879,15 +7882,15 @@ export default function ProduksiNPKApp() {
                           e.target.value as "ALL" | "NPK1" | "NPK2"
                         )
                       }
-                      className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
+                      className="border-none bg-transparent text-xs font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer pr-6"
                     >
                       <option value="ALL">Semua</option>
                       <option value="NPK1">NPK 1</option>
                       <option value="NPK2">NPK 2</option>
                     </select>
                   </div>
-                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
-                    <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 border border-[#00B4D8]/20 shadow-sm">
+                    <label className="text-xs font-semibold text-[#001B44] whitespace-nowrap">
                       📆 Periode:
                     </label>
                     <select
@@ -7897,7 +7900,7 @@ export default function ProduksiNPKApp() {
                           e.target.value as "monthly" | "yearly"
                         )
                       }
-                      className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
+                      className="border-none bg-transparent text-xs font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer pr-6"
                     >
                       <option value="monthly">Bulanan</option>
                       <option value="yearly">Tahunan</option>
@@ -7908,7 +7911,7 @@ export default function ProduksiNPKApp() {
                       type="month"
                       value={downtimeFreqMonth}
                       onChange={(e) => setDowntimeFreqMonth(e.target.value)}
-                      className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
+                      className="border border-[#00B4D8]/30 rounded-lg px-3 py-1.5 text-xs font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
                     />
                   ) : (
                     <select
@@ -7916,7 +7919,7 @@ export default function ProduksiNPKApp() {
                       onChange={(e) =>
                         setDowntimeFreqMonth(`${e.target.value}-01`)
                       }
-                      className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
+                      className="border border-[#00B4D8]/30 rounded-lg px-3 py-1.5 text-xs font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
                     >
                       {Array.from(
                         { length: 10 },
@@ -8227,7 +8230,7 @@ export default function ProduksiNPKApp() {
 
           <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300">
             <CardHeader className="bg-white border-b-2 border-[#00B4D8]">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-3">
                 <div>
                   <CardTitle className="text-[#001B44] flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-[#00B4D8]" />
@@ -8237,9 +8240,9 @@ export default function ProduksiNPKApp() {
                     Monitoring waktu downtime equipment/item berdasarkan periode
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
-                    <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 border border-[#00B4D8]/20 shadow-sm">
+                    <label className="text-xs font-semibold text-[#001B44] whitespace-nowrap">
                       🏭 Plant:
                     </label>
                     <select
@@ -8249,15 +8252,15 @@ export default function ProduksiNPKApp() {
                           e.target.value as "ALL" | "NPK1" | "NPK2"
                         )
                       }
-                      className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
+                      className="border-none bg-transparent text-xs font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer pr-6"
                     >
                       <option value="ALL">Semua</option>
                       <option value="NPK1">NPK 1</option>
                       <option value="NPK2">NPK 2</option>
                     </select>
                   </div>
-                  <div className="flex items-center gap-2 bg-white rounded-lg px-4 py-2 border border-[#00B4D8]/20 shadow-sm">
-                    <label className="text-sm font-semibold text-[#001B44] whitespace-nowrap">
+                  <div className="flex items-center gap-2 bg-white rounded-lg px-3 py-1.5 border border-[#00B4D8]/20 shadow-sm">
+                    <label className="text-xs font-semibold text-[#001B44] whitespace-nowrap">
                       📆 Periode:
                     </label>
                     <select
@@ -8267,7 +8270,7 @@ export default function ProduksiNPKApp() {
                           e.target.value as "monthly" | "yearly"
                         )
                       }
-                      className="border-none bg-transparent text-sm font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer"
+                      className="border-none bg-transparent text-xs font-medium text-[#00B4D8] focus:outline-none focus:ring-0 cursor-pointer pr-6"
                     >
                       <option value="monthly">Bulanan</option>
                       <option value="yearly">Tahunan</option>
@@ -8278,7 +8281,7 @@ export default function ProduksiNPKApp() {
                       type="month"
                       value={downtimeChartMonth}
                       onChange={(e) => setDowntimeChartMonth(e.target.value)}
-                      className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
+                      className="border border-[#00B4D8]/30 rounded-lg px-3 py-1.5 text-xs font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
                     />
                   ) : (
                     <select
@@ -8286,7 +8289,7 @@ export default function ProduksiNPKApp() {
                       onChange={(e) =>
                         setDowntimeChartMonth(`${e.target.value}-01`)
                       }
-                      className="border border-[#00B4D8]/30 rounded-lg px-3 py-2 text-sm font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
+                      className="border border-[#00B4D8]/30 rounded-lg px-3 py-1.5 text-xs font-medium text-[#001B44] focus:outline-none focus:ring-2 focus:ring-[#00B4D8] focus:border-transparent cursor-pointer"
                     >
                       {Array.from(
                         { length: 10 },
