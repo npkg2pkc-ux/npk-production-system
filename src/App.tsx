@@ -7058,17 +7058,19 @@ function ProduksiNPKApp() {
       plant === "NPK1"
         ? {
             primary: "blue",
-            gradient: "from-blue-500 to-blue-600",
-            light: "bg-blue-50",
-            border: "border-blue-300",
-            text: "text-blue-600",
+            gradient: "from-[#1e3a8a] via-[#1e40af] to-[#2563eb]",
+            light: "bg-gradient-to-br from-[#1e3a8a]/20 to-[#2563eb]/10",
+            border: "border-blue-400/30",
+            text: "text-blue-400",
+            glow: "shadow-blue-500/50",
           }
         : {
             primary: "green",
-            gradient: "from-green-500 to-green-600",
-            light: "bg-green-50",
-            border: "border-green-300",
-            text: "text-green-600",
+            gradient: "from-[#065f46] via-[#047857] to-[#059669]",
+            light: "bg-gradient-to-br from-[#065f46]/20 to-[#059669]/10",
+            border: "border-green-400/30",
+            text: "text-green-400",
+            glow: "shadow-green-500/50",
           };
 
     return (
@@ -7117,7 +7119,7 @@ function ProduksiNPKApp() {
           {/* Produksi Bulan Ini - hanya untuk single plant view */}
           {dashboardPlantFilter !== "ALL" && (
             <Card
-              className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-lg border-none transform hover:scale-105 transition-transform duration-200`}
+              className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-2xl ${plantColor.glow} border border-white/10 backdrop-blur-xl transform hover:scale-105 transition-all duration-300`}
             >
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -7138,7 +7140,7 @@ function ProduksiNPKApp() {
           )}
 
           <Card
-            className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-lg border-none transform hover:scale-105 transition-transform duration-200`}
+            className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-2xl ${plantColor.glow} border border-white/10 backdrop-blur-xl transform hover:scale-105 transition-all duration-300`}
           >
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -7155,7 +7157,7 @@ function ProduksiNPKApp() {
           </Card>
 
           <Card
-            className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-lg border-none transform hover:scale-105 transition-transform duration-200`}
+            className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-2xl ${plantColor.glow} border border-white/10 backdrop-blur-xl transform hover:scale-105 transition-all duration-300`}
           >
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -7177,7 +7179,7 @@ function ProduksiNPKApp() {
           </Card>
 
           <Card
-            className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-lg border-none transform hover:scale-105 transition-transform duration-200`}
+            className={`bg-gradient-to-br ${plantColor.gradient} text-white shadow-2xl ${plantColor.glow} border border-white/10 backdrop-blur-xl transform hover:scale-105 transition-all duration-300`}
           >
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -7199,9 +7201,9 @@ function ProduksiNPKApp() {
         {/* Grafik untuk plant ini - hanya tampil di mode ALL */}
         {dashboardPlantFilter === "ALL" && (
           <>
-            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="bg-gray-900/40 backdrop-blur-xl border border-white/10 shadow-2xl hover:shadow-3xl transition-all duration-300">
               <CardHeader
-                className={`bg-gradient-to-r ${plantColor.gradient} text-white`}
+                className={`bg-gradient-to-r ${plantColor.gradient} text-white border-b border-white/10`}
               >
                 <CardTitle className="flex items-center gap-2">
                   <BarChart3 className="w-5 h-5" />
@@ -7266,9 +7268,9 @@ function ProduksiNPKApp() {
             </Card>
 
             {/* Grafik Persentase Pencapaian */}
-            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
+            <Card className="bg-gray-900/40 backdrop-blur-xl border border-white/10 shadow-2xl hover:shadow-3xl transition-all duration-300">
               <CardHeader
-                className={`bg-gradient-to-r ${plantColor.gradient} text-white`}
+                className={`bg-gradient-to-r ${plantColor.gradient} text-white border-b border-white/10`}
               >
                 <CardTitle className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5" />
@@ -7564,8 +7566,8 @@ function ProduksiNPKApp() {
         {/* Grafik Comparison Per Plant - Hanya tampil saat filter ALL */}
         {userPlant === "ALL" && dashboardPlantFilter === "ALL" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-              <CardHeader className="bg-gradient-to-r from-[#00B4D8] to-[#5FE9C5] border-b-2">
+            <Card className="bg-gray-900/40 backdrop-blur-xl border border-white/10 shadow-2xl hover:shadow-3xl transition-all duration-300">
+              <CardHeader className="bg-gradient-to-r from-[#1e3a8a] via-[#059669] to-[#2563eb] border-b border-white/10">
                 <CardTitle className="text-white flex items-center gap-2">
                   <TrendingUp className="w-5 h-5" />
                   Perbandingan Produksi NPK 1 vs NPK 2
@@ -7619,8 +7621,8 @@ function ProduksiNPKApp() {
               </CardContent>
             </Card>
 
-            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-              <CardHeader className="bg-gradient-to-r from-[#001B44] to-[#00B4D8] border-b-2">
+            <Card className="bg-gray-900/40 backdrop-blur-xl border border-white/10 shadow-2xl hover:shadow-3xl transition-all duration-300">
+              <CardHeader className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] border-b border-white/10">
                 <CardTitle className="text-white flex items-center gap-2">
                   <Target className="w-5 h-5" />
                   Total Produksi Per Plant ({dashboardYear})
@@ -7722,8 +7724,8 @@ function ProduksiNPKApp() {
         {/* Grafik untuk mode single plant */}
         {dashboardPlantFilter !== "ALL" && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-              <CardHeader className="bg-gradient-to-r from-[#00B4D8] to-[#7FFFD4]">
+            <Card className="bg-gray-900/40 backdrop-blur-xl border border-white/10 shadow-2xl hover:shadow-3xl transition-all duration-300">
+              <CardHeader className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] border-b border-white/10">
                 <CardTitle className="text-white flex items-center gap-2">
                   <BarChart className="w-5 h-5" />
                   Grafik Produksi vs RKAP Tahunan ({dashboardYear})
@@ -7763,8 +7765,8 @@ function ProduksiNPKApp() {
               </CardContent>
             </Card>
 
-            <Card className="border-gray-200 shadow-lg hover:shadow-xl transition-shadow">
-              <CardHeader className="bg-gradient-to-r from-[#001B44] via-[#003366] to-[#00B4D8]">
+            <Card className="bg-gray-900/40 backdrop-blur-xl border border-white/10 shadow-2xl hover:shadow-3xl transition-all duration-300">
+              <CardHeader className="bg-gradient-to-r from-[#1e3a8a] via-[#1e40af] to-[#2563eb] border-b border-white/10">
                 <CardTitle className="text-white flex items-center gap-2">
                   <TrendingUp className="w-5 h-5" />
                   Persentase Pencapaian Bulanan ({dashboardYear})
